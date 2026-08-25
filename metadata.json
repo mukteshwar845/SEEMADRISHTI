@@ -1,0 +1,6 @@
+{
+  "name": "Trinetra AI Dashboard",
+  "description": "TRINETRA AI DASHBOARD — 9-Camera Border Surveillance Matrix (SIH26187 - Ministry of Home Affairs) featuring 3x3 Tactical Matrix, 2x2 Quad View, Spotlight Mode, 60 FPS Canvas AI Bounding Boxes, Dynamic Feed Renaming, Real-time Alert Feed, and Hardware Telemetry Gauges.",
+  "requestFramePermissions": ["camera"],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

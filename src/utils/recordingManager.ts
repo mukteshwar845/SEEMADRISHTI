@@ -17,7 +17,7 @@ export interface ActiveRecording {
 
 type RecordingListener = (activeRecordings: Map<string, ActiveRecording>, savedClips: RecordedClip[]) => void;
 
-const SESSION_STORAGE_KEY = 'trinetra_session_recorded_clips_v1';
+const SESSION_STORAGE_KEY = 'seemadrishti_session_recorded_clips_v1';
 
 // Initial baseline mock recordings for the session
 const INITIAL_SESSION_CLIPS: RecordedClip[] = [

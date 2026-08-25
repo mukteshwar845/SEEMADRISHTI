@@ -1,6 +1,6 @@
 <div align="center">
 
-# 👁️ TRINETRA AI
+# 👁️ SEEMADRISHTI AI
 ### Next-Gen Tactical Multi-Camera CCTV Surveillance & Threat Intelligence Command Matrix
 
 [![React](https://img.shields.io/badge/React-18.3.1-61DAFB?style=for-the-badge&logo=react&logoColor=black)](https://react.dev/)
@@ -20,7 +20,7 @@
 
 ```
 ┌─────────────────────────────────────────────────────────────────────────────────────────────┐
-│ TRINETRA TACTICAL SURVEILLANCE MATRIX v4.2.0                    ● LIVE RTSP [9/9 ACTIVE]    │
+│ SEEMADRISHTI TACTICAL SURVEILLANCE MATRIX v4.2.0                    ● LIVE RTSP [9/9 ACTIVE]    │
 ├───────────────────────────────┬───────────────────────────────┬─────────────────────────────┤
 │ [CAM-01] URBAN ARTERIAL       │ [CAM-02] AERIAL BOX JUNCTION  │ [CAM-03] FLYOVER JUNCTION   │
 │ 🚗 MERCEDES E300 [22 MPH]     │ 🟨 YELLOW BOX CLEARANCE: 100% │ 🚌 BMTA BUS [ROUTE 504]     │
@@ -133,7 +133,7 @@ flowchart TD
 
 ## 🔲 Tactical Matrix Layouts
 
-TRINETRA allows operators to switch viewport layouts dynamically with one click:
+SEEMADRISHTI allows operators to switch viewport layouts dynamically with one click:
 
 | Layout Mode | Description | Best For |
 | :--- | :--- | :--- |
@@ -152,10 +152,10 @@ TRINETRA allows operators to switch viewport layouts dynamically with one click:
 ### 1. Clone & Install
 ```bash
 # Clone the repository
-git clone https://github.com/<your-username>/trinetra-ai-surveillance.git
+git clone https://github.com/<your-username>/seemadrishti-ai-surveillance.git
 
 # Navigate to the project root
-cd trinetra-ai-surveillance
+cd seemadrishti-ai-surveillance
 
 # Install dependencies
 npm install
@@ -178,7 +178,7 @@ The optimized bundle will be created in the `dist/` directory.
 ## 📁 Project Structure
 
 ```text
-trinetra-ai/
+seemadrishti-ai/
 ├── src/
 │   ├── components/
 │   │   ├── MatrixCameraCell.tsx     # Individual 60 FPS CCTV stream player & HUD engine
@@ -223,7 +223,7 @@ trinetra-ai/
 ## 🔒 Security & Privacy Policy
 
 - **Zero Hardcoded Secrets**: This codebase contains **zero** private API keys, authentication tokens, passwords, or personal credentials.
-- **Client-Side Simulation**: All video streams, license plates, operator profiles (`@surveillance.trinetra.gov`), and sensor telemetry use synthetic, privacy-safe simulation data.
+- **Client-Side Simulation**: All video streams, license plates, operator profiles (`@surveillance.seemadrishti.gov`), and sensor telemetry use synthetic, privacy-safe simulation data.
 - **Production-Ready Hygiene**: Environment templates (`.env.example`) contain only generic configuration variables.
 
 ---

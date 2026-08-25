@@ -1,5 +1,5 @@
 /**
- * Trinetra Defense Surveillance - Web Audio API Alert Engine
+ * Seemadrishti Defense Surveillance - Web Audio API Alert Engine
  * Synthesizes short, low-frequency 'alert ping' sounds for high-confidence (>90%) intrusion events.
  */
 

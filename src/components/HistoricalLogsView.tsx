@@ -120,7 +120,7 @@ export const HistoricalLogsView: React.FC<HistoricalLogsViewProps> = ({
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
-    a.download = `trinetra-rtsp-clip-${clip.cameraCode.toLowerCase()}-${clip.id}.json`;
+    a.download = `seemadrishti-rtsp-clip-${clip.cameraCode.toLowerCase()}-${clip.id}.json`;
     a.click();
     URL.revokeObjectURL(url);
     showToast(`Clip ${clip.cameraCode} metadata & stream index exported.`);

@@ -129,7 +129,7 @@ export const MatrixCameraCell: React.FC<MatrixCameraCellProps> = ({
     const canvas = canvasRef.current;
     if (!canvas) return;
     const link = document.createElement('a');
-    link.download = `TRINETRA_${camera.tag}_${playbackMode}_${Date.now()}.png`;
+    link.download = `SEEMADRISHTI_${camera.tag}_${playbackMode}_${Date.now()}.png`;
     link.href = canvas.toDataURL('image/png');
     link.click();
   };

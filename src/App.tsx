@@ -40,6 +40,7 @@ export default function App() {
   const [alerts, setAlerts] = useState<AlertItem[]>(initialAlerts);
   const [selectedAlertForModal, setSelectedAlertForModal] = useState<AlertItem | null>(null);
   const [telemetry, setTelemetry] = useState(initialTelemetry);
+  const [confidenceThreshold, setConfidenceThreshold] = useState<number>(85);
 
   // Dynamic Camera Name Renaming Handler
   const handleUpdateCameraName = (id: number, newName: string) => {
@@ -122,24 +123,30 @@ export default function App() {
     const camTag = cam ? cam.tag : 'CAM-01';
     const camName = cam ? cam.name : 'Sector A - Perimeter Fence Line';
 
+    const randomConfidence = Math.round((50 + Math.random() * 49.9) * 10) / 10;
+
     const newAlert: AlertItem = {
       id: `alt-${Date.now()}`,
       title: 'Perimeter Intrusion Alert',
       camera: camTag,
-      severity: 'High',
+      severity: randomConfidence >= 90 ? 'High' : randomConfidence >= 75 ? 'Medium' : 'Low',
       time: timeStr,
       type: 'Perimeter Breach',
       timestamp: Date.now(),
       status: 'active',
       description: `Tactical barrier crossing detected on ${camName}. Immediate response dispatched.`,
       location: camName,
-      confidence: 98.4,
+      confidence: randomConfidence,
       assignedUnit: 'Border Patrol Squad Alpha',
     };
 
-    triggerIntrusionAudioAlert(newAlert);
-    setAlerts((prev) => [newAlert, ...prev]);
-    setSelectedAlertForModal(newAlert);
+    if (randomConfidence >= confidenceThreshold) {
+      triggerIntrusionAudioAlert(newAlert);
+      setAlerts((prev) => [newAlert, ...prev]);
+      setSelectedAlertForModal(newAlert);
+    } else {
+      console.log(`[AI FILTER] Alert suppressed. Confidence (${randomConfidence}%) below threshold (${confidenceThreshold}%).`);
+    }
   };
 
   // Alert Actions
@@ -160,7 +167,7 @@ export default function App() {
 
   return (
     <div
-      id="trinetra-app-root"
+      id="seemadrishti-app-root"
       className="min-h-screen bg-slate-950 text-slate-200 flex flex-row overflow-x-hidden font-mono antialiased selection:bg-cyan-500 selection:text-black"
     >
       {/* 1. Left Sidebar Navigation */}
@@ -233,6 +240,8 @@ export default function App() {
                     onSelectCameraForDetails={(cam) => {
                       setSelectedCameraId(String(cam.id));
                     }}
+                    confidenceThreshold={confidenceThreshold}
+                    onConfidenceThresholdChange={setConfidenceThreshold}
                   />
                 </div>
 
@@ -260,6 +269,8 @@ export default function App() {
                 setSelectedCameraId(String(cam.id));
                 setCurrentView('dashboard');
               }}
+              confidenceThreshold={confidenceThreshold}
+              onConfidenceThresholdChange={setConfidenceThreshold}
             />
           )}
 

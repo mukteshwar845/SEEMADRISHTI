@@ -224,7 +224,7 @@ export const AnalyticsDashboard: React.FC<AnalyticsDashboardProps> = () => {
   // Export report simulation
   const handleExportReport = () => {
     const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify({
-      reportTitle: "TRINETRA AI Surveillance 24H Analytics Report",
+      reportTitle: "SEEMADRISHTI AI Surveillance 24H Analytics Report",
       generatedAt: new Date().toISOString(),
       timeRange,
       summaryStats,
@@ -234,7 +234,7 @@ export const AnalyticsDashboard: React.FC<AnalyticsDashboardProps> = () => {
     
     const downloadAnchor = document.createElement('a');
     downloadAnchor.setAttribute("href", dataStr);
-    downloadAnchor.setAttribute("download", `trinetra-analytics-24h-${Date.now()}.json`);
+    downloadAnchor.setAttribute("download", `seemadrishti-analytics-24h-${Date.now()}.json`);
     document.body.appendChild(downloadAnchor);
     downloadAnchor.click();
     downloadAnchor.remove();

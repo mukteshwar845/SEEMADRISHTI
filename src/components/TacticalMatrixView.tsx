@@ -20,6 +20,7 @@ import {
   Play,
   Pause,
   Video,
+  RefreshCcw,
 } from 'lucide-react';
 import { recordingEngine } from '../utils/recordingManager';
 
@@ -32,6 +33,8 @@ interface TacticalMatrixViewProps {
   onBatchUpdateSources?: (updates: { id: number; src: string; customName?: string }[]) => void;
   onSelectCameraForDetails?: (cam: MatrixCameraFeed) => void;
   onTriggerAlert?: (cam: MatrixCameraFeed) => void;
+  confidenceThreshold?: number;
+  onConfidenceThresholdChange?: (val: number) => void;
 }
 
 export const TacticalMatrixView: React.FC<TacticalMatrixViewProps> = ({
@@ -39,6 +42,8 @@ export const TacticalMatrixView: React.FC<TacticalMatrixViewProps> = ({
   onUpdateCameraName,
   onSelectCameraForDetails,
   onTriggerAlert,
+  confidenceThreshold = 85,
+  onConfidenceThresholdChange,
 }) => {
   const [layoutMode, setLayoutMode] = useState<MatrixLayoutMode>('matrix-3x3');
   const [spotlightCameraId, setSpotlightCameraId] = useState<number>(1);
@@ -46,6 +51,30 @@ export const TacticalMatrixView: React.FC<TacticalMatrixViewProps> = ({
   const [filterRisk, setFilterRisk] = useState<'ALL' | 'HIGH' | 'NORMAL'>('ALL');
   const [liveTimestamp, setLiveTimestamp] = useState('10:45:22 AM');
   const [globalRecording, setGlobalRecording] = useState(false);
+  const [isPatrolMode, setIsPatrolMode] = useState(false);
+  const [patrolInterval, setPatrolInterval] = useState(5);
+
+  // Patrol Mode logic
+  useEffect(() => {
+    let intervalId: NodeJS.Timeout;
+    
+    if (isPatrolMode) {
+      // Force spotlight mode when patrol starts
+      setLayoutMode('spotlight');
+      
+      intervalId = setInterval(() => {
+        setSpotlightCameraId((prev) => {
+          const currentIndex = cameras.findIndex(c => c.id === prev);
+          const nextIndex = (currentIndex + 1) % cameras.length;
+          return cameras[nextIndex]?.id || prev;
+        });
+      }, patrolInterval * 1000);
+    }
+    
+    return () => {
+      if (intervalId) clearInterval(intervalId);
+    };
+  }, [isPatrolMode, patrolInterval, cameras]);
 
   // Real-time live timestamp clock updater
   useEffect(() => {
@@ -155,7 +184,7 @@ export const TacticalMatrixView: React.FC<TacticalMatrixViewProps> = ({
           {/* Button 1: 3x3 Tactical Matrix */}
           <button
             id="btn-layout-3x3"
-            onClick={() => setLayoutMode('matrix-3x3')}
+            onClick={() => { setLayoutMode('matrix-3x3'); setIsPatrolMode(false); }}
             className={`px-3 py-1.5 rounded-lg text-xs font-mono font-bold tracking-wider flex items-center gap-1.5 transition-all cursor-pointer border ${
               layoutMode === 'matrix-3x3'
                 ? 'bg-cyan-600 text-black border-cyan-400 shadow-[0_0_12px_rgba(0,240,255,0.4)]'
@@ -169,7 +198,7 @@ export const TacticalMatrixView: React.FC<TacticalMatrixViewProps> = ({
           {/* Button 2: 2x2 Quad View */}
           <button
             id="btn-layout-2x2"
-            onClick={() => setLayoutMode('quad-2x2')}
+            onClick={() => { setLayoutMode('quad-2x2'); setIsPatrolMode(false); }}
             className={`px-3 py-1.5 rounded-lg text-xs font-mono font-bold tracking-wider flex items-center gap-1.5 transition-all cursor-pointer border ${
               layoutMode === 'quad-2x2'
                 ? 'bg-cyan-600 text-black border-cyan-400 shadow-[0_0_12px_rgba(0,240,255,0.4)]'
@@ -183,9 +212,9 @@ export const TacticalMatrixView: React.FC<TacticalMatrixViewProps> = ({
           {/* Button 3: Spotlight Mode */}
           <button
             id="btn-layout-spotlight"
-            onClick={() => setLayoutMode('spotlight')}
+            onClick={() => { setLayoutMode('spotlight'); setIsPatrolMode(false); }}
             className={`px-3 py-1.5 rounded-lg text-xs font-mono font-bold tracking-wider flex items-center gap-1.5 transition-all cursor-pointer border ${
-              layoutMode === 'spotlight'
+              layoutMode === 'spotlight' && !isPatrolMode
                 ? 'bg-cyan-600 text-black border-cyan-400 shadow-[0_0_12px_rgba(0,240,255,0.4)]'
                 : 'bg-slate-950 text-slate-400 hover:text-white border-slate-800 hover:bg-slate-800'
             }`}
@@ -193,46 +222,100 @@ export const TacticalMatrixView: React.FC<TacticalMatrixViewProps> = ({
             <Maximize2 size={13} />
             <span>Spotlight (1+8)</span>
           </button>
+
+          {/* Button 4: Patrol Mode */}
+          <div className="flex items-center gap-1 bg-slate-950 border border-slate-800 rounded-lg p-0.5">
+            <button
+              id="btn-layout-patrol"
+              onClick={() => setIsPatrolMode(!isPatrolMode)}
+              className={`px-3 py-1 rounded-md text-xs font-mono font-bold tracking-wider flex items-center gap-1.5 transition-all cursor-pointer ${
+                isPatrolMode
+                  ? 'bg-amber-600 text-black shadow-[0_0_12px_rgba(251,191,36,0.4)]'
+                  : 'text-amber-400 hover:text-amber-300 hover:bg-amber-950/30'
+              }`}
+            >
+              <RefreshCcw size={13} className={isPatrolMode ? 'animate-[spin_4s_linear_infinite]' : ''} />
+              <span>PATROL MODE</span>
+            </button>
+            
+            {isPatrolMode && (
+              <select
+                value={patrolInterval}
+                onChange={(e) => setPatrolInterval(Number(e.target.value))}
+                className="bg-transparent text-amber-400 border-l border-amber-500/30 text-xs font-mono px-2 py-1 outline-none cursor-pointer appearance-none text-center hover:bg-amber-950/50 transition-colors"
+                title="Patrol Interval"
+              >
+                <option value={3}>3s</option>
+                <option value={5}>5s</option>
+                <option value={10}>10s</option>
+                <option value={15}>15s</option>
+                <option value={30}>30s</option>
+              </select>
+            )}
+          </div>
         </div>
       </div>
 
       {/* 2. Sub-Toolbar: Risk Filters & Quick Metadata Stats */}
-      <div className="flex flex-wrap items-center justify-between gap-2 px-3 py-2 bg-slate-900/60 border border-slate-800/80 rounded-lg text-xs font-mono">
-        <div className="flex items-center gap-2">
-          <span className="text-slate-400 flex items-center gap-1">
-            <Filter size={12} className="text-cyan-400" />
-            FILTER SECTOR:
-          </span>
-          <button
-            onClick={() => setFilterRisk('ALL')}
-            className={`px-2 py-0.5 rounded text-[10px] font-bold cursor-pointer transition-all ${
-              filterRisk === 'ALL'
-                ? 'bg-cyan-950 text-cyan-300 border border-cyan-500/50'
-                : 'text-slate-400 hover:text-slate-200'
-            }`}
-          >
-            ALL (9)
-          </button>
-          <button
-            onClick={() => setFilterRisk('HIGH')}
-            className={`px-2 py-0.5 rounded text-[10px] font-bold cursor-pointer transition-all ${
-              filterRisk === 'HIGH'
-                ? 'bg-rose-950 text-rose-300 border border-rose-600/50'
-                : 'text-slate-400 hover:text-slate-200'
-            }`}
-          >
-            HIGH RISK ONLY
-          </button>
-          <button
-            onClick={() => setFilterRisk('NORMAL')}
-            className={`px-2 py-0.5 rounded text-[10px] font-bold cursor-pointer transition-all ${
-              filterRisk === 'NORMAL'
-                ? 'bg-emerald-950 text-emerald-300 border border-emerald-500/50'
-                : 'text-slate-400 hover:text-slate-200'
-            }`}
-          >
-            NORMAL
-          </button>
+      <div className="flex flex-wrap items-center justify-between gap-3 px-3 py-2 bg-slate-900/60 border border-slate-800/80 rounded-lg text-xs font-mono">
+        <div className="flex items-center gap-4 flex-wrap">
+          <div className="flex items-center gap-2">
+            <span className="text-slate-400 flex items-center gap-1">
+              <Filter size={12} className="text-cyan-400" />
+              FILTER SECTOR:
+            </span>
+            <button
+              onClick={() => setFilterRisk('ALL')}
+              className={`px-2 py-0.5 rounded text-[10px] font-bold cursor-pointer transition-all ${
+                filterRisk === 'ALL'
+                  ? 'bg-cyan-950 text-cyan-300 border border-cyan-500/50'
+                  : 'text-slate-400 hover:text-slate-200'
+              }`}
+            >
+              ALL (9)
+            </button>
+            <button
+              onClick={() => setFilterRisk('HIGH')}
+              className={`px-2 py-0.5 rounded text-[10px] font-bold cursor-pointer transition-all ${
+                filterRisk === 'HIGH'
+                  ? 'bg-rose-950 text-rose-300 border border-rose-600/50'
+                  : 'text-slate-400 hover:text-slate-200'
+              }`}
+            >
+              HIGH RISK ONLY
+            </button>
+            <button
+              onClick={() => setFilterRisk('NORMAL')}
+              className={`px-2 py-0.5 rounded text-[10px] font-bold cursor-pointer transition-all ${
+                filterRisk === 'NORMAL'
+                  ? 'bg-emerald-950 text-emerald-300 border border-emerald-500/50'
+                  : 'text-slate-400 hover:text-slate-200'
+              }`}
+            >
+              NORMAL
+            </button>
+          </div>
+
+          <div className="h-4 w-px bg-slate-700 hidden sm:block"></div>
+
+          {/* AI Confidence Threshold Filter */}
+          <div className="flex items-center gap-2">
+            <span className="text-slate-400 flex items-center gap-1 text-[10px] font-bold uppercase tracking-wider">
+              <Sparkles size={12} className="text-purple-400" />
+              AI CONFIDENCE FILTER:
+            </span>
+            <input
+              type="range"
+              min="50"
+              max="99"
+              value={confidenceThreshold}
+              onChange={(e) => onConfidenceThresholdChange?.(Number(e.target.value))}
+              className="w-24 h-1.5 bg-slate-800 rounded-lg appearance-none cursor-pointer accent-purple-500"
+            />
+            <span className="text-purple-300 font-bold text-[10px] w-8">
+              {confidenceThreshold}%+
+            </span>
+          </div>
         </div>
 
         {layoutMode === 'quad-2x2' && (

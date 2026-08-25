@@ -643,7 +643,7 @@ export const LiveStreamPlayer: React.FC<LiveStreamPlayerProps> = ({
     const dataUrl = canvas.toDataURL('image/png');
     const a = document.createElement('a');
     a.href = dataUrl;
-    a.download = `TRINETRA_CAM1_SNAPSHOT_${Date.now()}.png`;
+    a.download = `SEEMADRISHTI_CAM1_SNAPSHOT_${Date.now()}.png`;
     a.click();
   };
 

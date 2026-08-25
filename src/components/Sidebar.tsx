@@ -17,7 +17,7 @@ import {
   Disc,
 } from 'lucide-react';
 import { ViewMode } from '../types';
-import { TrinetraLogo } from './TrinetraLogo';
+import { SeemadrishtiLogo } from './SeemadrishtiLogo';
 import { recordingEngine } from '../utils/recordingManager';
 
 interface SidebarProps {
@@ -71,7 +71,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
       )}
 
       <aside
-        id="trinetra-sidebar"
+        id="seemadrishti-sidebar"
         className={`fixed top-0 bottom-0 left-0 z-50 w-64 bg-[#010307] border-r border-cyan-500/20 flex flex-col justify-between transition-transform duration-300 ease-in-out lg:static lg:translate-x-0 shadow-[10px_0_40px_rgba(0,0,0,0.95)] ${
           isOpenMobile ? 'translate-x-0' : '-translate-x-full'
         }`}
@@ -80,11 +80,11 @@ export const Sidebar: React.FC<SidebarProps> = ({
         <div>
           <div className="p-4 flex items-center gap-3 border-b border-cyan-500/20 bg-[#040812]/80">
             <div className="w-9 h-9 flex items-center justify-center bg-cyan-950 border border-cyan-400/60 rounded-lg shadow-[0_0_15px_rgba(0,240,255,0.4)] shrink-0 text-cyan-300">
-              <TrinetraLogo size={20} />
+              <SeemadrishtiLogo size={20} />
             </div>
             <div>
               <div className="flex items-center gap-2">
-                <h1 className="text-sm font-black text-white tracking-widest font-mono">TRINETRA</h1>
+                <h1 className="text-sm font-black text-white tracking-widest font-mono">SEEMADRISHTI</h1>
                 <span className="px-1.5 py-0.2 rounded bg-cyan-950 text-cyan-300 border border-cyan-500/40 text-[8px] font-bold font-mono">
                   MIL-SPEC v2.8
                 </span>

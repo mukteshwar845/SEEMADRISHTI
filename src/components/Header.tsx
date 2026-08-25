@@ -78,7 +78,7 @@ export const Header: React.FC<HeaderProps> = ({
                 id="dashboard-title-heading"
                 className="text-xs sm:text-sm font-black tracking-[0.18em] text-cyan-300 uppercase font-mono drop-shadow-[0_0_8px_rgba(0,240,255,0.4)]"
               >
-                TRINETRA AI DASHBOARD
+                SEEMADRISHTI AI DASHBOARD
               </h2>
               <span className="hidden md:inline-flex px-1.5 py-0.5 rounded text-[8px] font-bold font-mono tracking-widest bg-cyan-950 text-cyan-400 border border-cyan-500/40 shadow-[0_0_8px_rgba(0,240,255,0.2)]">
                 [SIH26187 - MHA]

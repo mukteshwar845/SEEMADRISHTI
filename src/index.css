@@ -1,6 +1,47 @@
 @import "tailwindcss";
 
 @layer base {
+  :root {
+    --bg-app: #000000;
+    --bg-panel: rgba(4, 7, 13, 0.92);
+    --bg-panel-solid: #040812;
+    --bg-subtle: #090d16;
+    --text-main: #f1f5f9;
+    --text-muted: #94a3b8;
+    --text-faint: #64748b;
+    --border-main: rgba(0, 240, 255, 0.2);
+    --border-subtle: rgba(0, 240, 255, 0.08);
+    --accent-cyan: #00f0ff;
+    --accent-green: #00ff66;
+    --accent-red: #ff0055;
+    --accent-amber: #f59e0b;
+    --glow-cyan: 0 0 15px rgba(0, 240, 255, 0.35);
+    --glow-green: 0 0 15px rgba(0, 255, 102, 0.35);
+    --glow-red: 0 0 15px rgba(255, 0, 85, 0.35);
+  }
+
+  [data-theme="daylight-field"],
+  [data-theme="standard"],
+  html.theme-daylight,
+  html.theme-standard {
+    --bg-app: #f8fafc;
+    --bg-panel: #ffffff;
+    --bg-panel-solid: #ffffff;
+    --bg-subtle: #f1f5f9;
+    --text-main: #0f172a;
+    --text-muted: #334155;
+    --text-faint: #64748b;
+    --border-main: #cbd5e1;
+    --border-subtle: #e2e8f0;
+    --accent-cyan: #0284c7;
+    --accent-green: #16a34a;
+    --accent-red: #dc2626;
+    --accent-amber: #d97706;
+    --glow-cyan: none;
+    --glow-green: none;
+    --glow-red: none;
+  }
+
   body {
     background-color: #000000;
     color: #e2e8f0;
@@ -12,12 +53,27 @@
       linear-gradient(to bottom, rgba(0, 240, 255, 0.025) 1px, transparent 1px);
     background-size: 100% 100%, 100% 100%, 24px 24px, 24px 24px;
     background-attachment: fixed;
+    transition: background-color 0.3s ease, color 0.3s ease;
+  }
+
+  /* Daylight Field High-Visibility Theme */
+  [data-theme="daylight-field"] body,
+  [data-theme="standard"] body,
+  html.theme-daylight body,
+  html.theme-standard body {
+    background-color: #f8fafc;
+    color: #0f172a;
+    background-image: 
+      radial-gradient(circle at 50% 0%, rgba(14, 165, 233, 0.04) 0%, transparent 60%),
+      linear-gradient(to right, rgba(203, 213, 225, 0.4) 1px, transparent 1px),
+      linear-gradient(to bottom, rgba(203, 213, 225, 0.4) 1px, transparent 1px);
+    background-size: 100% 100%, 32px 32px, 32px 32px;
   }
 
   /* Stealth Pitch-Black Custom Scrollbars */
   ::-webkit-scrollbar {
-    width: 4px;
-    height: 4px;
+    width: 5px;
+    height: 5px;
   }
   ::-webkit-scrollbar-track {
     background: #000000;
@@ -32,6 +88,61 @@
     background: #00f0ff;
     box-shadow: 0 0 10px #00f0ff;
   }
+
+  [data-theme="daylight-field"] ::-webkit-scrollbar-track,
+  [data-theme="standard"] ::-webkit-scrollbar-track,
+  .theme-daylight ::-webkit-scrollbar-track,
+  .theme-standard ::-webkit-scrollbar-track {
+    background: #f1f5f9;
+    border-left: 1px solid #cbd5e1;
+  }
+  [data-theme="daylight-field"] ::-webkit-scrollbar-thumb,
+  [data-theme="standard"] ::-webkit-scrollbar-thumb,
+  .theme-daylight ::-webkit-scrollbar-thumb,
+  .theme-standard ::-webkit-scrollbar-thumb {
+    background: #cbd5e1;
+    border-radius: 3px;
+    border: 1px solid #94a3b8;
+  }
+  [data-theme="daylight-field"] ::-webkit-scrollbar-thumb:hover,
+  [data-theme="standard"] ::-webkit-scrollbar-thumb:hover,
+  .theme-daylight ::-webkit-scrollbar-thumb:hover,
+  .theme-standard ::-webkit-scrollbar-thumb:hover {
+    background: #0284c7;
+    border-color: #0369a1;
+  }
+}
+
+/* Global High Severity Alarm Strobe Animations */
+@keyframes perimeterAlarmStrobe {
+  0%, 100% {
+    box-shadow: inset 0 0 70px 10px rgba(239, 68, 68, 0.65), 0 0 50px rgba(239, 68, 68, 0.8);
+    border-color: rgba(239, 68, 68, 0.95);
+  }
+  50% {
+    box-shadow: inset 0 0 20px 2px rgba(239, 68, 68, 0.15), 0 0 10px rgba(239, 68, 68, 0.2);
+    border-color: rgba(239, 68, 68, 0.3);
+  }
+}
+
+@keyframes globalScreenFlashPulse {
+  0% {
+    background-color: rgba(239, 68, 68, 0.22);
+  }
+  50% {
+    background-color: rgba(239, 68, 68, 0.04);
+  }
+  100% {
+    background-color: rgba(239, 68, 68, 0.22);
+  }
+}
+
+.animate-perimeter-strobe {
+  animation: perimeterAlarmStrobe 0.8s ease-in-out infinite;
+}
+
+.animate-screen-flash-pulse {
+  animation: globalScreenFlashPulse 0.8s ease-in-out infinite;
 }
 
 /* Animations */
@@ -97,8 +208,8 @@
 
 /* Hacked HUD Borders & Containers */
 .hacked-panel {
-  background: rgba(4, 7, 13, 0.92);
-  border: 1px solid rgba(0, 240, 255, 0.18);
+  background: var(--bg-panel, rgba(4, 7, 13, 0.92));
+  border: 1px solid var(--border-main, rgba(0, 240, 255, 0.18));
   box-shadow: 0 0 20px -2px rgba(0, 0, 0, 0.9), inset 0 0 15px rgba(0, 240, 255, 0.02);
   position: relative;
 }
@@ -108,16 +219,51 @@
   box-shadow: 0 0 25px -2px rgba(0, 240, 255, 0.1), inset 0 0 20px rgba(0, 240, 255, 0.04);
 }
 
+[data-theme="daylight-field"] .hacked-panel,
+[data-theme="standard"] .hacked-panel,
+.theme-daylight .hacked-panel,
+.theme-standard .hacked-panel {
+  background: rgba(255, 255, 255, 0.96);
+  border: 1px solid rgba(148, 163, 184, 0.4);
+  box-shadow: 0 4px 15px -2px rgba(0, 0, 0, 0.06), 0 1px 3px rgba(0, 0, 0, 0.04);
+}
+
+[data-theme="daylight-field"] .hacked-panel:hover,
+[data-theme="standard"] .hacked-panel:hover,
+.theme-daylight .hacked-panel:hover,
+.theme-standard .hacked-panel:hover {
+  border-color: rgba(2, 132, 199, 0.5);
+  box-shadow: 0 8px 25px -3px rgba(2, 132, 199, 0.12);
+}
+
 .hacked-panel-red {
   background: rgba(8, 2, 5, 0.92);
   border: 1px solid rgba(255, 0, 85, 0.3);
   box-shadow: 0 0 20px -2px rgba(255, 0, 85, 0.12), inset 0 0 15px rgba(255, 0, 85, 0.03);
 }
 
+[data-theme="daylight-field"] .hacked-panel-red,
+[data-theme="standard"] .hacked-panel-red,
+.theme-daylight .hacked-panel-red,
+.theme-standard .hacked-panel-red {
+  background: rgba(254, 242, 242, 0.95);
+  border: 1px solid rgba(239, 68, 68, 0.4);
+  box-shadow: 0 4px 15px -2px rgba(239, 68, 68, 0.1);
+}
+
 .hacked-panel-green {
   background: rgba(2, 8, 4, 0.92);
   border: 1px solid rgba(0, 255, 102, 0.25);
   box-shadow: 0 0 20px -2px rgba(0, 255, 102, 0.1), inset 0 0 15px rgba(0, 255, 102, 0.03);
+}
+
+[data-theme="daylight-field"] .hacked-panel-green,
+[data-theme="standard"] .hacked-panel-green,
+.theme-daylight .hacked-panel-green,
+.theme-standard .hacked-panel-green {
+  background: rgba(240, 253, 244, 0.95);
+  border: 1px solid rgba(34, 197, 94, 0.4);
+  box-shadow: 0 4px 15px -2px rgba(34, 197, 94, 0.1);
 }
 
 /* Tactical Corner Brackets (HUD Trim) */
@@ -147,6 +293,21 @@
   pointer-events: none;
 }
 
+[data-theme="daylight-field"] .hud-corner-brackets::before,
+[data-theme="standard"] .hud-corner-brackets::before,
+.theme-daylight .hud-corner-brackets::before,
+.theme-standard .hud-corner-brackets::before {
+  border-top-color: #0284c7;
+  border-left-color: #0284c7;
+}
+[data-theme="daylight-field"] .hud-corner-brackets::after,
+[data-theme="standard"] .hud-corner-brackets::after,
+.theme-daylight .hud-corner-brackets::after,
+.theme-standard .hud-corner-brackets::after {
+  border-bottom-color: #0284c7;
+  border-right-color: #0284c7;
+}
+
 /* Green Corner Brackets */
 .hud-corner-green::before {
   content: '';
@@ -169,6 +330,21 @@
   border-bottom: 2px solid #00ff66;
   border-right: 2px solid #00ff66;
   pointer-events: none;
+}
+
+[data-theme="daylight-field"] .hud-corner-green::before,
+[data-theme="standard"] .hud-corner-green::before,
+.theme-daylight .hud-corner-green::before,
+.theme-standard .hud-corner-green::before {
+  border-top-color: #16a34a;
+  border-left-color: #16a34a;
+}
+[data-theme="daylight-field"] .hud-corner-green::after,
+[data-theme="standard"] .hud-corner-green::after,
+.theme-daylight .hud-corner-green::after,
+.theme-standard .hud-corner-green::after {
+  border-bottom-color: #16a34a;
+  border-right-color: #16a34a;
 }
 
 /* Red Corner Brackets */
@@ -195,6 +371,21 @@
   pointer-events: none;
 }
 
+[data-theme="daylight-field"] .hud-corner-red::before,
+[data-theme="standard"] .hud-corner-red::before,
+.theme-daylight .hud-corner-red::before,
+.theme-standard .hud-corner-red::before {
+  border-top-color: #dc2626;
+  border-left-color: #dc2626;
+}
+[data-theme="daylight-field"] .hud-corner-red::after,
+[data-theme="standard"] .hud-corner-red::after,
+.theme-daylight .hud-corner-red::after,
+.theme-standard .hud-corner-red::after {
+  border-bottom-color: #dc2626;
+  border-right-color: #dc2626;
+}
+
 .crt-grid-overlay {
   background: linear-gradient(
     rgba(18, 16, 16, 0) 50%, 
@@ -207,3 +398,227 @@
   );
   background-size: 100% 3px, 6px 100%;
 }
+
+/* =========================================================================
+   COMPREHENSIVE DAYLIGHT & STANDARD (WHITE / HIGH-VISIBILITY) THEME ENGINE
+   Transforms military dark HUD into crisp, polished, high-contrast command UI
+   ========================================================================= */
+
+[data-theme="daylight-field"],
+[data-theme="standard"],
+.theme-daylight,
+.theme-standard {
+  /* 1. Core Card & Panel Surfaces */
+  .bg-slate-900,
+  .bg-slate-950,
+  .bg-\[\#131b2e\],
+  .bg-\[\#0e1626\],
+  .bg-\[\#040812\],
+  .bg-\[\#060c18\],
+  .bg-\[\#010307\],
+  .bg-\[\#020409\],
+  .bg-\[\#02040a\],
+  .bg-\[\#0a101d\],
+  .bg-\[\#0a0f1d\],
+  .bg-\[\#0d1424\],
+  .bg-\[\#070d18\],
+  .bg-\[\#050b14\],
+  .bg-\[\#101726\],
+  .bg-\[\#162238\],
+  .bg-\[\#182338\],
+  .bg-\[\#1e293b\]\/95,
+  .bg-black\/90,
+  .bg-slate-900\/90,
+  .bg-slate-950\/90,
+  .bg-slate-950\/95 {
+    background-color: #ffffff !important;
+    border-color: #cbd5e1 !important;
+  }
+
+  /* Secondary light grey surfaces & table headers */
+  .bg-slate-950\/50,
+  .bg-slate-950\/60,
+  .bg-slate-950\/70,
+  .bg-slate-950\/80,
+  .bg-slate-900\/50,
+  .bg-slate-900\/60,
+  .bg-slate-900\/70,
+  .bg-slate-900\/80,
+  .bg-\[\#0b1220\],
+  .bg-\[\#0c1424\],
+  .bg-black\/80,
+  .bg-black\/60 {
+    background-color: #f8fafc !important;
+    border-color: #e2e8f0 !important;
+  }
+
+  /* 2. Crisp Borders */
+  .border-slate-800,
+  .border-slate-700,
+  .border-slate-800\/80,
+  .border-slate-800\/90,
+  .border-slate-700\/60,
+  .border-\[\#1e293b\],
+  .border-\[\#21304d\],
+  .border-\[\#233555\],
+  .border-cyan-500\/20,
+  .border-cyan-500\/30,
+  .border-cyan-500\/40,
+  .border-white\/\[0\.06\],
+  .border-white\/\[0\.08\],
+  .border-white\/\[0\.12\] {
+    border-color: #cbd5e1 !important;
+  }
+
+  /* 3. Typography & Contrast */
+  .text-white,
+  .text-slate-100,
+  .text-slate-200 {
+    color: #0f172a !important;
+  }
+
+  .text-slate-300,
+  .text-slate-400 {
+    color: #334155 !important;
+  }
+
+  .text-slate-500 {
+    color: #64748b !important;
+  }
+
+  /* High-Contrast Tactical Accent Colors */
+  .text-cyan-400,
+  .text-cyan-300 {
+    color: #0284c7 !important;
+  }
+
+  .text-emerald-400,
+  .text-emerald-300 {
+    color: #15803d !important;
+  }
+
+  .text-rose-400,
+  .text-rose-300 {
+    color: #dc2626 !important;
+  }
+
+  .text-amber-400,
+  .text-amber-300 {
+    color: #b45309 !important;
+  }
+
+  .text-purple-400,
+  .text-purple-300 {
+    color: #7e22ce !important;
+  }
+
+  /* 4. Soft Tactical Pills & Badges (No dark mud, clean pastel tint) */
+  .bg-cyan-950,
+  .bg-cyan-950\/80,
+  .bg-cyan-950\/90,
+  .bg-cyan-900\/50,
+  .bg-cyan-950\/50,
+  .bg-cyan-950\/40 {
+    background-color: #e0f2fe !important;
+    border-color: #7dd3fc !important;
+    color: #0369a1 !important;
+  }
+
+  .bg-emerald-950,
+  .bg-emerald-950\/80,
+  .bg-emerald-950\/90,
+  .bg-emerald-900\/50 {
+    background-color: #dcfce7 !important;
+    border-color: #86efac !important;
+    color: #15803d !important;
+  }
+
+  .bg-rose-950,
+  .bg-rose-950\/80,
+  .bg-rose-950\/90,
+  .bg-rose-900\/50,
+  .bg-rose-950\/20 {
+    background-color: #fee2e2 !important;
+    border-color: #fca5a5 !important;
+    color: #b91c1c !important;
+  }
+
+  .bg-amber-950,
+  .bg-amber-950\/80,
+  .bg-amber-950\/90,
+  .bg-amber-900\/50,
+  .bg-amber-950\/20 {
+    background-color: #fef3c7 !important;
+    border-color: #fcd34d !important;
+    color: #92400e !important;
+  }
+
+  .bg-purple-950,
+  .bg-purple-950\/80,
+  .bg-purple-950\/90 {
+    background-color: #f3e8ff !important;
+    border-color: #d8b4fe !important;
+    color: #6b21a8 !important;
+  }
+
+  /* 5. Clean Tactile Buttons & Interactive Elements */
+  button.bg-slate-950,
+  button.bg-slate-900,
+  button.bg-slate-800,
+  button.bg-slate-850 {
+    background-color: #f1f5f9 !important;
+    border-color: #cbd5e1 !important;
+    color: #0f172a !important;
+  }
+
+  button.bg-slate-950:hover,
+  button.bg-slate-900:hover,
+  button.bg-slate-800:hover {
+    background-color: #e2e8f0 !important;
+    border-color: #94a3b8 !important;
+    color: #000000 !important;
+  }
+
+  /* Form Inputs & Controls */
+  input[type="text"],
+  input[type="number"],
+  input[type="password"],
+  input[type="search"],
+  select,
+  textarea {
+    background-color: #ffffff !important;
+    color: #0f172a !important;
+    border-color: #cbd5e1 !important;
+  }
+
+  input::placeholder,
+  textarea::placeholder {
+    color: #94a3b8 !important;
+  }
+
+  /* 6. Hardware Telemetry Circular SVG Gauges */
+  .stroke-slate-800 {
+    stroke: #e2e8f0 !important;
+  }
+
+  /* 7. Drop Shadows & Glows */
+  .shadow-2xl,
+  .shadow-xl,
+  .shadow-lg {
+    box-shadow: 0 4px 15px -2px rgba(15, 23, 42, 0.08), 0 2px 4px -2px rgba(15, 23, 42, 0.04) !important;
+  }
+
+  /* 8. Camera Grid Video Overlays */
+  /* Keep video stream screen dark inside the player, but give the card frame clean white chrome */
+  #tactical-matrix-view-root [id^="matrix-camera-card-"] {
+    background-color: #ffffff !important;
+    border-color: #cbd5e1 !important;
+    box-shadow: 0 4px 14px -2px rgba(15, 23, 42, 0.08) !important;
+  }
+
+  #tactical-matrix-view-root [id^="matrix-camera-card-"] > div:first-child {
+    background-color: #f8fafc !important;
+    border-bottom-color: #e2e8f0 !important;
+  }
+}
+

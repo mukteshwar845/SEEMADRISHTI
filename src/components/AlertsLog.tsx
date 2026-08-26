@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { AlertItem } from '../types';
-import { ChevronRight, ShieldAlert, AlertTriangle, Radio, Shield, Filter, Search } from 'lucide-react';
+import { ChevronRight, ShieldAlert, AlertTriangle, Radio, Shield, Filter, Search, Download } from 'lucide-react';
 
 interface AlertsLogProps {
   alerts: AlertItem[];
@@ -15,6 +15,26 @@ export const AlertsLog: React.FC<AlertsLogProps> = ({
 }) => {
   const [severityFilter, setSeverityFilter] = useState<'ALL' | 'High' | 'Medium' | 'Low'>('ALL');
   const [searchQuery, setSearchQuery] = useState('');
+  
+  const handleExportCSV = () => {
+    if (alerts.length === 0) return;
+    const headers = ['ID', 'Title', 'Camera', 'Severity', 'Time', 'Type', 'Status', 'Confidence'];
+    const csvContent = [
+      headers.join(','),
+      ...alerts.map(a => 
+        `"${a.id}","${a.title}","${a.camera}","${a.severity}","${a.time}","${a.type}","${a.status}","${a.confidence || ''}"`
+      )
+    ].join('\n');
+    
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.setAttribute('download', `tactical_alerts_export_${Date.now()}.csv`);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
 
   const filteredAlerts = alerts.filter((alert) => {
     const matchesSeverity = severityFilter === 'ALL' || alert.severity === severityFilter;
@@ -62,9 +82,19 @@ export const AlertsLog: React.FC<AlertsLogProps> = ({
             REAL-TIME ALERT FEED
           </span>
         </div>
-        <span className="text-[9px] text-rose-400 font-mono font-bold bg-rose-950/80 px-2 py-0.5 rounded border border-rose-500/40">
-          LIVE STREAM
-        </span>
+        <div className="flex items-center gap-2">
+          <button 
+            onClick={handleExportCSV}
+            className="flex items-center gap-1 text-[9px] text-cyan-400 font-mono font-bold bg-cyan-950/40 px-2 py-0.5 rounded border border-cyan-500/30 hover:bg-cyan-900/60 transition-colors"
+            title="Export to CSV"
+          >
+            <Download size={10} />
+            EXPORT
+          </button>
+          <span className="text-[9px] text-rose-400 font-mono font-bold bg-rose-950/80 px-2 py-0.5 rounded border border-rose-500/40">
+            LIVE STREAM
+          </span>
+        </div>
       </div>
 
       {/* Filter Tabs & Search Bar */}

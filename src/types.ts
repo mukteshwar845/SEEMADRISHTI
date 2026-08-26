@@ -5,13 +5,44 @@ export type ViewMode =
   | 'analytics'
   | 'detections' 
   | 'alerts'
+  | 'diagnostics'
   | 'historical-logs' 
+  | 'notification-history'
   | 'livestream' 
   | 'stitching' 
   | 'settings' 
   | 'users';
 
 export type AlertSeverity = 'High' | 'Medium' | 'Low';
+
+export interface CameraDiagnosticMetric {
+  cameraId: number | string;
+  tag: string;
+  name: string;
+  location: string;
+  status: 'Online' | 'Degraded' | 'Offline';
+  latencyMs: number;
+  jitterMs: number;
+  frameDropRate: number; // percentage e.g. 0.12%
+  packetLossPercent: number; // e.g. 0.05%
+  bitrateMbps: number; // e.g. 8.4
+  targetFps: number;
+  actualFps: number;
+  uptimePercent: number; // e.g. 99.94
+  protocol: 'RTSP/TCP' | 'RTSP/UDP' | 'WebRTC' | 'HLS/TLS';
+  resolution: string;
+  codec: string;
+  edgeTemperatureC: number;
+  healthScore: number; // 0 - 100
+  lastPingTimestamp: number;
+  historyLatency: number[]; // last 10-20 measurements
+}
+
+export interface WebSocketMessage {
+  type: 'ALERT_TRIGGER' | 'CAMERA_METRICS' | 'SYSTEM_TELEMETRY' | 'CONNECTION_ACK' | 'PING_PONG';
+  payload: any;
+  timestamp: number;
+}
 
 export interface RecordedClip {
   id: string;
@@ -50,6 +81,8 @@ export interface AlertItem {
   confidence?: number;
   snapshotUrl?: string;
   assignedUnit?: string;
+  audioTriggered?: boolean;
+  thresholdAtTime?: number;
 }
 
 export interface DetectionItem {
@@ -79,6 +112,7 @@ export interface MatrixCameraFeed {
   bitrate?: string;
   aiModels?: string[];
   activeDetections?: number;
+  batteryLevel?: number;
 }
 
 export interface CameraFeed {

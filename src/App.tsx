@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { ViewMode, AlertItem, CameraFeed, MatrixCameraFeed } from './types';
 import {
   initialAlerts,
@@ -23,15 +23,24 @@ import { AlertDetailModal } from './components/AlertDetailModal';
 import { AnalyticsDashboard } from './components/AnalyticsDashboard';
 import { IncidentInspectorView } from './components/IncidentInspectorView';
 import { HistoricalLogsView } from './components/HistoricalLogsView';
+import { NotificationHistory } from './components/NotificationHistory';
+import { CameraHealthDiagnosticsView } from './components/CameraHealthDiagnosticsView';
 import { audioAlertEngine, triggerIntrusionAudioAlert } from './utils/audioAlert';
+import { ThemeProvider, useTheme } from './context/ThemeContext';
+import { webSocketService } from './services/websocketService';
+import { Siren, ShieldAlert } from 'lucide-react';
 
-export default function App() {
+function SeemadrishtiMainApp() {
+  const { theme, isDaylight } = useTheme();
   const [currentView, setCurrentView] = useState<ViewMode>('dashboard');
   const [isMobileSidebarOpen, setIsMobileSidebarOpen] = useState(false);
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [isAudioMuted, setIsAudioMuted] = useState(false);
   const [isAudioPingActive, setIsAudioPingActive] = useState(false);
   const [audioVolume, setAudioVolume] = useState(85);
+
+  // Global Strobe/Flash Alert Animation State for High Severity Breaches
+  const [isGlobalFlashActive, setIsGlobalFlashActive] = useState(false);
 
   // 9-Camera Matrix Reactive State
   const [matrixCameras, setMatrixCameras] = useState<MatrixCameraFeed[]>(initialMatrixCameras);
@@ -88,6 +97,48 @@ export default function App() {
   );
   const [showTrajectoryVectors, setShowTrajectoryVectors] = useState<boolean>(true);
 
+  // Trigger Flash Animation Helper
+  const triggerGlobalFlash = useCallback(() => {
+    setIsGlobalFlashActive(true);
+    setTimeout(() => {
+      setIsGlobalFlashActive(false);
+    }, 4500);
+  }, []);
+
+  // WebSocket Live Stream Service Integration
+  useEffect(() => {
+    webSocketService.connect();
+
+    // Ingest Live Stream Alerts from WebSocket Server
+    const unsubAlerts = webSocketService.onAlert((incomingAlert) => {
+      setAlerts((prev) => {
+        // Prevent duplicate IDs
+        if (prev.some((a) => a.id === incomingAlert.id)) return prev;
+        return [incomingAlert, ...prev];
+      });
+
+      if (incomingAlert.severity === 'High') {
+        triggerGlobalFlash();
+        if (incomingAlert.audioTriggered) {
+          triggerIntrusionAudioAlert(incomingAlert);
+        }
+      }
+    });
+
+    // Ingest Live Telemetry updates from WebSocket Server
+    const unsubTelemetry = webSocketService.onTelemetry((incomingTelemetry) => {
+      setTelemetry((prev) => ({
+        ...prev,
+        ...incomingTelemetry,
+      }));
+    });
+
+    return () => {
+      unsubAlerts();
+      unsubTelemetry();
+    };
+  }, [triggerGlobalFlash]);
+
   // Subscribe to Audio Alert Engine
   useEffect(() => {
     const unsubscribe = audioAlertEngine.subscribe((isPlaying) => {
@@ -124,21 +175,29 @@ export default function App() {
     const camName = cam ? cam.name : 'Sector A - Perimeter Fence Line';
 
     const randomConfidence = Math.round((50 + Math.random() * 49.9) * 10) / 10;
+    const isHighSeverity = randomConfidence >= 90;
 
     const newAlert: AlertItem = {
       id: `alt-${Date.now()}`,
-      title: 'Perimeter Intrusion Alert',
+      title: isHighSeverity ? 'CRITICAL PERIMETER BREACH' : 'Perimeter Intrusion Alert',
       camera: camTag,
-      severity: randomConfidence >= 90 ? 'High' : randomConfidence >= 75 ? 'Medium' : 'Low',
+      severity: isHighSeverity ? 'High' : randomConfidence >= 75 ? 'Medium' : 'Low',
       time: timeStr,
       type: 'Perimeter Breach',
       timestamp: Date.now(),
       status: 'active',
-      description: `Tactical barrier crossing detected on ${camName}. Immediate response dispatched.`,
+      description: `Tactical barrier crossing detected on ${camName}. AI anomaly detection flagged trajectory crossing border perimeter.`,
       location: camName,
       confidence: randomConfidence,
       assignedUnit: 'Border Patrol Squad Alpha',
+      audioTriggered: randomConfidence >= confidenceThreshold,
+      thresholdAtTime: confidenceThreshold,
     };
+
+    // Trigger global screen flash strobe if High severity
+    if (isHighSeverity || newAlert.severity === 'High') {
+      triggerGlobalFlash();
+    }
 
     if (randomConfidence >= confidenceThreshold) {
       triggerIntrusionAudioAlert(newAlert);
@@ -146,6 +205,7 @@ export default function App() {
       setSelectedAlertForModal(newAlert);
     } else {
       console.log(`[AI FILTER] Alert suppressed. Confidence (${randomConfidence}%) below threshold (${confidenceThreshold}%).`);
+      setAlerts((prev) => [newAlert, ...prev]);
     }
   };
 
@@ -168,8 +228,33 @@ export default function App() {
   return (
     <div
       id="seemadrishti-app-root"
-      className="min-h-screen bg-slate-950 text-slate-200 flex flex-row overflow-x-hidden font-mono antialiased selection:bg-cyan-500 selection:text-black"
+      className={`min-h-screen flex flex-row overflow-x-hidden font-mono antialiased relative transition-colors duration-300 ${
+        isDaylight
+          ? 'bg-[#f1f5f9] text-slate-900 selection:bg-cyan-600 selection:text-white'
+          : 'bg-[#02040a] text-slate-200 selection:bg-cyan-500 selection:text-black'
+      } ${isGlobalFlashActive ? 'animate-screen-flash-pulse' : ''}`}
     >
+      {/* Global Perimeter Alarm Visual Warning Overlay Banner */}
+      {isGlobalFlashActive && (
+        <div
+          id="global-perimeter-alarm-banner"
+          className="fixed top-0 left-0 right-0 z-50 bg-rose-600/90 text-white border-b-2 border-rose-400 py-1.5 px-4 flex items-center justify-between shadow-[0_0_30px_rgba(255,0,85,0.9)] animate-bounce font-mono text-xs font-black tracking-widest"
+        >
+          <div className="flex items-center gap-2">
+            <Siren size={18} className="animate-spin text-white" />
+            <span className="uppercase">
+              CRITICAL DEFCON-1 PERIMETER INTRUSION DETECTED — TACTICAL ALARM ENGAGED
+            </span>
+          </div>
+          <button
+            onClick={() => setIsGlobalFlashActive(false)}
+            className="px-2 py-0.5 rounded bg-black/40 hover:bg-black/70 text-white text-[10px] uppercase cursor-pointer"
+          >
+            DISMISS ALARM STROBE
+          </button>
+        </div>
+      )}
+
       {/* 1. Left Sidebar Navigation */}
       <Sidebar
         currentView={currentView}
@@ -180,25 +265,45 @@ export default function App() {
       />
 
       {/* Main Content Area */}
-      <div className="flex-1 flex flex-col min-w-0 bg-slate-950 relative">
+      <div
+        className={`flex-1 flex flex-col min-w-0 relative ${
+          isDaylight ? 'bg-[#f8fafc]' : 'bg-[#02040a]'
+        }`}
+      >
         {/* Tactical Defense Telemetry Ribbon */}
-        <div className="h-6 bg-slate-950 border-b border-slate-800 px-4 flex items-center justify-between text-[9px] text-cyan-400 font-mono select-none overflow-hidden">
+        <div
+          className={`h-6 px-4 flex items-center justify-between text-[9px] font-mono select-none overflow-hidden border-b ${
+            isDaylight
+              ? 'bg-slate-200 border-slate-300 text-slate-700'
+              : 'bg-[#010307] border-cyan-500/20 text-cyan-400'
+          }`}
+        >
           <div className="flex items-center gap-3">
-            <span className="flex items-center gap-1 text-emerald-400 font-bold">
-              <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-ping"></span>
+            <span
+              className={`flex items-center gap-1 font-bold ${
+                isDaylight ? 'text-emerald-700' : 'text-emerald-400'
+              }`}
+            >
+              <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-ping"></span>
               [SEC_NET: MIL-SPEC ENCRYPTED 256-BIT]
             </span>
-            <span className="text-slate-700">|</span>
-            <span className="text-slate-400 hidden sm:inline">
+            <span className="text-slate-400">|</span>
+            <span className="hidden sm:inline">
               [SYSTEM LATENCY: 14ms // 60 FPS INFERENCE]
             </span>
           </div>
 
           <div className="flex items-center gap-3">
-            <span className="text-rose-400 font-bold">
+            <span className="text-rose-600 dark:text-rose-400 font-bold">
               [ALERTS TODAY: {alerts.length}]
             </span>
-            <span className="text-cyan-400 font-bold hidden sm:inline px-2 py-0.5 rounded bg-cyan-950/80 border border-cyan-500/40">
+            <span
+              className={`font-bold hidden sm:inline px-2 py-0.5 rounded border ${
+                isDaylight
+                  ? 'bg-cyan-100 text-cyan-900 border-cyan-300'
+                  : 'bg-cyan-950/80 border-cyan-500/40 text-cyan-400'
+              }`}
+            >
               [DEFCON 4 // ACTIVE DEFENSE]
             </span>
           </div>
@@ -216,11 +321,11 @@ export default function App() {
         <main className="flex-1 p-3.5 sm:p-5 overflow-y-auto space-y-5">
           {currentView === 'dashboard' && (
             <>
-              {/* 3. Top Metrics Row: [TOTAL CAMERAS: 9] [ACTIVE FEEDS: 9] [ALERTS TODAY: 19] [TOTAL DETECTIONS: 4,892] */}
+              {/* 3. Top Metrics Row */}
               <KpiCards
                 totalCameras={matrixCameras.length}
                 activeCameras={matrixCameras.filter((c) => c.status === 'Online').length}
-                alertsToday={19}
+                alertsToday={alerts.length}
                 totalDetections={'4,892'}
                 onCardClick={(type) => {
                   if (type === 'cameras' || type === 'active') setCurrentView('cameras');
@@ -235,6 +340,7 @@ export default function App() {
                 <div className="lg:col-span-9 flex flex-col">
                   <TacticalMatrixView
                     cameras={matrixCameras}
+                    alerts={alerts}
                     onUpdateCameraName={handleUpdateCameraName}
                     onTriggerAlert={handleSimulateIntrusion}
                     onSelectCameraForDetails={(cam) => {
@@ -260,9 +366,12 @@ export default function App() {
             </>
           )}
 
+          {currentView === 'diagnostics' && <CameraHealthDiagnosticsView />}
+
           {currentView === 'cameras' && (
             <TacticalMatrixView
               cameras={matrixCameras}
+              alerts={alerts}
               onUpdateCameraName={handleUpdateCameraName}
               onTriggerAlert={handleSimulateIntrusion}
               onSelectCameraForDetails={(cam) => {
@@ -302,6 +411,9 @@ export default function App() {
               onResolveAlert={handleResolveAlert}
             />
           )}
+          {currentView === 'notification-history' && (
+            <NotificationHistory alerts={alerts} />
+          )}
 
           {currentView === 'livestream' && (
             <QuadLiveStreamView
@@ -340,3 +452,12 @@ export default function App() {
     </div>
   );
 }
+
+export default function App() {
+  return (
+    <ThemeProvider>
+      <SeemadrishtiMainApp />
+    </ThemeProvider>
+  );
+}
+

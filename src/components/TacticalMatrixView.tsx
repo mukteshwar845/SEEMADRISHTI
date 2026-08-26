@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { MatrixCameraFeed } from '../types';
+import { MatrixCameraFeed, AlertItem } from '../types';
 import { MatrixCameraCell } from './MatrixCameraCell';
 import {
   Grid,
@@ -21,6 +21,7 @@ import {
   Pause,
   Video,
   RefreshCcw,
+  Flame,
 } from 'lucide-react';
 import { recordingEngine } from '../utils/recordingManager';
 
@@ -28,6 +29,7 @@ export type MatrixLayoutMode = 'matrix-3x3' | 'quad-2x2' | 'spotlight';
 
 interface TacticalMatrixViewProps {
   cameras: MatrixCameraFeed[];
+  alerts?: AlertItem[];
   onUpdateCameraName: (id: number, newName: string) => void;
   onUpdateCameraSource?: (id: number, newSrc: string, customName?: string) => void;
   onBatchUpdateSources?: (updates: { id: number; src: string; customName?: string }[]) => void;
@@ -39,6 +41,7 @@ interface TacticalMatrixViewProps {
 
 export const TacticalMatrixView: React.FC<TacticalMatrixViewProps> = ({
   cameras,
+  alerts = [],
   onUpdateCameraName,
   onSelectCameraForDetails,
   onTriggerAlert,
@@ -53,6 +56,24 @@ export const TacticalMatrixView: React.FC<TacticalMatrixViewProps> = ({
   const [globalRecording, setGlobalRecording] = useState(false);
   const [isPatrolMode, setIsPatrolMode] = useState(false);
   const [patrolInterval, setPatrolInterval] = useState(5);
+  const [isHeatmapActive, setIsHeatmapActive] = useState(false);
+
+  // Calculate heatmap data
+  const heatmapData = React.useMemo(() => {
+    const counts: Record<string, number> = {};
+    let max = 0;
+    alerts.forEach(alert => {
+      counts[alert.camera] = (counts[alert.camera] || 0) + 1;
+      if (counts[alert.camera] > max) {
+        max = counts[alert.camera];
+      }
+    });
+    const intensities: Record<string, number> = {};
+    Object.keys(counts).forEach(camTag => {
+      intensities[camTag] = max > 0 ? counts[camTag] / max : 0;
+    });
+    return intensities;
+  }, [alerts]);
 
   // Patrol Mode logic
   useEffect(() => {
@@ -187,7 +208,7 @@ export const TacticalMatrixView: React.FC<TacticalMatrixViewProps> = ({
             onClick={() => { setLayoutMode('matrix-3x3'); setIsPatrolMode(false); }}
             className={`px-3 py-1.5 rounded-lg text-xs font-mono font-bold tracking-wider flex items-center gap-1.5 transition-all cursor-pointer border ${
               layoutMode === 'matrix-3x3'
-                ? 'bg-cyan-600 text-black border-cyan-400 shadow-[0_0_12px_rgba(0,240,255,0.4)]'
+                ? 'bg-cyan-600 text-white border-cyan-400 shadow-[0_0_12px_rgba(0,240,255,0.4)] font-bold'
                 : 'bg-slate-950 text-slate-400 hover:text-white border-slate-800 hover:bg-slate-800'
             }`}
           >
@@ -201,7 +222,7 @@ export const TacticalMatrixView: React.FC<TacticalMatrixViewProps> = ({
             onClick={() => { setLayoutMode('quad-2x2'); setIsPatrolMode(false); }}
             className={`px-3 py-1.5 rounded-lg text-xs font-mono font-bold tracking-wider flex items-center gap-1.5 transition-all cursor-pointer border ${
               layoutMode === 'quad-2x2'
-                ? 'bg-cyan-600 text-black border-cyan-400 shadow-[0_0_12px_rgba(0,240,255,0.4)]'
+                ? 'bg-cyan-600 text-white border-cyan-400 shadow-[0_0_12px_rgba(0,240,255,0.4)] font-bold'
                 : 'bg-slate-950 text-slate-400 hover:text-white border-slate-800 hover:bg-slate-800'
             }`}
           >
@@ -215,7 +236,7 @@ export const TacticalMatrixView: React.FC<TacticalMatrixViewProps> = ({
             onClick={() => { setLayoutMode('spotlight'); setIsPatrolMode(false); }}
             className={`px-3 py-1.5 rounded-lg text-xs font-mono font-bold tracking-wider flex items-center gap-1.5 transition-all cursor-pointer border ${
               layoutMode === 'spotlight' && !isPatrolMode
-                ? 'bg-cyan-600 text-black border-cyan-400 shadow-[0_0_12px_rgba(0,240,255,0.4)]'
+                ? 'bg-cyan-600 text-white border-cyan-400 shadow-[0_0_12px_rgba(0,240,255,0.4)] font-bold'
                 : 'bg-slate-950 text-slate-400 hover:text-white border-slate-800 hover:bg-slate-800'
             }`}
           >
@@ -230,7 +251,7 @@ export const TacticalMatrixView: React.FC<TacticalMatrixViewProps> = ({
               onClick={() => setIsPatrolMode(!isPatrolMode)}
               className={`px-3 py-1 rounded-md text-xs font-mono font-bold tracking-wider flex items-center gap-1.5 transition-all cursor-pointer ${
                 isPatrolMode
-                  ? 'bg-amber-600 text-black shadow-[0_0_12px_rgba(251,191,36,0.4)]'
+                  ? 'bg-amber-600 text-white shadow-[0_0_12px_rgba(251,191,36,0.4)] font-bold'
                   : 'text-amber-400 hover:text-amber-300 hover:bg-amber-950/30'
               }`}
             >
@@ -253,6 +274,20 @@ export const TacticalMatrixView: React.FC<TacticalMatrixViewProps> = ({
               </select>
             )}
           </div>
+          
+          {/* Button 5: Threat Heatmap */}
+          <button
+            id="btn-layout-heatmap"
+            onClick={() => setIsHeatmapActive(!isHeatmapActive)}
+            className={`px-3 py-1.5 rounded-lg text-xs font-mono font-bold tracking-wider flex items-center gap-1.5 transition-all cursor-pointer border ${
+              isHeatmapActive
+                ? 'bg-rose-600 text-white border-rose-400 shadow-[0_0_12px_rgba(225,29,72,0.6)]'
+                : 'bg-slate-950 text-rose-400 hover:text-rose-300 border-slate-800 hover:bg-rose-950/30'
+            }`}
+          >
+            <Flame size={13} className={isHeatmapActive ? 'animate-pulse' : ''} />
+            <span>THREAT HEATMAP</span>
+          </button>
         </div>
       </div>
 
@@ -364,6 +399,7 @@ export const TacticalMatrixView: React.FC<TacticalMatrixViewProps> = ({
                 setLayoutMode('spotlight');
               }}
               onTriggerAlert={onTriggerAlert}
+              heatmapIntensity={isHeatmapActive ? heatmapData[cam.tag] || 0 : undefined}
             />
           ))}
         </div>
@@ -386,6 +422,7 @@ export const TacticalMatrixView: React.FC<TacticalMatrixViewProps> = ({
                 setLayoutMode('spotlight');
               }}
               onTriggerAlert={onTriggerAlert}
+              heatmapIntensity={isHeatmapActive ? heatmapData[cam.tag] || 0 : undefined}
             />
           ))}
         </div>
@@ -405,6 +442,7 @@ export const TacticalMatrixView: React.FC<TacticalMatrixViewProps> = ({
               liveTimestamp={liveTimestamp}
               onUpdateCameraName={onUpdateCameraName}
               onTriggerAlert={onTriggerAlert}
+              heatmapIntensity={isHeatmapActive ? heatmapData[spotlightCamera.tag] || 0 : undefined}
             />
           </div>
 
@@ -425,6 +463,7 @@ export const TacticalMatrixView: React.FC<TacticalMatrixViewProps> = ({
                   liveTimestamp={liveTimestamp}
                   onUpdateCameraName={onUpdateCameraName}
                   onTriggerAlert={onTriggerAlert}
+                  heatmapIntensity={isHeatmapActive ? heatmapData[cam.tag] || 0 : undefined}
                 />
                 <div className="absolute inset-0 bg-cyan-500/0 group-hover:bg-cyan-500/10 pointer-events-none transition-colors" />
               </div>

@@ -26,6 +26,13 @@ import {
   Bookmark,
   Clock,
   Move,
+  EyeOff,
+  Shield,
+  Battery, 
+  BatteryFull, 
+  BatteryMedium, 
+  BatteryLow, 
+  BatteryWarning,
 } from 'lucide-react';
 import { recordingEngine } from '../utils/recordingManager';
 
@@ -38,6 +45,7 @@ interface MatrixCameraCellProps {
   onUpdateCameraSource?: (id: number, newSrc: string, customName?: string) => void;
   onSelectSpotlight?: (cam: MatrixCameraFeed) => void;
   onTriggerAlert?: (cam: MatrixCameraFeed) => void;
+  heatmapIntensity?: number;
 }
 
 export const MatrixCameraCell: React.FC<MatrixCameraCellProps> = ({
@@ -48,6 +56,7 @@ export const MatrixCameraCell: React.FC<MatrixCameraCellProps> = ({
   onUpdateCameraName,
   onSelectSpotlight,
   onTriggerAlert,
+  heatmapIntensity,
 }) => {
   const videoRef = useRef<HTMLVideoElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
@@ -66,6 +75,7 @@ export const MatrixCameraCell: React.FC<MatrixCameraCellProps> = ({
   const [videoError, setVideoError] = useState(false);
   const [isRecording, setIsRecording] = useState(false);
   const [isAutoRotate, setIsAutoRotate] = useState(false);
+  const [isBlackout, setIsBlackout] = useState(false);
 
   // Playback Mode (LIVE vs RECORDED FOOTAGE)
   const [playbackMode, setPlaybackMode] = useState<'LIVE' | 'RECORDED'>('LIVE');
@@ -791,12 +801,36 @@ export const MatrixCameraCell: React.FC<MatrixCameraCellProps> = ({
         ctx.stroke();
       }
 
+      // -------------------------------------------------------------
+      // DRAW THREAT HEATMAP OVERLAY
+      // -------------------------------------------------------------
+      if (heatmapIntensity && heatmapIntensity > 0) {
+        ctx.save();
+        // Base red overlay scaled by intensity
+        ctx.fillStyle = `rgba(225, 29, 72, ${heatmapIntensity * 0.4})`;
+        ctx.fillRect(0, 0, width, height);
+        
+        // Render a grid-like or pulse effect based on intensity
+        const pulse = Math.sin(time * 3) * 0.1 + 0.9;
+        const radius = Math.min(width, height) * 0.4 * pulse * heatmapIntensity;
+        const centerX = width / 2;
+        const centerY = height / 2;
+        
+        const gradient = ctx.createRadialGradient(centerX, centerY, 0, centerX, centerY, radius * 1.5);
+        gradient.addColorStop(0, `rgba(225, 29, 72, ${heatmapIntensity * 0.6})`);
+        gradient.addColorStop(1, 'rgba(225, 29, 72, 0)');
+        
+        ctx.fillStyle = gradient;
+        ctx.fillRect(0, 0, width, height);
+        ctx.restore();
+      }
+
       animationFrameId = requestAnimationFrame(render);
     };
 
     animationFrameId = requestAnimationFrame(render);
     return () => cancelAnimationFrame(animationFrameId);
-  }, [camera, nightVision, thermalMode, showAiHud, isCompact, playbackMode, playbackTimeOffset, playbackSpeed, isAutoRotate, zoomLevel]);
+  }, [camera, nightVision, thermalMode, showAiHud, isCompact, playbackMode, playbackTimeOffset, playbackSpeed, isAutoRotate, zoomLevel, heatmapIntensity]);
 
   return (
     <div
@@ -937,6 +971,20 @@ export const MatrixCameraCell: React.FC<MatrixCameraCellProps> = ({
           className="absolute inset-0 w-full h-full pointer-events-none z-10 transition-transform duration-200"
         />
 
+        {/* Blackout Mode Overlay */}
+        {isBlackout && (
+          <div className="absolute inset-0 z-[15] bg-slate-950 flex flex-col items-center justify-center overflow-hidden pointer-events-none">
+            <div className="scanline-effect opacity-20"></div>
+            <div className="absolute inset-0 flex flex-col items-center justify-center p-4">
+              <div className="w-full h-full border-2 border-dashed border-emerald-500/30 rounded-lg flex flex-col items-center justify-center bg-emerald-950/20 backdrop-blur-md">
+                <Shield size={28} className="text-emerald-500 mb-2 animate-pulse" />
+                <span className="text-emerald-500 font-mono font-bold tracking-widest text-base sm:text-lg">SIGNAL SECURE</span>
+                <span className="text-emerald-500/60 font-mono text-[9px] tracking-widest mt-1 text-center">AREA MASKED BY OPERATOR</span>
+              </div>
+            </div>
+          </div>
+        )}
+
         {/* 3. Top-Left Watermark: Mode Badge + Time */}
         <div className="absolute top-2.5 left-2.5 flex items-center gap-1.5 z-20 pointer-events-none select-none">
           {playbackMode === 'LIVE' ? (
@@ -973,6 +1021,21 @@ export const MatrixCameraCell: React.FC<MatrixCameraCellProps> = ({
           <span className="px-1.5 py-0.5 bg-slate-950/85 text-slate-300 text-[8px] font-mono font-bold rounded border border-slate-700">
             {camera.alertType}
           </span>
+          {camera.batteryLevel !== undefined && (
+            <span className={`px-1.5 py-0.5 bg-black/80 text-[8px] font-mono font-bold rounded border flex items-center gap-0.5 backdrop-blur-md ${
+              camera.batteryLevel > 50 
+                ? 'text-emerald-400 border-emerald-500/30' 
+                : camera.batteryLevel > 20 
+                  ? 'text-amber-400 border-amber-500/30' 
+                  : 'text-rose-500 border-rose-500/50 animate-pulse'
+            }`}>
+              {camera.batteryLevel > 80 ? <BatteryFull size={10} /> :
+               camera.batteryLevel > 50 ? <BatteryMedium size={10} /> :
+               camera.batteryLevel > 20 ? <BatteryLow size={10} /> : 
+               <BatteryWarning size={10} />}
+              {camera.batteryLevel}%
+            </span>
+          )}
         </div>
 
         {/* 4. Bottom Recorded Timeline Scrubber (When in RECORDED Mode) */}
@@ -1007,6 +1070,20 @@ export const MatrixCameraCell: React.FC<MatrixCameraCellProps> = ({
         {/* Bottom Floating Tactical Action Bar (Appears on Hover) */}
         <div className="absolute bottom-2 inset-x-2 flex items-center justify-between px-2 py-1 bg-slate-950/90 border border-slate-700/60 rounded-lg backdrop-blur-md opacity-0 group-hover:opacity-100 transition-opacity z-20">
           <div className="flex items-center gap-1">
+            {/* Blackout Mode Toggle */}
+            <button
+              onClick={() => setIsBlackout(!isBlackout)}
+              title="Toggle Blackout (Mask Signal)"
+              className={`px-1.5 py-0.5 rounded text-[9px] font-mono font-bold transition-all cursor-pointer flex items-center gap-1 ${
+                isBlackout
+                  ? 'bg-emerald-600 text-white animate-pulse'
+                  : 'bg-slate-800 text-slate-300 hover:text-white hover:bg-slate-700'
+              }`}
+            >
+              <EyeOff size={9} />
+              MASK
+            </button>
+
             {/* Night Vision */}
             <button
               onClick={() => {

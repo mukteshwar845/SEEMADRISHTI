@@ -25,6 +25,7 @@ import {
   FastForward,
   Bookmark,
   Clock,
+  Move,
 } from 'lucide-react';
 import { recordingEngine } from '../utils/recordingManager';
 
@@ -64,6 +65,7 @@ export const MatrixCameraCell: React.FC<MatrixCameraCellProps> = ({
   const [videoLoaded, setVideoLoaded] = useState(false);
   const [videoError, setVideoError] = useState(false);
   const [isRecording, setIsRecording] = useState(false);
+  const [isAutoRotate, setIsAutoRotate] = useState(false);
 
   // Playback Mode (LIVE vs RECORDED FOOTAGE)
   const [playbackMode, setPlaybackMode] = useState<'LIVE' | 'RECORDED'>('LIVE');
@@ -169,6 +171,20 @@ export const MatrixCameraCell: React.FC<MatrixCameraCellProps> = ({
         ? Math.floor(playbackTimeOffset * 30) 
         : frame;
       const time = effectiveFrame * 0.03;
+
+      // PTZ Auto Rotate Simulation
+      let panX = 0;
+      if (isAutoRotate) {
+        panX = Math.sin(time * 0.2) * 5; // slow pan +/- 5%
+      }
+      const currentZoom = isAutoRotate ? Math.max(zoomLevel, 1.1) : zoomLevel;
+
+      if (videoRef.current) {
+        videoRef.current.style.transform = `scale(${currentZoom}) translateX(${panX}%)`;
+      }
+      if (canvasRef.current) {
+        canvasRef.current.style.transform = `scale(${currentZoom}) translateX(${panX}%)`;
+      }
 
       // -------------------------------------------------------------
       // DRAW HIGH FIDELITY CCTV FOOTAGE BACKGROUND (Always crisp 60FPS)
@@ -780,7 +796,7 @@ export const MatrixCameraCell: React.FC<MatrixCameraCellProps> = ({
 
     animationFrameId = requestAnimationFrame(render);
     return () => cancelAnimationFrame(animationFrameId);
-  }, [camera, nightVision, thermalMode, showAiHud, isCompact, playbackMode, playbackTimeOffset, playbackSpeed]);
+  }, [camera, nightVision, thermalMode, showAiHud, isCompact, playbackMode, playbackTimeOffset, playbackSpeed, isAutoRotate, zoomLevel]);
 
   return (
     <div
@@ -1038,6 +1054,19 @@ export const MatrixCameraCell: React.FC<MatrixCameraCellProps> = ({
           </div>
 
           <div className="flex items-center gap-1">
+            {/* PTZ Auto Rotate Toggle */}
+            <button
+              onClick={() => setIsAutoRotate(!isAutoRotate)}
+              title={isAutoRotate ? 'Stop PTZ Auto-Rotate' : 'Start PTZ Auto-Rotate'}
+              className={`p-1 rounded cursor-pointer transition-all ${
+                isAutoRotate
+                  ? 'bg-amber-600 text-white'
+                  : 'bg-slate-800 text-slate-300 hover:text-white hover:bg-slate-700'
+              }`}
+            >
+              <Move size={11} className={isAutoRotate ? 'animate-[pulse_2s_ease-in-out_infinite]' : ''} />
+            </button>
+
             {/* Digital Zoom Controls */}
             <button
               onClick={() => setZoomLevel((prev) => Math.max(1, prev - 0.25))}

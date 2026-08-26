@@ -40,9 +40,9 @@ export function initializeWebSocketServer(server: http.Server): WebSocketServer 
             timestamp: Date.now(),
           };
           ws.send(JSON.stringify(pong));
-        } else if (msg.type === 'detection') {
-          // Fan out real YOLO detection payload to all connected clients (React dashboards)
-          broadcastWebSocketMessage('detection', msg.data);
+        } else if (msg.type === 'detection' || msg.type === 'tracking') {
+          // Fan out real YOLO detection & ByteTrack tracking payload to all connected clients (React dashboards)
+          broadcastWebSocketMessage(msg.type, msg.data);
         } else if (msg.type === 'camera_status' || msg.type === 'event_created' || msg.type === 'alert_created') {
           broadcastWebSocketMessage(msg.type, msg.data);
         }

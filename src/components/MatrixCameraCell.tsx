@@ -35,7 +35,7 @@ import {
   BatteryWarning,
 } from 'lucide-react';
 import { recordingEngine } from '../utils/recordingManager';
-import { webSocketService, RealYoloDetection } from '../services/websocketService';
+import { webSocketService, RealYoloDetection, TrackItem } from '../services/websocketService';
 
 interface MatrixCameraCellProps {
   camera: MatrixCameraFeed;
@@ -92,8 +92,16 @@ export const MatrixCameraCell: React.FC<MatrixCameraCellProps> = ({
     frameHeight: number;
   } | null>(null);
 
+  // Real ByteTrack tracking stream state from WebSocket
+  const realTracksRef = useRef<{
+    timestamp: number;
+    tracks: TrackItem[];
+    frameWidth: number;
+    frameHeight: number;
+  } | null>(null);
+
   useEffect(() => {
-    const unsub = webSocketService.onDetection((payload) => {
+    const unsubDet = webSocketService.onDetection((payload) => {
       const targetId = String(payload.camera_id).toLowerCase().trim();
       const myTag = camera.tag.toLowerCase().trim();
       const myId = String(camera.id).toLowerCase().trim();
@@ -109,7 +117,26 @@ export const MatrixCameraCell: React.FC<MatrixCameraCellProps> = ({
       }
     });
 
-    return unsub;
+    const unsubTrack = webSocketService.onTracking((payload) => {
+      const targetId = String(payload.camera_id).toLowerCase().trim();
+      const myTag = camera.tag.toLowerCase().trim();
+      const myId = String(camera.id).toLowerCase().trim();
+      const myTagPadded = `cam-0${camera.id}`.toLowerCase();
+
+      if (targetId === myTag || targetId === myId || targetId === myTagPadded) {
+        realTracksRef.current = {
+          timestamp: Date.now(),
+          tracks: payload.tracks || [],
+          frameWidth: payload.frame_width || 1920,
+          frameHeight: payload.frame_height || 1080,
+        };
+      }
+    });
+
+    return () => {
+      unsubDet();
+      unsubTrack();
+    };
   }, [camera.id, camera.tag]);
 
   // Keep editedName in sync when camera updates from props
@@ -620,11 +647,50 @@ export const MatrixCameraCell: React.FC<MatrixCameraCellProps> = ({
           speed?: string;
         }> = [];
 
+        // Check if real ByteTrack tracks are actively streaming (within last 3.5s)
+        const realTrackData = realTracksRef.current;
+        const hasRealTracks =
+          realTrackData &&
+          Date.now() - realTrackData.timestamp < 3500 &&
+          realTrackData.tracks &&
+          realTrackData.tracks.length > 0;
+
         // Check if real YOLO detections are actively streaming (within last 3.5s)
         const realData = realDetectionsRef.current;
         const hasRealDetections = realData && Date.now() - realData.timestamp < 3500;
 
-        if (hasRealDetections && realData && realData.detections && realData.detections.length > 0) {
+        if (hasRealTracks && realTrackData) {
+          // RENDER REAL BYTETRACK PERSISTENT TRACKS
+          const fw = realTrackData.frameWidth || 1920;
+          const fh = realTrackData.frameHeight || 1080;
+          const scaleX = width / fw;
+          const scaleY = height / fh;
+
+          realTrackData.tracks.forEach((trk) => {
+            const bx = trk.bbox.x1 * scaleX;
+            const by = trk.bbox.y1 * scaleY;
+            const bw = (trk.bbox.x2 - trk.bbox.x1) * scaleX;
+            const bh = (trk.bbox.y2 - trk.bbox.y1) * scaleY;
+
+            const isVehicle = ['car', 'truck', 'bus', 'motorcycle', 'bicycle'].includes(
+              trk.class_name.toLowerCase()
+            );
+            const color = isVehicle ? '#38bdf8' : '#22c55e'; // Cyan for vehicles, Emerald for persons
+            const trackTag = trk.track_id < 10 ? `0${trk.track_id}` : `${trk.track_id}`;
+
+            targets.push({
+              type: isVehicle ? 'vehicle' : 'pedestrian',
+              label: `${trk.class_name.toUpperCase()} #${trackTag}`,
+              confidence: trk.confidence,
+              x: bx,
+              y: by,
+              w: Math.max(bw, 20),
+              h: Math.max(bh, 20),
+              color: color,
+              subLabel: `TRACK ID: ${trk.track_id} [${Math.round(trk.confidence * 100)}%]`,
+            });
+          });
+        } else if (hasRealDetections && realData && realData.detections && realData.detections.length > 0) {
           // RENDER REAL YOLO BOUNDING BOXES (Normalized from frame coordinates)
           const fw = realData.frameWidth || 1920;
           const fh = realData.frameHeight || 1080;

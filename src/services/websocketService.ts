@@ -35,11 +35,38 @@ export interface CameraDetectionsPayload {
   detections: RealYoloDetection[];
 }
 
+export interface TrackItem {
+  track_id: number;
+  class_name: string;
+  class_id: number;
+  confidence: number;
+  state?: string;
+  bbox: {
+    x1: number;
+    y1: number;
+    x2: number;
+    y2: number;
+  };
+}
+
+export interface CameraTrackingPayload {
+  camera_id: string;
+  timestamp: string;
+  frame_width: number;
+  frame_height: number;
+  inference_ms?: number;
+  tracking_ms?: number;
+  total_ms?: number;
+  track_count?: number;
+  tracks: TrackItem[];
+}
+
 type AlertListener = (alert: AlertItem) => void;
 type MetricsListener = (metrics: CameraDiagnosticMetric[]) => void;
 type TelemetryListener = (telemetry: Partial<SystemTelemetry>) => void;
 type StateListener = (state: WebSocketServiceState) => void;
 export type DetectionListener = (data: CameraDetectionsPayload) => void;
+export type TrackingListener = (data: CameraTrackingPayload) => void;
 
 const WS_URL_STORAGE_KEY = 'seemadrishti_ws_url_v2';
 const DEFAULT_WS_URL = 'ws://127.0.0.1:8000/ws/alerts';
@@ -64,6 +91,7 @@ class WebSocketService {
   private telemetryListeners: Set<TelemetryListener> = new Set();
   private stateListeners: Set<StateListener> = new Set();
   private detectionListeners: Set<DetectionListener> = new Set();
+  private trackingListeners: Set<TrackingListener> = new Set();
 
   constructor() {
     try {
@@ -249,6 +277,14 @@ class WebSocketService {
         }
         break;
       }
+      case 'tracking' as any:
+      case 'TRACKING' as any: {
+        const payload = (msg as any).data || msg.payload;
+        if (payload) {
+          this.trackingListeners.forEach((listener) => listener(payload));
+        }
+        break;
+      }
     }
   }
 
@@ -381,6 +417,11 @@ class WebSocketService {
   public onDetection(listener: DetectionListener): () => void {
     this.detectionListeners.add(listener);
     return () => this.detectionListeners.delete(listener);
+  }
+
+  public onTracking(listener: TrackingListener): () => void {
+    this.trackingListeners.add(listener);
+    return () => this.trackingListeners.delete(listener);
   }
 
   public onStateChange(listener: StateListener): () => void {

@@ -69,14 +69,11 @@ class DetectionPublisher:
 
                     while self._is_running:
                         try:
-                            # Wait for next detection payload from queue (with timeout)
-                            payload = await asyncio.wait_for(self._outbox.get(), timeout=1.0)
-                            msg = {
-                                "type": "detection",
-                                "data": payload,
-                                "timestamp": int(time.time() * 1000),
-                            }
-                            await ws.send(json.dumps(msg))
+                            # Wait for next packet from queue (with timeout)
+                            packet = await asyncio.wait_for(self._outbox.get(), timeout=1.0)
+                            if "timestamp" not in packet:
+                                packet["timestamp"] = int(time.time() * 1000)
+                            await ws.send(json.dumps(packet))
                             self.packets_sent += 1
                             self._outbox.task_done()
                         except asyncio.TimeoutError:
@@ -90,18 +87,26 @@ class DetectionPublisher:
                 # Sleep before retrying
                 await asyncio.sleep(2.0)
 
-    def publish(self, detection_data: Dict[str, Any]) -> bool:
+    def publish(self, payload_data: Dict[str, Any], message_type: Optional[str] = None) -> bool:
         """
-        Publish detection data synchronously. Queues to WebSocket worker,
+        Publish detection or tracking data synchronously. Queues to WebSocket worker,
         or falls back to HTTP POST if WebSocket is disconnected.
         """
         if not self._is_running:
             self.start()
 
+        # Determine message type: tracking if 'tracks' present, else detection
+        m_type = message_type or ("tracking" if "tracks" in payload_data else "detection")
+        packet = {
+            "type": m_type,
+            "data": payload_data,
+            "timestamp": int(time.time() * 1000),
+        }
+
         # If connected to WebSocket and loop is alive, enqueue message
         if self._connected and self._loop and self._outbox:
             try:
-                self._loop.call_soon_threadsafe(self._outbox.put_nowait, detection_data)
+                self._loop.call_soon_threadsafe(self._outbox.put_nowait, packet)
                 return True
             except Exception:
                 pass
@@ -110,7 +115,7 @@ class DetectionPublisher:
         try:
             resp = requests.post(
                 self.http_url,
-                json={"type": "detection", "data": detection_data},
+                json=packet,
                 timeout=0.8,
             )
             if resp.status_code == 200:

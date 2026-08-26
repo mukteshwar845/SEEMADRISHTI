@@ -22,6 +22,7 @@ import time
 import json
 import asyncio
 import subprocess
+import cv2
 import numpy as np
 
 # Ensure project root is on sys.path
@@ -62,8 +63,28 @@ def run_tests():
 
     detector = None
     tracker = None
-    source = None
-    frames_buffer = []
+
+    # Load bus multi-object frames
+    bus_frames = []
+    cap_bus = cv2.VideoCapture(TEST_BUS_VIDEO)
+    for _ in range(5):
+        ret, frame = cap_bus.read()
+        if ret and frame is not None:
+            bus_frames.append(frame)
+    cap_bus.release()
+
+    # Load moving pedestrian frames (from active walking section at frame 20)
+    moving_ped_frames = []
+    if os.path.exists(TEST_MOVING_VIDEO):
+        cap_mov = cv2.VideoCapture(TEST_MOVING_VIDEO)
+        cap_mov.set(cv2.CAP_PROP_POS_FRAMES, 20)
+        for _ in range(6):
+            ret, frame = cap_mov.read()
+            if ret and frame is not None:
+                moving_ped_frames.append(frame)
+        cap_mov.release()
+    else:
+        moving_ped_frames = bus_frames
 
     # -------------------------------------------------------------------------
     # TEST 1: Tracker Initializes
@@ -83,25 +104,14 @@ def run_tests():
     # -------------------------------------------------------------------------
     # TEST 2: YOLO Detections Enter Tracker
     # -------------------------------------------------------------------------
-    first_track_output = None
+    track_output = None
     try:
-        video_path = TEST_MOVING_VIDEO if os.path.exists(TEST_MOVING_VIDEO) else TEST_BUS_VIDEO
-        source = create_video_source(video_path, loop=False)
-        source.open()
-
-        # Read 10 frames
-        for _ in range(10):
-            ret, frame = source.read_frame()
-            if ret and frame is not None:
-                frames_buffer.append(frame)
-
-        assert len(frames_buffer) >= 5, "Failed to read sufficient test frames"
-
-        first_track_output = tracker.track(frames_buffer[0], camera_id="cam-01")
-        assert "tracks" in first_track_output
-        assert "inference_ms" in first_track_output
-        assert "tracking_ms" in first_track_output
-        record_pass(2, "YOLO Detections Enter Tracker", f"Tracked {first_track_output['track_count']} objects from frame 1")
+        assert len(bus_frames) > 0, "No bus test frames available"
+        track_output = tracker.track(bus_frames[0], camera_id="cam-01")
+        assert "tracks" in track_output
+        assert "inference_ms" in track_output
+        assert "tracking_ms" in track_output
+        record_pass(2, "YOLO Detections Enter Tracker", f"Tracked {track_output['track_count']} objects from test frame")
     except Exception as e:
         record_fail(2, "YOLO Detections Enter Tracker", e)
 
@@ -109,9 +119,9 @@ def run_tests():
     # TEST 3: Track ID is Generated
     # -------------------------------------------------------------------------
     try:
-        assert first_track_output is not None
-        assert first_track_output["track_count"] > 0, "No tracks found in frame 1"
-        t0 = first_track_output["tracks"][0]
+        assert track_output is not None
+        assert track_output["track_count"] > 0, "No tracks found in frame"
+        t0 = track_output["tracks"][0]
         assert "track_id" in t0
         assert isinstance(t0["track_id"], int) and t0["track_id"] > 0
         record_pass(3, "Track ID is Generated", f"Generated valid track ID #{t0['track_id']} for class '{t0['class_name']}'")
@@ -124,22 +134,17 @@ def run_tests():
     try:
         tracker.reset()
         track_history_by_id = {}
-        consecutive_frames_tracked = 0
 
-        # Feed 6 consecutive moving frames into the tracker
-        for f_idx, frame in enumerate(frames_buffer[:6]):
+        # Feed consecutive bus frames into the tracker
+        for f_idx, frame in enumerate(bus_frames):
             res = tracker.track(frame, camera_id="cam-01")
-            active_ids = []
             for trk in res["tracks"]:
                 tid = trk["track_id"]
-                active_ids.append(tid)
                 track_history_by_id.setdefault(tid, []).append({
                     "frame": f_idx,
                     "bbox": trk["bbox"],
                     "class": trk["class_name"]
                 })
-            if len(active_ids) > 0:
-                consecutive_frames_tracked += 1
 
         # Find tracks that persist across multiple consecutive frames
         persistent_tracks = {tid: hist for tid, hist in track_history_by_id.items() if len(hist) >= 3}
@@ -159,9 +164,8 @@ def run_tests():
     # TEST 5: Multiple Objects Receive Different IDs
     # -------------------------------------------------------------------------
     try:
-        # Check frame 1 of sample_test.mp4 or moving video for multiple concurrent objects
-        test_frame = frames_buffer[0]
-        res = tracker.track(test_frame, camera_id="cam-01")
+        # Check bus_frames which contains 1 bus + 3 persons
+        res = tracker.track(bus_frames[1], camera_id="cam-01")
         track_ids = [t["track_id"] for t in res["tracks"]]
         unique_ids = set(track_ids)
 
@@ -187,20 +191,35 @@ def run_tests():
     # TEST 7: Bounding Boxes Update with Movement
     # -------------------------------------------------------------------------
     try:
-        # Check coordinate continuity on persistent tracks across frames
-        movement_verified = False
-        for tid, hist in track_history_by_id.items():
-            if len(hist) >= 2:
-                b1 = hist[0]["bbox"]
-                b2 = hist[-1]["bbox"]
-                # Verify coordinates exist and form valid geometry
-                assert b1["x2"] > b1["x1"] and b1["y2"] > b1["y1"]
-                assert b2["x2"] > b2["x1"] and b2["y2"] > b2["y1"]
-                movement_verified = True
-                break
+        # Run walking pedestrian frames and verify trajectory movement
+        ped_tracker = ByteTrackEngine(config, detector=detector)
+        ped_tracker.initialize()
+        centroids = []
+        target_tid = None
 
-        assert movement_verified, "No multi-frame track available to verify bbox trajectory"
-        record_pass(7, "Bounding Boxes Update with Movement", "Verified bounding box spatial integrity across frames")
+        for f in moving_ped_frames:
+            p_out = ped_tracker.track(f, camera_id="cam-01")
+            if p_out["tracks"]:
+                if target_tid is None:
+                    target_tid = p_out["tracks"][0]["track_id"]
+                for trk in p_out["tracks"]:
+                    if trk["track_id"] == target_tid:
+                        b = trk["bbox"]
+                        cx = (b["x1"] + b["x2"]) // 2
+                        cy = (b["y1"] + b["y2"]) // 2
+                        centroids.append((cx, cy))
+                        break
+
+        assert len(centroids) >= 2, f"Insufficient pedestrian trajectory points: {centroids}"
+        initial_pos = centroids[0]
+        final_pos = centroids[-1]
+        moved = (initial_pos != final_pos)
+        assert moved, f"Expected object movement, but position remained stationary at {initial_pos}"
+        record_pass(
+            7,
+            "Bounding Boxes Update with Movement",
+            f"Object #{target_tid} moved from {initial_pos} to {final_pos} across {len(centroids)} frames"
+        )
     except Exception as e:
         record_fail(7, "Bounding Boxes Update with Movement", e)
 
@@ -208,21 +227,19 @@ def run_tests():
     # TEST 8: Lost Tracks Expire Correctly
     # -------------------------------------------------------------------------
     try:
-        # Create a synthetic track in active_tracks and simulate missed detections
         dummy_id = 999
-        tracker.active_tracks[dummy_id] = tracker.active_tracks.get(dummy_id) or \
-            type("TrackRecord", (), {
-                "track_id": dummy_id,
-                "class_id": 0,
-                "class_name": "person",
-                "state": "ACTIVE",
-                "time_since_update": 0,
-                "age": 5,
-                "hits": 5,
-                "history": [],
-                "mark_missed": lambda self, buf: setattr(self, "state", "REMOVED" if self.time_since_update + 1 > buf else "LOST") or setattr(self, "time_since_update", self.time_since_update + 1),
-                "mark_detected": lambda self, b: None,
-            })()
+        tracker.active_tracks[dummy_id] = type("TrackRecord", (), {
+            "track_id": dummy_id,
+            "class_id": 0,
+            "class_name": "person",
+            "state": "ACTIVE",
+            "time_since_update": 0,
+            "age": 5,
+            "hits": 5,
+            "history": [],
+            "mark_missed": lambda self, buf: setattr(self, "state", "REMOVED" if self.time_since_update + 1 > buf else "LOST") or setattr(self, "time_since_update", self.time_since_update + 1),
+            "mark_detected": lambda self, b: None,
+        })()
 
         # Simulate missing frames until expiration
         for _ in range(config.track_buffer + 1):
@@ -313,7 +330,7 @@ def run_tests():
     # TEST 11: Existing Phase 2 Detection Functionality Still Works (Regression)
     # -------------------------------------------------------------------------
     try:
-        det_output = detector.detect(frames_buffer[0], camera_id="cam-01")
+        det_output = detector.detect(bus_frames[0], camera_id="cam-01")
         assert "detections" in det_output
         assert det_output["detection_count"] > 0
         assert "bbox" in det_output["detections"][0]
@@ -325,7 +342,6 @@ def run_tests():
     # TEST 12: Phase 1 Regression Suite Still Passes
     # -------------------------------------------------------------------------
     try:
-        # Run Phase 1 test suite via npm
         proc = subprocess.run(
             ["npm.cmd", "run", "test:phase1"],
             cwd=os.path.abspath(os.path.join(os.path.dirname(__file__), "../..")),
@@ -339,8 +355,6 @@ def run_tests():
         record_fail(12, "Phase 1 Regression Suite Still Passes", e)
 
     # Cleanup
-    if source:
-        source.release()
     if publisher:
         publisher.close()
 

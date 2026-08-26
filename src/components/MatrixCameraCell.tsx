@@ -35,6 +35,7 @@ import {
   BatteryWarning,
 } from 'lucide-react';
 import { recordingEngine } from '../utils/recordingManager';
+import { webSocketService, RealYoloDetection } from '../services/websocketService';
 
 interface MatrixCameraCellProps {
   camera: MatrixCameraFeed;
@@ -82,6 +83,34 @@ export const MatrixCameraCell: React.FC<MatrixCameraCellProps> = ({
   const [isPlayingRecorded, setIsPlayingRecorded] = useState(true);
   const [playbackTimeOffset, setPlaybackTimeOffset] = useState(42); // Seconds into archive
   const [playbackSpeed, setPlaybackSpeed] = useState<number>(1);
+
+  // Real YOLO detection stream state from WebSocket
+  const realDetectionsRef = useRef<{
+    timestamp: number;
+    detections: RealYoloDetection[];
+    frameWidth: number;
+    frameHeight: number;
+  } | null>(null);
+
+  useEffect(() => {
+    const unsub = webSocketService.onDetection((payload) => {
+      const targetId = String(payload.camera_id).toLowerCase().trim();
+      const myTag = camera.tag.toLowerCase().trim();
+      const myId = String(camera.id).toLowerCase().trim();
+      const myTagPadded = `cam-0${camera.id}`.toLowerCase();
+
+      if (targetId === myTag || targetId === myId || targetId === myTagPadded) {
+        realDetectionsRef.current = {
+          timestamp: Date.now(),
+          detections: payload.detections || [],
+          frameWidth: payload.frame_width || 1920,
+          frameHeight: payload.frame_height || 1080,
+        };
+      }
+    });
+
+    return unsub;
+  }, [camera.id, camera.tag]);
 
   // Keep editedName in sync when camera updates from props
   useEffect(() => {
@@ -591,7 +620,41 @@ export const MatrixCameraCell: React.FC<MatrixCameraCellProps> = ({
           speed?: string;
         }> = [];
 
-        if (camera.id === 1) {
+        // Check if real YOLO detections are actively streaming (within last 3.5s)
+        const realData = realDetectionsRef.current;
+        const hasRealDetections = realData && Date.now() - realData.timestamp < 3500;
+
+        if (hasRealDetections && realData && realData.detections && realData.detections.length > 0) {
+          // RENDER REAL YOLO BOUNDING BOXES (Normalized from frame coordinates)
+          const fw = realData.frameWidth || 1920;
+          const fh = realData.frameHeight || 1080;
+          const scaleX = width / fw;
+          const scaleY = height / fh;
+
+          realData.detections.forEach((det) => {
+            const bx = det.bbox.x1 * scaleX;
+            const by = det.bbox.y1 * scaleY;
+            const bw = (det.bbox.x2 - det.bbox.x1) * scaleX;
+            const bh = (det.bbox.y2 - det.bbox.y1) * scaleY;
+
+            const isVehicle = ['car', 'truck', 'bus', 'motorcycle', 'bicycle'].includes(
+              det.class_name.toLowerCase()
+            );
+            const color = isVehicle ? '#38bdf8' : '#22c55e'; // Cyan for vehicles, Emerald for persons
+
+            targets.push({
+              type: isVehicle ? 'vehicle' : 'pedestrian',
+              label: det.class_name.toUpperCase(),
+              confidence: det.confidence,
+              x: bx,
+              y: by,
+              w: Math.max(bw, 20),
+              h: Math.max(bh, 20),
+              color: color,
+              subLabel: `REAL YOLO [${Math.round(det.confidence * 100)}%]`,
+            });
+          });
+        } else if (camera.id === 1) {
           // Keep Clear Road Targets
           const car1Y = ((effectiveFrame * 2.2) % (height + 120)) - 60;
           const car1X = width * 0.48;

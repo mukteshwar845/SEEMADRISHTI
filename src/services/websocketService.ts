@@ -13,10 +13,33 @@ export interface WebSocketServiceState {
   isEmulationEnabled: boolean;
 }
 
+export interface RealYoloDetection {
+  class_name: string;
+  class_id: number;
+  confidence: number;
+  bbox: {
+    x1: number;
+    y1: number;
+    x2: number;
+    y2: number;
+  };
+}
+
+export interface CameraDetectionsPayload {
+  camera_id: string;
+  timestamp: string;
+  frame_width: number;
+  frame_height: number;
+  inference_ms?: number;
+  detection_count?: number;
+  detections: RealYoloDetection[];
+}
+
 type AlertListener = (alert: AlertItem) => void;
 type MetricsListener = (metrics: CameraDiagnosticMetric[]) => void;
 type TelemetryListener = (telemetry: Partial<SystemTelemetry>) => void;
 type StateListener = (state: WebSocketServiceState) => void;
+export type DetectionListener = (data: CameraDetectionsPayload) => void;
 
 const WS_URL_STORAGE_KEY = 'seemadrishti_ws_url_v2';
 const DEFAULT_WS_URL = 'ws://127.0.0.1:8000/ws/alerts';
@@ -40,6 +63,7 @@ class WebSocketService {
   private metricsListeners: Set<MetricsListener> = new Set();
   private telemetryListeners: Set<TelemetryListener> = new Set();
   private stateListeners: Set<StateListener> = new Set();
+  private detectionListeners: Set<DetectionListener> = new Set();
 
   constructor() {
     try {
@@ -217,6 +241,14 @@ class WebSocketService {
         this.latencyMs = Math.max(5, Math.round(Date.now() - msg.timestamp));
         this.lastHeartbeat = Date.now();
         break;
+      case 'detection' as any:
+      case 'DETECTION' as any: {
+        const payload = (msg as any).data || msg.payload;
+        if (payload) {
+          this.detectionListeners.forEach((listener) => listener(payload));
+        }
+        break;
+      }
     }
   }
 
@@ -344,6 +376,11 @@ class WebSocketService {
   public onTelemetry(listener: TelemetryListener): () => void {
     this.telemetryListeners.add(listener);
     return () => this.telemetryListeners.delete(listener);
+  }
+
+  public onDetection(listener: DetectionListener): () => void {
+    this.detectionListeners.add(listener);
+    return () => this.detectionListeners.delete(listener);
   }
 
   public onStateChange(listener: StateListener): () => void {

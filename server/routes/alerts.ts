@@ -114,9 +114,14 @@ alertsRouter.post('/', (req: Request, res: Response, next: NextFunction) => {
       }
     }
 
-    if (!severity || !VALID_SEVERITIES.includes(severity)) {
+    let targetSeverity = severity;
+    if (typeof targetSeverity === 'string' && targetSeverity.toUpperCase() === 'CRITICAL') {
+      targetSeverity = 'High';
+    }
+
+    if (!targetSeverity || !VALID_SEVERITIES.includes(targetSeverity)) {
       throw new AppError(
-        `Invalid severity '${severity}'. Allowed: ${VALID_SEVERITIES.join(', ')}`,
+        `Invalid severity '${severity}'. Allowed: ${VALID_SEVERITIES.join(', ')} (or CRITICAL)`,
         400
       );
     }
@@ -137,7 +142,7 @@ alertsRouter.post('/', (req: Request, res: Response, next: NextFunction) => {
       VALUES (?, ?, ?, ?, ?, ?, ?, ?)
     `);
 
-    insert.run(alertId, event_id || null, camera_id, severity, title.trim(), reason.trim(), 0, alertTime);
+    insert.run(alertId, event_id || null, camera_id, targetSeverity, title.trim(), reason.trim(), 0, alertTime);
 
     const created = db.prepare('SELECT * FROM alerts WHERE id = ?').get(alertId);
     const formatted = formatAlert(created);

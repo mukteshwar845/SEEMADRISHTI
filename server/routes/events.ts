@@ -118,9 +118,14 @@ eventsRouter.post('/', (req: Request, res: Response, next: NextFunction) => {
       throw new AppError('event_type is required', 400);
     }
 
-    if (!severity || !VALID_SEVERITIES.includes(severity)) {
+    let targetSeverity = severity;
+    if (typeof targetSeverity === 'string' && targetSeverity.toUpperCase() === 'CRITICAL') {
+      targetSeverity = 'High';
+    }
+
+    if (!targetSeverity || !VALID_SEVERITIES.includes(targetSeverity)) {
       throw new AppError(
-        `Invalid severity '${severity}'. Allowed: ${VALID_SEVERITIES.join(', ')}`,
+        `Invalid severity '${severity}'. Allowed: ${VALID_SEVERITIES.join(', ')} (or CRITICAL)`,
         400
       );
     }
@@ -134,7 +139,7 @@ eventsRouter.post('/', (req: Request, res: Response, next: NextFunction) => {
       VALUES (?, ?, ?, ?, ?, ?, ?)
     `);
 
-    insert.run(eventId, camera_id, event_type.trim(), severity, object_id || null, eventTime, metaString);
+    insert.run(eventId, camera_id, event_type.trim(), targetSeverity, object_id || null, eventTime, metaString);
 
     const created = db.prepare('SELECT * FROM events WHERE id = ?').get(eventId);
     const formatted = formatEvent(created);

@@ -30,8 +30,11 @@ zonesRouter.get('/', (req: Request, res: Response, next: NextFunction) => {
     const params: any[] = [];
 
     if (camera_id && typeof camera_id === 'string') {
-      query += ' WHERE camera_id = ?';
-      params.push(camera_id);
+      const trimmed = camera_id.trim();
+      const numMatch = trimmed.match(/\d+/);
+      const paddedTag = numMatch ? `cam-0${parseInt(numMatch[0], 10)}` : trimmed;
+      query += ' WHERE (LOWER(camera_id) = LOWER(?) OR LOWER(camera_id) = LOWER(?))';
+      params.push(trimmed, paddedTag);
     }
 
     query += ' ORDER BY created_at ASC';
@@ -91,14 +94,21 @@ zonesRouter.post('/', (req: Request, res: Response, next: NextFunction) => {
       throw new AppError('Zone name is required', 400);
     }
 
-    if (!Array.isArray(polygon) || polygon.length < 2) {
-      throw new AppError('Zone polygon must be an array of at least 2 coordinate points [x, y]', 400);
+    if (!Array.isArray(polygon) || polygon.length < 3) {
+      throw new AppError('Zone polygon must be an array of at least 3 coordinate points [x, y]', 400);
     }
 
-    // Validate that each point is a 2-element array of numbers
+    // Validate that each point is a 2-element array of finite numbers
     for (let i = 0; i < polygon.length; i++) {
       const pt = polygon[i];
-      if (!Array.isArray(pt) || pt.length !== 2 || typeof pt[0] !== 'number' || typeof pt[1] !== 'number') {
+      if (
+        !Array.isArray(pt) ||
+        pt.length !== 2 ||
+        typeof pt[0] !== 'number' ||
+        typeof pt[1] !== 'number' ||
+        !isFinite(pt[0]) ||
+        !isFinite(pt[1])
+      ) {
         throw new AppError(`Invalid coordinate at index ${i}: must be [number, number]`, 400);
       }
     }
@@ -133,22 +143,29 @@ zonesRouter.put('/:id', (req: Request, res: Response, next: NextFunction) => {
   try {
     const db = getDatabase();
     const { id } = req.params;
+    const { name, polygon, enabled } = req.body;
 
-    const existing = db.prepare('SELECT * FROM zones WHERE id = ?').get(id) as any;
+    const existing = db.prepare('SELECT * FROM zones WHERE id = ?').get(id) as unknown as ZoneEntity | undefined;
     if (!existing) {
       throw new AppError(`Zone with id '${id}' not found`, 404);
     }
 
-    const { name, polygon, enabled } = req.body;
-
     let updatedPolygonJson = existing.polygon;
     if (polygon !== undefined) {
-      if (!Array.isArray(polygon) || polygon.length < 2) {
-        throw new AppError('Zone polygon must be an array of at least 2 coordinate points [x, y]', 400);
+      if (!Array.isArray(polygon) || polygon.length < 3) {
+        throw new AppError('Zone polygon must be an array of at least 3 coordinate points [x, y]', 400);
       }
+
       for (let i = 0; i < polygon.length; i++) {
         const pt = polygon[i];
-        if (!Array.isArray(pt) || pt.length !== 2 || typeof pt[0] !== 'number' || typeof pt[1] !== 'number') {
+        if (
+          !Array.isArray(pt) ||
+          pt.length !== 2 ||
+          typeof pt[0] !== 'number' ||
+          typeof pt[1] !== 'number' ||
+          !isFinite(pt[0]) ||
+          !isFinite(pt[1])
+        ) {
           throw new AppError(`Invalid coordinate at index ${i}: must be [number, number]`, 400);
         }
       }

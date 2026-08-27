@@ -36,6 +36,7 @@ import {
 } from 'lucide-react';
 import { recordingEngine } from '../utils/recordingManager';
 import { webSocketService, RealYoloDetection, TrackItem } from '../services/websocketService';
+import { fetchZones } from '../services/api';
 
 interface MatrixCameraCellProps {
   camera: MatrixCameraFeed;
@@ -137,6 +138,43 @@ export const MatrixCameraCell: React.FC<MatrixCameraCellProps> = ({
       unsubDet();
       unsubTrack();
     };
+  }, [camera.id, camera.tag]);
+
+  // Active virtual zones and intrusion state for this camera
+  const [activeZones, setActiveZones] = useState<Array<{ id: string; name: string; polygon: [number, number][] }>>([]);
+  const activeIntrusionRef = useRef<{ timestamp: number; zoneName?: string } | null>(null);
+
+  useEffect(() => {
+    const myId = String(camera.id);
+    const myTag = camera.tag?.toLowerCase() || `cam-0${camera.id}`;
+
+    fetchZones(myId)
+      .then((res) => {
+        if (res.success && res.data && res.data.length > 0) {
+          setActiveZones(res.data.map((z) => ({ id: z.id, name: z.name, polygon: z.polygon })));
+        } else {
+          fetchZones(myTag)
+            .then((res2) => {
+              if (res2.success && res2.data && res2.data.length > 0) {
+                setActiveZones(res2.data.map((z) => ({ id: z.id, name: z.name, polygon: z.polygon })));
+              }
+            })
+            .catch(() => {});
+        }
+      })
+      .catch(() => {});
+
+    const unsubAlert = webSocketService.onAlert((alert) => {
+      const alertCam = (alert.camera || (alert as any).sector || '').toLowerCase();
+      if (alertCam.includes(myId) || alertCam.includes(myTag)) {
+        activeIntrusionRef.current = {
+          timestamp: Date.now(),
+          zoneName: alert.type || 'RESTRICTED PERIMETER',
+        };
+      }
+    });
+
+    return unsubAlert;
   }, [camera.id, camera.tag]);
 
   // Keep editedName in sync when camera updates from props
@@ -633,6 +671,58 @@ export const MatrixCameraCell: React.FC<MatrixCameraCellProps> = ({
       // DRAW 60 FPS AI BOUNDING BOXES & OPTICAL FLOW TRACKING
       // -------------------------------------------------------------
       if (showAiHud) {
+        // Draw Virtual Perimeter Geofence Zones
+        if (activeZones.length > 0) {
+          ctx.save();
+          const isIntrusion =
+            activeIntrusionRef.current && Date.now() - activeIntrusionRef.current.timestamp < 7000;
+          const pulse = 0.5 + Math.sin(time * 8) * 0.5;
+
+          activeZones.forEach((z) => {
+            if (!z.polygon || z.polygon.length < 3) return;
+            const isNorm = z.polygon.every((pt) => pt[0] <= 1.0 && pt[1] <= 1.0);
+            const fw = realTracksRef.current?.frameWidth || 768;
+            const fh = realTracksRef.current?.frameHeight || 432;
+
+            ctx.beginPath();
+            z.polygon.forEach((pt, idx) => {
+              const px = isNorm ? pt[0] * width : (pt[0] / fw) * width;
+              const py = isNorm ? pt[1] * height : (pt[1] / fh) * height;
+              if (idx === 0) ctx.moveTo(px, py);
+              else ctx.lineTo(px, py);
+            });
+            ctx.closePath();
+
+            if (isIntrusion) {
+              ctx.fillStyle = `rgba(239, 68, 68, ${0.12 + pulse * 0.14})`;
+              ctx.strokeStyle = `rgba(239, 68, 68, ${0.7 + pulse * 0.3})`;
+              ctx.lineWidth = 2;
+              ctx.setLineDash([6, 3]);
+            } else {
+              ctx.fillStyle = 'rgba(245, 158, 11, 0.08)';
+              ctx.strokeStyle = 'rgba(245, 158, 11, 0.65)';
+              ctx.lineWidth = 1.5;
+              ctx.setLineDash([4, 4]);
+            }
+            ctx.fill();
+            ctx.stroke();
+            ctx.setLineDash([]);
+
+            // Tactical Zone Name Badge
+            const firstPt = z.polygon[0];
+            const bx = isNorm ? firstPt[0] * width : (firstPt[0] / fw) * width;
+            const by = isNorm ? firstPt[1] * height : (firstPt[1] / fh) * height;
+
+            ctx.fillStyle = isIntrusion ? '#ef4444' : 'rgba(245, 158, 11, 0.9)';
+            ctx.font = 'bold 9px monospace';
+            const zoneTag = isIntrusion
+              ? `[INTRUSION ACTIVE: ${z.name.toUpperCase()}]`
+              : `[ZONE: ${z.name.toUpperCase()}]`;
+            ctx.fillText(zoneTag, Math.max(bx + 4, 10), Math.max(by + 12, 16));
+          });
+          ctx.restore();
+        }
+
         const targets: Array<{
           type: 'pedestrian' | 'vehicle' | 'intrusion';
           label: string;

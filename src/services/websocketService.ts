@@ -285,6 +285,58 @@ class WebSocketService {
         }
         break;
       }
+      case 'alert_created' as any:
+      case 'ALERT_CREATED' as any: {
+        const payload = (msg as any).data || msg.payload;
+        if (payload) {
+          const alertSeverity =
+            payload.severity?.toLowerCase() === 'high' || payload.severity?.toLowerCase() === 'critical'
+              ? 'High'
+              : 'Medium';
+          const uiAlert: AlertItem = {
+            id: payload.id || `alt-${Date.now()}`,
+            title: payload.title || 'UNAUTHORIZED ZONE ENTRY',
+            camera: payload.camera_id ? payload.camera_id.toUpperCase() : 'CAM-01',
+            severity: alertSeverity,
+            time: payload.timestamp
+              ? new Date(payload.timestamp).toLocaleTimeString()
+              : new Date().toLocaleTimeString(),
+            type: payload.title || 'UNAUTHORIZED ZONE ENTRY',
+            timestamp: payload.timestamp ? new Date(payload.timestamp).getTime() : Date.now(),
+            status: payload.acknowledged ? 'acknowledged' : 'active',
+            description: payload.reason || 'Intrusion alert detected',
+            location: payload.camera_id ? `Sector ${payload.camera_id.toUpperCase()}` : 'Sector Alpha',
+            confidence: payload.confidence || 0.95,
+            audioTriggered: true,
+          };
+          this.alertListeners.forEach((listener) => listener(uiAlert));
+        }
+        break;
+      }
+      case 'event_created' as any:
+      case 'EVENT_CREATED' as any: {
+        const payload = (msg as any).data || msg.payload;
+        if (payload && payload.event_type === 'INTRUSION') {
+          const uiAlert: AlertItem = {
+            id: payload.id ? `alt-from-${payload.id}` : `alt-${Date.now()}`,
+            title: 'UNAUTHORIZED ZONE ENTRY',
+            camera: payload.camera_id ? payload.camera_id.toUpperCase() : 'CAM-01',
+            severity: 'High',
+            time: payload.timestamp
+              ? new Date(payload.timestamp).toLocaleTimeString()
+              : new Date().toLocaleTimeString(),
+            type: 'UNAUTHORIZED ZONE ENTRY',
+            timestamp: payload.timestamp ? new Date(payload.timestamp).getTime() : Date.now(),
+            status: 'active',
+            description: `Track #${payload.object_id || '?'} breached ${payload.metadata?.zone_name || 'Restricted Zone'}`,
+            location: payload.camera_id ? `Sector ${payload.camera_id.toUpperCase()}` : 'Sector Alpha',
+            confidence: payload.metadata?.confidence || 0.95,
+            audioTriggered: true,
+          };
+          this.alertListeners.forEach((listener) => listener(uiAlert));
+        }
+        break;
+      }
     }
   }
 

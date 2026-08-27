@@ -127,6 +127,10 @@ class DetectionPublisher:
 
         return False
 
+    @property
+    def is_connected(self) -> bool:
+        return self._connected
+
     def close(self) -> None:
         self._is_running = False
         if self._loop:

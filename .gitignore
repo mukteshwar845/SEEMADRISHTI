@@ -1,8 +1,98 @@
-node_modules/
-build/
-dist/
-coverage/
-.DS_Store
-*.log
-.env*
+# =============================================================================
+# SEEMADRISHTI AI - .gitignore
+# Prevents accidental commits of environment secrets, runtime SQLite databases,
+# heavy model checkpoints, compiled bytecode, and dependencies.
+# =============================================================================
+
+# -----------------------------------------------------------------------------
+# 1. Environment and Sensitive Files (CRITICAL: Do NOT commit secrets to GitHub)
+# -----------------------------------------------------------------------------
+.env
+.env.*
+*.env
 !.env.example
+
+# -----------------------------------------------------------------------------
+# 2. SQLite Databases & Runtime Data (State generated at runtime)
+# -----------------------------------------------------------------------------
+data/*.sqlite
+data/*.sqlite-wal
+data/*.sqlite-shm
+data/*.sqlite-journal
+data/*.db
+data/*.db-journal
+*.sqlite
+*.sqlite-wal
+*.sqlite-shm
+*.sqlite-journal
+*.db
+*.db-journal
+!data/.gitkeep
+
+# -----------------------------------------------------------------------------
+# 3. Node.js & Frontend Artifacts
+# -----------------------------------------------------------------------------
+node_modules/
+dist/
+build/
+coverage/
+.vite/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
+# -----------------------------------------------------------------------------
+# 4. Python Caches, Virtual Environments & Bytecode
+# -----------------------------------------------------------------------------
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+env/
+venv/
+.venv/
+ENV/
+.pytest_cache/
+*.egg-info/
+.installed.cfg
+*.egg
+
+# -----------------------------------------------------------------------------
+# 5. Heavy AI Model Checkpoints & YOLO Runs
+# (yolov8n.pt is auto-downloaded on demand by Ultralytics)
+# -----------------------------------------------------------------------------
+*.pt
+*.pth
+*.onnx
+*.engine
+*.tflite
+runs/
+
+# -----------------------------------------------------------------------------
+# 6. Logs & Temporary Files
+# -----------------------------------------------------------------------------
+*.log
+logs/
+*.tmp
+*.temp
+*.swp
+*.swo
+
+# -----------------------------------------------------------------------------
+# 7. OS & IDE Configuration
+# -----------------------------------------------------------------------------
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+Thumbs.db
+ehthumbs.db
+
+.idea/
+.vscode/*
+!.vscode/extensions.json
+*.sublime-project
+*.sublime-workspace

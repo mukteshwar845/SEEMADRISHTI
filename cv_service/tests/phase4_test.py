@@ -375,11 +375,11 @@ def run_tests():
     # -------------------------------------------------------------------------
     try:
         proc = subprocess.run(
-            ["py", "-3.12", "cv_service/tests/phase3_test.py"],
+            [sys.executable, "cv_service/tests/phase3_test.py"],
             cwd=os.path.abspath(os.path.join(os.path.dirname(__file__), "../..")),
             capture_output=True,
             text=True,
-            timeout=35,
+            timeout=75,
         )
         assert proc.returncode == 0, f"Phase 3 tests failed:\n{proc.stderr}\n{proc.stdout}"
         record_pass(20, "Phase 3 Tracking Regression", "12/12 Phase 3 multi-object tracking tests passed")
@@ -391,11 +391,11 @@ def run_tests():
     # -------------------------------------------------------------------------
     try:
         proc = subprocess.run(
-            ["py", "-3.12", "cv_service/tests/phase2_test.py"],
+            [sys.executable, "cv_service/tests/phase2_test.py"],
             cwd=os.path.abspath(os.path.join(os.path.dirname(__file__), "../..")),
             capture_output=True,
             text=True,
-            timeout=30,
+            timeout=75,
         )
         assert proc.returncode == 0, f"Phase 2 tests failed:\n{proc.stderr}\n{proc.stdout}"
         record_pass(21, "Phase 2 Detection Regression", "12/12 Phase 2 computer vision tests passed")

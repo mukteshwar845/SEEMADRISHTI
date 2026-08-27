@@ -23,6 +23,8 @@ from cv_service.detection.yolo_detector import YoloDetector
 from cv_service.tracking.byte_tracker import ByteTrackEngine
 from cv_service.geometry.polygon import PolygonZone
 from cv_service.intrusion.detector import IntrusionDetector
+from cv_service.loitering.detector import LoiteringDetector
+from cv_service.risk.engine import RiskEngine
 from cv_service.output.detection_publisher import DetectionPublisher
 
 
@@ -76,6 +78,28 @@ def parse_args():
         action="store_true",
         help="Disable ByteTrack multi-object tracking (raw detection only)",
     )
+    parser.add_argument(
+        "--loitering-threshold",
+        type=float,
+        default=30.0,
+        help="Loitering dwell time threshold in seconds (default: 30.0)",
+    )
+    parser.add_argument(
+        "--loitering-grace-period",
+        type=float,
+        default=2.0,
+        help="Grace period in seconds before resetting lost track dwell (default: 2.0)",
+    )
+    parser.add_argument(
+        "--no-loitering",
+        action="store_true",
+        help="Disable loitering / abnormal dwell-time detection",
+    )
+    parser.add_argument(
+        "--no-risk",
+        action="store_true",
+        help="Disable explainable threat assessment & risk engine",
+    )
     return parser.parse_args()
 
 
@@ -88,21 +112,29 @@ def main():
         frame_skip=args.frame_skip,
         camera_id=args.camera_id,
         ws_url="ws://127.0.0.1:8000/ws",
+        loitering_enabled=not args.no_loitering,
+        loitering_threshold_seconds=args.loitering_threshold,
+        loitering_grace_period_seconds=args.loitering_grace_period,
+        risk_engine_enabled=not args.no_risk,
     )
 
     use_tracking = not args.no_tracking
+    use_loitering = not args.no_loitering and config.loitering_enabled
+    use_risk = not args.no_risk and config.risk_engine_enabled
 
     print("\n===================================================================")
-    print("SEEMADRISHTI AI - INTRUSION DETECTION PIPELINE (PHASE 4)")
+    print("SEEMADRISHTI AI - INTRUSION, LOITERING & RISK PIPELINE (PHASE 6)")
     print("===================================================================")
-    print(f" * Video Source:     {args.source}")
-    print(f" * Camera ID:        {config.camera_id}")
-    print(f" * YOLO Model:       {config.model_name}")
-    print(f" * Confidence Limit: {config.confidence_threshold}")
-    print(f" * Frame Skip Ratio: {config.frame_skip}")
-    print(f" * Tracking Engine:  {'ByteTrack (Active)' if use_tracking else 'Disabled'}")
-    print(f" * Intrusion Engine: Active (Polygon Point-in-Polygon & Transition)")
-    print(f" * WebSocket Target: {config.ws_url if not args.no_ws else 'Disabled'}")
+    print(f" * Video Source:       {args.source}")
+    print(f" * Camera ID:          {config.camera_id}")
+    print(f" * YOLO Model:         {config.model_name}")
+    print(f" * Confidence Limit:   {config.confidence_threshold}")
+    print(f" * Frame Skip Ratio:   {config.frame_skip}")
+    print(f" * Tracking Engine:    {'ByteTrack (Active)' if use_tracking else 'Disabled'}")
+    print(f" * Intrusion Engine:   Active (Polygon Point-in-Polygon & Transition)")
+    print(f" * Loitering Engine:   {'Active (Threshold: ' + str(config.loitering_threshold_seconds) + 's)' if use_loitering else 'Disabled'}")
+    print(f" * Threat Risk Engine: {'Active (Explainable 0-100 Scoring)' if use_risk else 'Disabled'}")
+    print(f" * WebSocket Target:   {config.ws_url if not args.no_ws else 'Disabled'}")
     print("===================================================================")
 
     # 1. Initialize Video Source
@@ -124,7 +156,7 @@ def main():
         source.release()
         sys.exit(1)
 
-    # 3. Initialize ByteTrack Engine (if tracking enabled)
+    # 3. Initialize ByteTrack Engine (if enabled)
     tracker = None
     if use_tracking:
         try:
@@ -135,11 +167,11 @@ def main():
             source.release()
             sys.exit(1)
 
-    # 4. Initialize Intrusion Detector & Load Zones
+    # 4. Initialize Intrusion, Loitering & Risk Detectors & Load Zones
     intrusion_detector = IntrusionDetector(api_base_url="http://127.0.0.1:8000/api")
     loaded_count = intrusion_detector.load_zones_from_backend(config.camera_id)
     if loaded_count == 0:
-        # Fallback default perimeter zone for Sector Alpha: Y <= 360 in 768x432 (or 35% normalized)
+        # Fallback default perimeter zone for Sector Alpha
         default_zone = PolygonZone(
             zone_id=f"zone-{config.camera_id}-default",
             camera_id=config.camera_id,
@@ -151,6 +183,30 @@ def main():
         print(f"[CV-Service] Configured default virtual zone: '{default_zone.name}' with polygon: {default_zone.raw_polygon}")
     else:
         print(f"[CV-Service] Loaded {loaded_count} active zone(s) from backend for {config.camera_id}")
+
+    loitering_detector = None
+    if use_loitering:
+        loitering_detector = LoiteringDetector(
+            threshold_seconds=config.loitering_threshold_seconds,
+            grace_period_seconds=config.loitering_grace_period_seconds,
+            target_classes=config.loitering_target_classes,
+            api_base_url="http://127.0.0.1:8000/api",
+        )
+        loitering_detector.zones = intrusion_detector.zones
+
+    risk_engine = None
+    if use_risk:
+        risk_engine = RiskEngine(
+            intrusion_points=config.risk_intrusion_points,
+            loitering_points=config.risk_loitering_points,
+            reentry_points=config.risk_reentry_points,
+            persistence_points=config.risk_persistence_points,
+            persistence_min_seconds=config.risk_persistence_min_seconds,
+            max_score=config.risk_max_score,
+            target_classes=config.loitering_target_classes,
+            api_base_url="http://127.0.0.1:8000/api",
+            alert_threshold=config.risk_alert_threshold,
+        )
 
     # 5. Initialize WebSocket Publisher
     publisher = None
@@ -169,12 +225,16 @@ def main():
     total_inference_time_ms = 0.0
     total_tracking_time_ms = 0.0
     total_geometry_time_ms = 0.0
+    total_loitering_time_ms = 0.0
+    total_loitering_count = 0
+    total_risk_time_ms = 0.0
+    total_risk_alerts_count = 0
 
     t_start = time.perf_counter()
     last_log_time = time.perf_counter()
 
     try:
-        print("[CV-Service] Video tracking & intrusion monitoring running. Press Ctrl+C to stop.")
+        print("[CV-Service] Video tracking, intrusion, loitering & risk monitoring running. Press Ctrl+C to stop.")
         while True:
             ret, frame = source.read_frame()
             if not ret or frame is None:
@@ -218,6 +278,78 @@ def main():
                         if ev.direction == "ENTERING":
                             total_intrusions_count += 1
 
+                # Step C: Loitering Detection & Dwell Accumulation
+                if loitering_detector:
+                    loit_events, loit_ms = loitering_detector.process_tracks(
+                        output["tracks"],
+                        camera_id=config.camera_id,
+                        frame_width=w,
+                        frame_height=h,
+                        publisher=publisher,
+                    )
+                    total_loitering_time_ms += loit_ms
+                    total_loitering_count += len(loit_events)
+
+                    # Enrich track objects with active dwell info for HUD display
+                    for trk in output["tracks"]:
+                        tid = trk["track_id"]
+                        for zid in loitering_detector.zones:
+                            st = loitering_detector.track_states.get((config.camera_id, tid, zid))
+                            if st and st.inside and st.dwell_seconds > 0:
+                                trk["dwell_seconds"] = round(st.dwell_seconds, 1)
+                                trk["is_loitering"] = st.loitering_alerted
+
+                # Step D: Explainable Threat Assessment & Risk Engine
+                if risk_engine:
+                    t_risk0 = time.perf_counter()
+                    for trk in output["tracks"]:
+                        tid = trk["track_id"]
+                        is_in_zone = False
+                        has_intrus = False
+                        is_loit = False
+                        active_dwell = 0.0
+                        reentry_ct = 0
+
+                        # Check intrusion state
+                        for zid in intrusion_detector.zones:
+                            st = intrusion_detector.track_states.get((config.camera_id, tid, zid))
+                            if st and st.current_inside:
+                                is_in_zone = True
+                                has_intrus = True
+                                break
+
+                        # Check loitering state
+                        if loitering_detector:
+                            for zid in loitering_detector.zones:
+                                lst = loitering_detector.track_states.get((config.camera_id, tid, zid))
+                                if lst and lst.inside:
+                                    is_in_zone = True
+                                    active_dwell = max(active_dwell, lst.dwell_seconds)
+                                    if lst.loitering_alerted:
+                                        is_loit = True
+
+                        assessment, alert_trig = risk_engine.evaluate_track(
+                            camera_id=config.camera_id,
+                            track=trk,
+                            is_inside_zone=is_in_zone,
+                            has_intrusion=has_intrus,
+                            is_loitering=is_loit,
+                            dwell_seconds=active_dwell,
+                            reentry_count=reentry_ct,
+                            publisher=publisher,
+                        )
+
+                        trk["risk_score"] = assessment.score
+                        trk["risk_level"] = assessment.level
+                        trk["risk_reasons"] = [r.to_dict() for r in assessment.reasons]
+                        if alert_trig:
+                            total_risk_alerts_count += 1
+
+                    total_risk_time_ms += (time.perf_counter() - t_risk0) * 1000.0
+                    risk_engine.cleanup_inactive_tracks(
+                        config.camera_id, {t["track_id"] for t in output["tracks"]}
+                    )
+
                 # Publish tracking telemetry packet over WebSocket
                 if publisher:
                     publisher.publish(output, message_type="tracking")
@@ -240,14 +372,20 @@ def main():
                 avg_inf = round(total_inference_time_ms / processed_counter, 1)
                 avg_trk = round(total_tracking_time_ms / processed_counter, 1)
                 avg_geo = round(total_geometry_time_ms / processed_counter, 2)
+                avg_loit = round(total_loitering_time_ms / processed_counter, 2) if loitering_detector else 0.0
+                avg_risk = round(total_risk_time_ms / processed_counter, 2) if risk_engine else 0.0
                 print(
                     f"[RUNNING] Frames: {processed_counter} | "
                     f"FPS: {current_fps} | "
                     f"Inference: {avg_inf}ms | "
                     f"Tracking: {avg_trk}ms | "
                     f"Geometry: {avg_geo}ms | "
+                    f"Loitering: {avg_loit}ms | "
+                    f"Risk: {avg_risk}ms | "
                     f"Active: {count} | "
-                    f"Intrusions: {total_intrusions_count}"
+                    f"Intrusions: {total_intrusions_count} | "
+                    f"Loitering: {total_loitering_count} | "
+                    f"Risk Alerts: {total_risk_alerts_count}"
                 )
                 last_log_time = now
 
@@ -268,10 +406,12 @@ def main():
         avg_inference_latency = round(total_inference_time_ms / processed_counter, 2) if processed_counter > 0 else 0.0
         avg_tracking_latency = round(total_tracking_time_ms / processed_counter, 2) if processed_counter > 0 and use_tracking else 0.0
         avg_geometry_latency = round(total_geometry_time_ms / processed_counter, 3) if processed_counter > 0 else 0.0
-        avg_total_latency = round(avg_inference_latency + avg_tracking_latency + avg_geometry_latency, 2)
+        avg_loitering_latency = round(total_loitering_time_ms / processed_counter, 3) if processed_counter > 0 and loitering_detector else 0.0
+        avg_risk_latency = round(total_risk_time_ms / processed_counter, 3) if processed_counter > 0 and risk_engine else 0.0
+        avg_total_latency = round(avg_inference_latency + avg_tracking_latency + avg_geometry_latency + avg_loitering_latency + avg_risk_latency, 2)
 
         print("\n===================================================================")
-        print("[BENCHMARK REPORT] PHASE 4 INTRUSION PIPELINE PERFORMANCE")
+        print("[BENCHMARK REPORT] PHASE 6 INTRUSION, LOITERING & RISK PERFORMANCE")
         print("===================================================================")
         print(f" * Total Ingested Frames:          {frame_counter}")
         print(f" * Total Processed Frames:         {processed_counter}")
@@ -280,10 +420,14 @@ def main():
         print(f" * Average YOLO Inference Latency: {avg_inference_latency} ms")
         print(f" * Average ByteTrack Latency:      {avg_tracking_latency} ms")
         print(f" * Average Zone Geometry Latency:  {avg_geometry_latency} ms")
+        print(f" * Average Loitering Latency:      {avg_loitering_latency} ms")
+        print(f" * Average Risk Engine Latency:    {avg_risk_latency} ms")
         print(f" * Total Processing Latency:       {avg_total_latency} ms")
         print(f" * Total Observed Track Records:   {total_objects_count}")
         print(f" * Unique Persistent Track IDs:    {len(unique_track_ids)} IDs: {sorted(list(unique_track_ids))}")
         print(f" * Real Intrusion Alerts Triggered: {total_intrusions_count}")
+        print(f" * Real Loitering Alerts Triggered: {total_loitering_count}")
+        print(f" * Real Risk Alerts Triggered:      {total_risk_alerts_count}")
         print(f" * Tracked Classes Tally:          {dict(class_frequency)}")
         print("===================================================================\n")
 

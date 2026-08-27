@@ -5,7 +5,7 @@ Handles virtual restricted zones, point-in-polygon tests using the ray-casting a
 target centroid calculations, and coordinate transformations.
 """
 
-from typing import List, Tuple, Union, Dict, Any
+from typing import List, Tuple, Union, Dict, Any, Optional
 
 
 def calculate_centroid(bbox: Dict[str, Union[int, float]]) -> Tuple[float, float]:
@@ -94,19 +94,21 @@ class PolygonZone:
     def __init__(
         self,
         zone_id: str,
-        camera_id: str,
-        name: str,
-        polygon: List[Union[List[float], Tuple[float, float]]],
+        camera_id: str = "cam-01",
+        name: str = "Zone",
+        polygon: Optional[List[Union[List[float], Tuple[float, float]]]] = None,
         enabled: bool = True,
+        **kwargs,
     ):
         self.zone_id = str(zone_id)
         self.camera_id = str(camera_id)
         self.name = str(name)
         self.enabled = bool(enabled)
         
+        pts = polygon if polygon is not None else kwargs.get("raw_polygon", [])
         # Parse polygon points as floats
         self.raw_polygon: List[Tuple[float, float]] = [
-            (float(p[0]), float(p[1])) for p in polygon
+            (float(p[0]), float(p[1])) for p in pts
         ]
         
         if len(self.raw_polygon) < 3:

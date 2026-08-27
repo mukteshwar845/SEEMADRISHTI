@@ -42,3 +42,20 @@ class CVConfig:
 
     # Performance / Profiling
     benchmark_frames: int = int(os.getenv("BENCHMARK_FRAMES", "0"))
+
+    # Phase 5 Loitering Configuration
+    loitering_enabled: bool = os.getenv("LOITERING_ENABLED", "true").lower() in ("true", "1", "yes")
+    loitering_threshold_seconds: float = float(os.getenv("LOITERING_THRESHOLD_SECONDS", "30.0"))
+    loitering_grace_period_seconds: float = float(os.getenv("LOITERING_GRACE_PERIOD_SECONDS", "2.0"))
+    loitering_target_classes: List[str] = field(default_factory=lambda: ["person"])
+    loitering_history_limit: int = int(os.getenv("LOITERING_HISTORY_LIMIT", "50"))
+
+    # Phase 6 Risk Assessment Configuration
+    risk_engine_enabled: bool = os.getenv("RISK_ENGINE_ENABLED", "true").lower() in ("true", "1", "yes")
+    risk_intrusion_points: int = int(os.getenv("RISK_INTRUSION_POINTS", "40"))
+    risk_loitering_points: int = int(os.getenv("RISK_LOITERING_POINTS", "25"))
+    risk_reentry_points: int = int(os.getenv("RISK_REENTRY_POINTS", "15"))
+    risk_persistence_points: int = int(os.getenv("RISK_PERSISTENCE_POINTS", "7"))
+    risk_persistence_min_seconds: float = float(os.getenv("RISK_PERSISTENCE_MIN_SECONDS", "10.0"))
+    risk_max_score: int = int(os.getenv("RISK_MAX_SCORE", "100"))
+    risk_alert_threshold: str = os.getenv("RISK_ALERT_THRESHOLD", "HIGH")

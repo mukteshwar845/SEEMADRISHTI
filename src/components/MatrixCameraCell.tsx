@@ -765,11 +765,33 @@ export const MatrixCameraCell: React.FC<MatrixCameraCellProps> = ({
             const isVehicle = ['car', 'truck', 'bus', 'motorcycle', 'bicycle'].includes(
               trk.class_name.toLowerCase()
             );
-            const color = isVehicle ? '#38bdf8' : '#22c55e'; // Cyan for vehicles, Emerald for persons
+            const isLoitering = Boolean((trk as any).is_loitering);
+            const dwellSec = (trk as any).dwell_seconds;
+            const riskScore = (trk as any).risk_score;
+            const riskLevel = (trk as any).risk_level;
+
+            // Tactical Crimson (#ef4444) for CRITICAL, Amber (#f59e0b) for HIGH, Yellow (#eab308) for MEDIUM, Cyan for vehicles, Emerald for normal
+            let color = isVehicle ? '#38bdf8' : '#22c55e';
+            if (riskLevel === 'CRITICAL') {
+              color = '#ef4444';
+            } else if (riskLevel === 'HIGH' || isLoitering) {
+              color = '#f59e0b';
+            } else if (riskLevel === 'MEDIUM') {
+              color = '#eab308';
+            }
+
             const trackTag = trk.track_id < 10 ? `0${trk.track_id}` : `${trk.track_id}`;
+            let subLabel = `TRACK ID: ${trk.track_id} [${Math.round(trk.confidence * 100)}%]`;
+            if (riskScore !== undefined && riskScore > 0 && riskLevel) {
+              subLabel = `RISK ${riskScore} // ${riskLevel}`;
+            } else if (isLoitering) {
+              subLabel = `LOITERING ${dwellSec ? Math.round(dwellSec) + 's' : ''}`;
+            } else if (dwellSec && dwellSec > 2) {
+              subLabel = `DWELL ${Math.round(dwellSec)}s`;
+            }
 
             targets.push({
-              type: isVehicle ? 'vehicle' : 'pedestrian',
+              type: isVehicle ? 'vehicle' : (riskLevel === 'CRITICAL' || riskLevel === 'HIGH' ? 'intrusion' : 'pedestrian'),
               label: `${trk.class_name.toUpperCase()} #${trackTag}`,
               confidence: trk.confidence,
               x: bx,
@@ -777,7 +799,7 @@ export const MatrixCameraCell: React.FC<MatrixCameraCellProps> = ({
               w: Math.max(bw, 20),
               h: Math.max(bh, 20),
               color: color,
-              subLabel: `TRACK ID: ${trk.track_id} [${Math.round(trk.confidence * 100)}%]`,
+              subLabel: subLabel,
             });
           });
         } else if (hasRealDetections && realData && realData.detections && realData.detections.length > 0) {

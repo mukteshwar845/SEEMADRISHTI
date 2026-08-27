@@ -334,6 +334,47 @@ class WebSocketService {
             audioTriggered: true,
           };
           this.alertListeners.forEach((listener) => listener(uiAlert));
+        } else if (payload && payload.event_type === 'LOITERING') {
+          const uiAlert: AlertItem = {
+            id: payload.id ? `alt-from-${payload.id}` : `alt-${Date.now()}`,
+            title: 'LOITERING DETECTED',
+            camera: payload.camera_id ? payload.camera_id.toUpperCase() : 'CAM-01',
+            severity: 'High',
+            time: payload.timestamp
+              ? new Date(payload.timestamp).toLocaleTimeString()
+              : new Date().toLocaleTimeString(),
+            type: 'LOITERING DETECTED',
+            timestamp: payload.timestamp ? new Date(payload.timestamp).getTime() : Date.now(),
+            status: 'active',
+            description: `Track #${payload.object_id || '?'} (${payload.metadata?.class_name || 'person'}) loitering in ${payload.metadata?.zone_name || 'Restricted Zone'} for ${payload.metadata?.dwell_seconds || 30}s`,
+            location: payload.camera_id ? `Sector ${payload.camera_id.toUpperCase()}` : 'Sector Alpha',
+            confidence: 0.98,
+            audioTriggered: true,
+          };
+          this.alertListeners.forEach((listener) => listener(uiAlert));
+        } else if (payload && payload.event_type === 'RISK_ASSESSMENT') {
+          const reasonsList = Array.isArray(payload.metadata?.reasons)
+            ? payload.metadata.reasons.map((r: any) => `${r.description} (+${r.points})`).join(', ')
+            : 'Multiple threat indicators detected';
+          const level = (payload.metadata?.risk_level || 'HIGH').toUpperCase();
+          const score = payload.metadata?.risk_score ?? 0;
+          const uiAlert: AlertItem = {
+            id: payload.id ? `alt-from-${payload.id}` : `alt-${Date.now()}`,
+            title: `${level} THREAT ASSESSMENT`,
+            camera: payload.camera_id ? payload.camera_id.toUpperCase() : 'CAM-01',
+            severity: 'High',
+            time: payload.timestamp
+              ? new Date(payload.timestamp).toLocaleTimeString()
+              : new Date().toLocaleTimeString(),
+            type: `${level} THREAT ASSESSMENT`,
+            timestamp: payload.timestamp ? new Date(payload.timestamp).getTime() : Date.now(),
+            status: 'active',
+            description: `Track #${payload.object_id || '?'} (${payload.metadata?.class_name || 'person'}) risk ${score}/100 [${level}]: ${reasonsList}`,
+            location: payload.camera_id ? `Sector ${payload.camera_id.toUpperCase()}` : 'Sector Alpha',
+            confidence: 0.99,
+            audioTriggered: true,
+          };
+          this.alertListeners.forEach((listener) => listener(uiAlert));
         }
         break;
       }

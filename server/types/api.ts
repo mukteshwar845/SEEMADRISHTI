@@ -260,6 +260,64 @@ export interface UpdateEnvironmentDTO {
   enhancement_enabled?: boolean | number;
 }
 
+// ----------------------------------------------------------------------------
+// Phase 10 Movement & Flow Analytics Types
+// ----------------------------------------------------------------------------
+
+export interface MovementEventEntity {
+  id: string;
+  camera_id: string;
+  zone_id: string;
+  zone_name?: string;
+  track_id: number;
+  class_name: string;
+  event_type: 'ENTRY' | 'EXIT';
+  direction: string;
+  speed: number;
+  timestamp: number;
+  created_at: string;
+}
+
+export interface ZoneOccupancyEntity {
+  zone_id: string;
+  camera_id: string;
+  zone_name: string;
+  current_occupants: number;
+  peak_occupants: number;
+  average_occupants: number;
+  class_breakdown: Record<string, number> | string;
+  is_occupied: number;
+  total_occupied_seconds: number;
+  updated_at: string;
+}
+
+export interface MovementAnomalyEntity {
+  id: string;
+  camera_id: string;
+  zone_id?: string;
+  anomaly_type: string;
+  severity: RiskLevel;
+  score: number;
+  reason: string;
+  observed_value: number;
+  baseline_value: number;
+  deviation_ratio: number;
+  timestamp: number;
+  created_at: string;
+}
+
+export interface CorridorStatisticsEntity {
+  corridor_id: string;
+  from_camera: string;
+  to_camera: string;
+  traversal_count: number;
+  average_transit_time: number;
+  dominant_direction: string;
+  classes_observed: string[] | string;
+  confidence: number;
+  updated_at: string;
+}
+
 export type WebSocketMessageType =
   | 'camera_status'
   | 'detection'
@@ -275,6 +333,11 @@ export type WebSocketMessageType =
   | 'correlation_escalated'
   | 'environment_update'
   | 'night_movement'
+  | 'movement_update'
+  | 'occupancy_update'
+  | 'direction_update'
+  | 'analytics_anomaly'
+  | 'group_movement'
   | 'ping'
   | 'pong'
   | 'connection_ack'

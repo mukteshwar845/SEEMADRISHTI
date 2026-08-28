@@ -148,6 +148,56 @@ export interface EnvironmentUpdatePayload {
 }
 export type EnvironmentListener = (data: EnvironmentUpdatePayload) => void;
 
+export interface MovementUpdatePayload {
+  id?: string;
+  camera_id: string;
+  zone_id: string;
+  zone_name?: string;
+  track_id: number;
+  class_name: string;
+  event_type: 'ENTRY' | 'EXIT';
+  direction: string;
+  speed: number;
+  timestamp: number;
+}
+export type MovementListener = (data: MovementUpdatePayload) => void;
+
+export interface OccupancyUpdatePayload {
+  zone_id: string;
+  camera_id: string;
+  zone_name: string;
+  current_occupants: number;
+  peak_occupants: number;
+  average_occupants: number;
+  class_breakdown: Record<string, number>;
+  is_occupied?: boolean;
+}
+export type OccupancyListener = (data: OccupancyUpdatePayload) => void;
+
+export interface AnalyticsAnomalyPayload {
+  id: string;
+  camera_id: string;
+  zone_id?: string;
+  anomaly_type: string;
+  severity: 'LOW' | 'MEDIUM' | 'HIGH' | 'CRITICAL';
+  score: number;
+  reason: string;
+  timestamp: number;
+}
+export type AnomalyListener = (data: AnalyticsAnomalyPayload) => void;
+
+export interface GroupMovementPayload {
+  group_id: string;
+  camera_id: string;
+  track_ids: number[];
+  size: number;
+  direction: string;
+  average_separation_px: number;
+  average_speed: number;
+  duration_seconds: number;
+}
+export type GroupMovementListener = (data: GroupMovementPayload) => void;
+
 const WS_URL_STORAGE_KEY = 'seemadrishti_ws_url_v2';
 const DEFAULT_WS_URL = 'ws://127.0.0.1:8000/ws/alerts';
 
@@ -179,6 +229,10 @@ class WebSocketService {
   private correlationUpdatedListeners: Set<CorrelationListener> = new Set();
   private correlationEscalatedListeners: Set<CorrelationListener> = new Set();
   private environmentListeners: Set<EnvironmentListener> = new Set();
+  private movementListeners: Set<MovementListener> = new Set();
+  private occupancyListeners: Set<OccupancyListener> = new Set();
+  private anomalyListeners: Set<AnomalyListener> = new Set();
+  private groupMovementListeners: Set<GroupMovementListener> = new Set();
   private latestEnvironmentStates: Map<string, EnvironmentUpdatePayload> = new Map();
 
   constructor() {
@@ -572,6 +626,51 @@ class WebSocketService {
         }
         break;
       }
+      case 'movement_update' as any: {
+        const payload = (msg as any).data || msg.payload;
+        if (payload) {
+          this.movementListeners.forEach((listener) => listener(payload));
+        }
+        break;
+      }
+      case 'occupancy_update' as any: {
+        const payload = (msg as any).data || msg.payload;
+        if (payload) {
+          this.occupancyListeners.forEach((listener) => listener(payload));
+        }
+        break;
+      }
+      case 'analytics_anomaly' as any: {
+        const payload = (msg as any).data || msg.payload;
+        if (payload) {
+          this.anomalyListeners.forEach((listener) => listener(payload));
+          if (payload.severity === 'HIGH' || payload.severity === 'CRITICAL') {
+            const uiAlert: AlertItem = {
+              id: payload.id || `anom-${Date.now()}`,
+              title: `ANOMALY // ${payload.anomaly_type || 'MOVEMENT'}`,
+              camera: (payload.camera_id || 'CAM-01').toUpperCase(),
+              severity: payload.severity === 'CRITICAL' ? 'High' : 'Medium',
+              time: new Date().toLocaleTimeString(),
+              type: 'BEHAVIOR ANOMALY',
+              timestamp: Date.now(),
+              status: 'active',
+              description: payload.reason || 'Statistical movement anomaly detected',
+              location: payload.zone_id ? `Zone ${payload.zone_id}` : 'Surveillance Grid',
+              confidence: 0.94,
+              audioTriggered: true,
+            };
+            this.alertListeners.forEach((listener) => listener(uiAlert));
+          }
+        }
+        break;
+      }
+      case 'group_movement' as any: {
+        const payload = (msg as any).data || msg.payload;
+        if (payload) {
+          this.groupMovementListeners.forEach((listener) => listener(payload));
+        }
+        break;
+      }
     }
   }
 
@@ -744,6 +843,26 @@ class WebSocketService {
   public onEnvironmentUpdate(listener: EnvironmentListener) {
     this.environmentListeners.add(listener);
     return () => this.environmentListeners.delete(listener);
+  }
+
+  public onMovementUpdate(listener: MovementListener): () => void {
+    this.movementListeners.add(listener);
+    return () => this.movementListeners.delete(listener);
+  }
+
+  public onOccupancyUpdate(listener: OccupancyListener): () => void {
+    this.occupancyListeners.add(listener);
+    return () => this.occupancyListeners.delete(listener);
+  }
+
+  public onAnalyticsAnomaly(listener: AnomalyListener): () => void {
+    this.anomalyListeners.add(listener);
+    return () => this.anomalyListeners.delete(listener);
+  }
+
+  public onGroupMovement(listener: GroupMovementListener): () => void {
+    this.groupMovementListeners.add(listener);
+    return () => this.groupMovementListeners.delete(listener);
   }
 
   public getLatestEnvironment(cameraId: string): EnvironmentUpdatePayload | undefined {

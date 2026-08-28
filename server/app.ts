@@ -6,6 +6,7 @@ import { alertsRouter } from './routes/alerts';
 import { incidentsRouter } from './routes/incidents';
 import { correlationsRouter } from './routes/correlations';
 import { environmentRouter } from './routes/environment';
+import { analyticsRouter } from './routes/analytics';
 import { telemetryRouter } from './routes/telemetry';
 import { devRouter } from './routes/dev';
 import { errorHandler, notFoundHandler } from './middleware/errorHandler';
@@ -59,6 +60,7 @@ export function createApp(): express.Application {
   app.use('/api/incidents', incidentsRouter);
   app.use('/api/correlations', correlationsRouter);
   app.use('/api/environment', environmentRouter);
+  app.use('/api/analytics', analyticsRouter);
   app.use('/api/telemetry', telemetryRouter);
   app.use('/api/dev', devRouter);
 

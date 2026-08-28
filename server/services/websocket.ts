@@ -54,7 +54,12 @@ export function initializeWebSocketServer(server: http.Server): WebSocketServer 
           msg.type === 'correlation_updated' ||
           msg.type === 'correlation_escalated' ||
           msg.type === 'environment_update' ||
-          msg.type === 'night_movement'
+          msg.type === 'night_movement' ||
+          msg.type === 'movement_update' ||
+          msg.type === 'occupancy_update' ||
+          msg.type === 'direction_update' ||
+          msg.type === 'analytics_anomaly' ||
+          msg.type === 'group_movement'
         ) {
           broadcastWebSocketMessage(msg.type, msg.data);
         }

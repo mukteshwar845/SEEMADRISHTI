@@ -34,6 +34,7 @@ from cv_service.environment.environment_analyzer import EnvironmentAnalyzer
 from cv_service.environment.enhancement import LowLightEnhancer
 from cv_service.environment.night_movement import NightMovementDetector
 from cv_service.adaptive.adaptive_sampler import AdaptiveSampler
+from cv_service.analytics.engine import MovementAnalyticsEngine
 from cv_service.output.detection_publisher import DetectionPublisher
 
 
@@ -158,6 +159,11 @@ def parse_args():
         action="store_true",
         help="Disable Phase 9 adaptive frame sampling",
     )
+    parser.add_argument(
+        "--no-analytics",
+        action="store_true",
+        help="Disable Phase 10 movement and traffic flow analytics",
+    )
     return parser.parse_args()
 
 
@@ -193,9 +199,10 @@ def main():
     use_environment = not args.no_environment and config.environment_enabled
     use_enhancement = not args.no_enhancement and config.enable_low_light_enhancement
     use_adaptive = not args.no_adaptive and config.enable_adaptive_sampling
+    use_analytics = not args.no_analytics and getattr(config, "analytics_enabled", True)
 
     print("\n===================================================================")
-    print("SEEMADRISHTI AI - NIGHT INTEL, RISK & SURVEILLANCE PIPELINE (PHASE 9)")
+    print("SEEMADRISHTI AI - MOVEMENT, FLOW & BEHAVIOR SURVEILLANCE PIPELINE (PHASE 10)")
     print("===================================================================")
     print(f" * Video Source:       {args.source}")
     print(f" * Camera ID:          {config.camera_id}")
@@ -212,6 +219,7 @@ def main():
     print(f" * Environment Engine: {'Active (Day/Night/Low-Light Pixel Analysis)' if use_environment else 'Disabled'}")
     print(f" * Optical Enhancement:{'Active (' + config.enhancement_method.upper() + ')' if use_enhancement else 'Disabled'}")
     print(f" * Adaptive Sampling:  {'Active (Dynamic FPS Policy)' if use_adaptive else 'Disabled'}")
+    print(f" * Analytics Engine:   {'Active (Trajectory, Direction, Flow, Occupancy & Anomalies)' if use_analytics else 'Disabled'}")
     print(f" * WebSocket Target:   {config.ws_url if not args.no_ws else 'Disabled'}")
     print("===================================================================")
 
@@ -349,7 +357,28 @@ def main():
             threat_skip=config.adaptive_threat_skip,
         )
 
-    # 8. Initialize WebSocket Publisher
+    # 8. Initialize Phase 10 Movement & Flow Analytics Engine
+    use_analytics = not args.no_analytics and getattr(config, "analytics_enabled", True)
+    analytics_engine = None
+    if use_analytics:
+        frame_w = int(meta.get("width", 1920) or 1920)
+        frame_h = int(meta.get("height", 1080) or 1080)
+        analytics_engine = MovementAnalyticsEngine(
+            camera_id=config.camera_id,
+            frame_width=frame_w,
+            frame_height=frame_h,
+            grid_rows=getattr(config, "density_grid_size", 8),
+            grid_cols=getattr(config, "density_grid_size", 8),
+            min_displacement_px=getattr(config, "direction_min_displacement_px", 3.0),
+            max_separation_px=getattr(config, "group_max_separation_px", 120.0),
+            min_group_size=getattr(config, "group_movement_min_size", 2),
+        )
+        for zid, zone in intrusion_detector.zones.items():
+            poly_pts = zone.get_pixel_polygon(frame_w, frame_h) if hasattr(zone, "get_pixel_polygon") else getattr(zone, "raw_polygon", [])
+            analytics_engine.register_zone(zid, zone.name, poly_pts)
+        print(f"[CV-Service] Initialized Phase 10 Movement & Flow Analytics Engine for {config.camera_id}")
+
+    # 9. Initialize WebSocket Publisher
     publisher = None
     if not args.no_ws:
         publisher = DetectionPublisher(config)
@@ -379,6 +408,10 @@ def main():
     total_enh_time_ms = 0.0
     total_enhanced_frames_count = 0
     total_night_movement_count = 0
+    total_analytics_time_ms = 0.0
+    total_movement_events_count = 0
+    total_analytics_anomalies_count = 0
+    total_groups_detected_count = 0
     last_known_mode = "DAY"
 
     t_start = time.perf_counter()
@@ -494,7 +527,34 @@ def main():
                                 trk["dwell_seconds"] = round(st.dwell_seconds, 1)
                                 trk["is_loitering"] = st.loitering_alerted
 
-                # Step D: Explainable Threat Assessment & Risk Engine
+                # Step D: Phase 10 Advanced Movement & Traffic Flow Analytics
+                active_anomalies = []
+                active_groups = []
+                if analytics_engine:
+                    t_an0 = time.perf_counter()
+                    an_res = analytics_engine.process_frame(output["tracks"], timestamp=current_frame_time)
+                    total_analytics_time_ms += (time.perf_counter() - t_an0) * 1000.0
+                    active_anomalies = an_res.get("anomalies", [])
+                    active_groups = an_res.get("groups", [])
+
+                    if publisher:
+                        if an_res.get("movement_events"):
+                            for mve in an_res["movement_events"]:
+                                publisher.publish(mve, message_type="movement_update")
+                                total_movement_events_count += 1
+                        if an_res.get("occupancy") and (frame_counter % 15 == 0):
+                            for occ in an_res["occupancy"]:
+                                publisher.publish(occ, message_type="occupancy_update")
+                        if active_anomalies:
+                            for anom in active_anomalies:
+                                publisher.publish(anom, message_type="analytics_anomaly")
+                                total_analytics_anomalies_count += 1
+                        if active_groups:
+                            for grp in active_groups:
+                                publisher.publish(grp, message_type="group_movement")
+                                total_groups_detected_count += 1
+
+                # Step E: Explainable Threat Assessment & Risk Engine
                 if risk_engine:
                     t_risk0 = time.perf_counter()
                     for trk in output["tracks"]:
@@ -546,6 +606,11 @@ def main():
                                 if adaptive_sampler:
                                     adaptive_sampler.register_threat(config.camera_id, 30)
 
+                        # Check Phase 10 Anomaly & Group flags
+                        has_anom = any(a.get("track_id") == tid for a in active_anomalies)
+                        anom_reason = next((a.get("reason") for a in active_anomalies if a.get("track_id") == tid), None)
+                        in_group = any(tid in g.get("track_ids", []) for g in active_groups)
+
                         assessment, alert_trig = risk_engine.evaluate_track(
                             camera_id=config.camera_id,
                             track=trk,
@@ -554,8 +619,12 @@ def main():
                             is_loitering=is_loit,
                             dwell_seconds=active_dwell,
                             reentry_count=reentry_ct,
-                            has_night_movement=has_night_mvmt,
+                            current_time=current_frame_time,
                             publisher=publisher,
+                            has_night_movement=has_night_mvmt,
+                            has_movement_anomaly=has_anom,
+                            movement_anomaly_reason=anom_reason,
+                            has_group_movement=in_group,
                         )
 
                         trk["risk_score"] = assessment.score
@@ -680,10 +749,11 @@ def main():
         avg_correlation_latency = round(total_correlation_time_ms / processed_counter, 3) if processed_counter > 0 and correlation_engine else 0.0
         avg_env_latency = round(total_env_time_ms / processed_counter, 3) if processed_counter > 0 and env_analyzer else 0.0
         avg_enh_latency = round(total_enh_time_ms / total_enhanced_frames_count, 3) if total_enhanced_frames_count > 0 else 0.0
-        avg_total_latency = round(avg_inference_latency + avg_tracking_latency + avg_geometry_latency + avg_loitering_latency + avg_risk_latency + avg_evidence_latency + avg_correlation_latency + avg_env_latency, 2)
+        avg_analytics_latency = round(total_analytics_time_ms / processed_counter, 3) if processed_counter > 0 and analytics_engine else 0.0
+        avg_total_latency = round(avg_inference_latency + avg_tracking_latency + avg_geometry_latency + avg_loitering_latency + avg_risk_latency + avg_evidence_latency + avg_correlation_latency + avg_env_latency + avg_analytics_latency, 2)
 
         print("\n===================================================================")
-        print("[BENCHMARK REPORT] PHASE 9 NIGHT, ADAPTIVE & THREAT PIPELINE")
+        print("[BENCHMARK REPORT] PHASE 10 MOVEMENT, FLOW & BEHAVIOR PIPELINE")
         print("===================================================================")
         print(f" * Total Ingested Frames:          {frame_counter}")
         print(f" * Total Processed Frames:         {processed_counter}")
@@ -699,12 +769,16 @@ def main():
         print(f" * Average Risk Engine Latency:    {avg_risk_latency} ms")
         print(f" * Average Evidence Latency:       {avg_evidence_latency} ms")
         print(f" * Average Correlation Latency:    {avg_correlation_latency} ms")
+        print(f" * Average Movement Analytics Lat: {avg_analytics_latency} ms")
         print(f" * Total Processing Latency:       {avg_total_latency} ms")
         print(f" * Total Observed Track Records:   {total_objects_count}")
         print(f" * Unique Persistent Track IDs:    {len(unique_track_ids)} IDs: {sorted(list(unique_track_ids))}")
         print(f" * Real Intrusion Alerts Triggered: {total_intrusions_count}")
         print(f" * Real Loitering Alerts Triggered: {total_loitering_count}")
         print(f" * Real Night Movement Triggered:  {total_night_movement_count}")
+        print(f" * Real Movement Events Recorded:  {total_movement_events_count}")
+        print(f" * Real Coordinated Groups Found:  {total_groups_detected_count}")
+        print(f" * Real Movement Anomalies Found:  {total_analytics_anomalies_count}")
         print(f" * Real Risk Alerts Triggered:      {total_risk_alerts_count}")
         print(f" * Real Incidents Triggered:        {total_incidents_count}")
         print(f" * Real Evidence Clips Generated:   {total_evidence_clips_count}")

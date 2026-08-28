@@ -97,5 +97,13 @@ class CVConfig:
     min_night_movement_frames: int = int(os.getenv("MIN_NIGHT_MOVEMENT_FRAMES", "2"))
     min_night_displacement_px: float = float(os.getenv("MIN_NIGHT_DISPLACEMENT_PX", "5.0"))
 
-
-
+    # Phase 10 Advanced Movement, Traffic Flow & Behavior Analytics Configuration
+    analytics_enabled: bool = os.getenv("ANALYTICS_ENABLED", "true").lower() in ("true", "1", "yes")
+    trajectory_max_points: int = int(os.getenv("TRAJECTORY_MAX_POINTS", "100"))
+    direction_min_displacement_px: float = float(os.getenv("DIRECTION_MIN_DISPLACEMENT_PX", "3.0"))
+    density_grid_size: int = int(os.getenv("DENSITY_GRID_SIZE", "8"))
+    group_movement_min_size: int = int(os.getenv("GROUP_MOVEMENT_MIN_SIZE", "2"))
+    group_max_separation_px: float = float(os.getenv("GROUP_MAX_SEPARATION_PX", "120.0"))
+    movement_anomaly_points: int = int(os.getenv("MOVEMENT_ANOMALY_POINTS", "8"))
+    group_movement_points: int = int(os.getenv("GROUP_MOVEMENT_POINTS", "5"))
+    abnormal_activity_points: int = int(os.getenv("ABNORMAL_ACTIVITY_POINTS", "7"))

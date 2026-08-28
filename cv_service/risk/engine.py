@@ -78,6 +78,10 @@ class TrackRiskContext:
         self.dwell_seconds: float = 0.0
         self.reentry_count: int = 0
         self.has_night_movement: bool = False
+        self.has_movement_anomaly: bool = False
+        self.movement_anomaly_reason: Optional[str] = None
+        self.has_group_movement: bool = False
+        self.has_abnormal_activity: bool = False
 
         # State tracking for alerts
         self.last_score: int = 0
@@ -99,6 +103,9 @@ class RiskEngine:
         persistence_points: int = 7,
         persistence_min_seconds: float = 10.0,
         night_movement_points: int = 10,
+        movement_anomaly_points: int = 8,
+        group_movement_points: int = 5,
+        abnormal_activity_points: int = 7,
         max_score: int = 100,
         target_classes: Optional[List[str]] = None,
         api_base_url: str = "http://127.0.0.1:8000/api",
@@ -110,6 +117,9 @@ class RiskEngine:
         self.persistence_points: int = int(persistence_points)
         self.persistence_min_seconds: float = float(persistence_min_seconds)
         self.night_movement_points: int = int(night_movement_points)
+        self.movement_anomaly_points: int = int(movement_anomaly_points)
+        self.group_movement_points: int = int(group_movement_points)
+        self.abnormal_activity_points: int = int(abnormal_activity_points)
         self.max_score: int = int(max_score)
         self.target_classes: List[str] = [c.lower() for c in (target_classes or ["person"])]
         self.api_base_url: str = api_base_url
@@ -256,6 +266,43 @@ class RiskEngine:
                 )
             )
 
+        # 6. Movement Anomaly Condition (+8 points)
+        if ctx.has_movement_anomaly:
+            pts = self.movement_anomaly_points
+            score += pts
+            desc = ctx.movement_anomaly_reason or "Abnormal movement pattern detected relative to learned baseline"
+            reasons.append(
+                RiskReason(
+                    code="MOVEMENT_ANOMALY",
+                    points=pts,
+                    description=desc,
+                )
+            )
+
+        # 7. Group Movement Condition (+5 points)
+        if ctx.has_group_movement:
+            pts = self.group_movement_points
+            score += pts
+            reasons.append(
+                RiskReason(
+                    code="GROUP_MOVEMENT",
+                    points=pts,
+                    description="Coordinated group movement detected across perimeter",
+                )
+            )
+
+        # 8. Abnormal Activity Condition (+7 points)
+        if ctx.has_abnormal_activity:
+            pts = self.abnormal_activity_points
+            score += pts
+            reasons.append(
+                RiskReason(
+                    code="ABNORMAL_ACTIVITY",
+                    points=pts,
+                    description="Abnormal velocity or spatial activity detected in restricted area",
+                )
+            )
+
         # Cap score at configured max (100)
         score = min(score, self.max_score)
         level = self.classify_score(score)
@@ -285,6 +332,10 @@ class RiskEngine:
         current_time: Optional[float] = None,
         publisher: Optional[Any] = None,
         has_night_movement: bool = False,
+        has_movement_anomaly: bool = False,
+        movement_anomaly_reason: Optional[str] = None,
+        has_group_movement: bool = False,
+        has_abnormal_activity: bool = False,
     ) -> Tuple[RiskAssessment, bool]:
         """
         Updates track state and assesses risk.
@@ -301,7 +352,11 @@ class RiskEngine:
         ctx.has_active_loitering = is_loitering
         ctx.dwell_seconds = dwell_seconds
         ctx.reentry_count = reentry_count
-        ctx.has_night_movement = has_night_movement
+        ctx.has_night_movement = bool(has_night_movement)
+        ctx.has_movement_anomaly = bool(has_movement_anomaly)
+        ctx.movement_anomaly_reason = movement_anomaly_reason
+        ctx.has_group_movement = bool(has_group_movement)
+        ctx.has_abnormal_activity = bool(has_abnormal_activity)
 
         assessment = self.calculate_risk(camera_id, tid, current_time=now)
 

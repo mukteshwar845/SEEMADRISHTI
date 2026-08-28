@@ -194,3 +194,101 @@ export async function acknowledgeAlert(
 export async function fetchSystemTelemetry(): Promise<{ success: boolean; data: any }> {
   return request('/telemetry');
 }
+
+// ----------------------------------------------------------------------------
+// Phase 10 Movement, Traffic Flow & Behavior Analytics
+// ----------------------------------------------------------------------------
+
+export interface MovementAnalytics {
+  camera_id: string;
+  total_entries: number;
+  total_exits: number;
+  current_occupants: number;
+  zones_monitored: number;
+  active_zones: OccupancyStats[];
+  top_corridors: CorridorStats[];
+  recent_anomalies: MovementAnomaly[];
+}
+
+export interface DirectionStats {
+  direction: string;
+  count: number;
+}
+
+export interface OccupancyStats {
+  zone_id: string;
+  camera_id: string;
+  zone_name: string;
+  current_occupants: number;
+  peak_occupants: number;
+  average_occupants: number;
+  class_breakdown: Record<string, number>;
+  is_occupied?: boolean;
+}
+
+export interface DensityStats {
+  row: number;
+  col: number;
+  bounds: { x1: number; y1: number; x2: number; y2: number };
+  visits: number;
+  dwell_frames: number;
+  movement_count: number;
+}
+
+export interface MovementAnomaly {
+  id: string;
+  camera_id: string;
+  zone_id?: string;
+  anomaly_type: string;
+  severity: 'LOW' | 'MEDIUM' | 'HIGH' | 'CRITICAL';
+  score: number;
+  reason: string;
+  observed_value?: number;
+  baseline_value?: number;
+  deviation_ratio?: number;
+  timestamp: number;
+}
+
+export interface CorridorStats {
+  corridor_id: string;
+  from_camera: string;
+  to_camera: string;
+  traversal_count: number;
+  average_transit_time: number;
+  dominant_direction: string;
+  confidence: number;
+}
+
+export async function fetchAnalyticsSummary(cameraId?: string): Promise<{ success: boolean; data: MovementAnalytics }> {
+  const query = cameraId ? `?camera_id=${encodeURIComponent(cameraId)}` : '';
+  return request(`/analytics/summary${query}`);
+}
+
+export async function fetchMovementEvents(filters: {
+  camera_id?: string;
+  zone_id?: string;
+  event_type?: 'ENTRY' | 'EXIT';
+  limit?: number;
+} = {}): Promise<{ success: boolean; data: any[]; count: number }> {
+  const params = new URLSearchParams();
+  if (filters.camera_id) params.set('camera_id', filters.camera_id);
+  if (filters.zone_id) params.set('zone_id', filters.zone_id);
+  if (filters.event_type) params.set('event_type', filters.event_type);
+  if (filters.limit) params.set('limit', String(filters.limit));
+  const qs = params.toString() ? `?${params.toString()}` : '';
+  return request(`/analytics/movement${qs}`);
+}
+
+export async function fetchOccupancy(cameraId?: string): Promise<{ success: boolean; data: OccupancyStats[] }> {
+  const query = cameraId ? `?camera_id=${encodeURIComponent(cameraId)}` : '';
+  return request(`/analytics/occupancy${query}`);
+}
+
+export async function fetchMovementAnomalies(cameraId?: string): Promise<{ success: boolean; data: MovementAnomaly[] }> {
+  const query = cameraId ? `?camera_id=${encodeURIComponent(cameraId)}` : '';
+  return request(`/analytics/anomalies${query}`);
+}
+
+export async function fetchCorridors(): Promise<{ success: boolean; data: CorridorStats[] }> {
+  return request('/analytics/corridors');
+}

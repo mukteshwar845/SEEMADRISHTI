@@ -59,3 +59,13 @@ class CVConfig:
     risk_persistence_min_seconds: float = float(os.getenv("RISK_PERSISTENCE_MIN_SECONDS", "10.0"))
     risk_max_score: int = int(os.getenv("RISK_MAX_SCORE", "100"))
     risk_alert_threshold: str = os.getenv("RISK_ALERT_THRESHOLD", "HIGH")
+
+    # Phase 7 Incident Evidence Capture & Reconstruction Configuration
+    evidence_enabled: bool = os.getenv("EVIDENCE_ENABLED", "true").lower() in ("true", "1", "yes")
+    evidence_pre_event_seconds: float = float(os.getenv("PRE_EVENT_SECONDS", "10.0"))
+    evidence_post_event_seconds: float = float(os.getenv("POST_EVENT_SECONDS", "10.0"))
+    evidence_dir: str = os.getenv("EVIDENCE_DIR", "evidence")
+    evidence_min_risk_level: str = os.getenv("MIN_EVIDENCE_RISK_LEVEL", "HIGH")
+    evidence_fps: float = float(os.getenv("EVIDENCE_FPS", "15.0"))
+    evidence_cooldown_seconds: float = float(os.getenv("EVIDENCE_COOLDOWN_SECONDS", "15.0"))
+

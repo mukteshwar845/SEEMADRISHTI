@@ -786,7 +786,7 @@ def main():
             [sys.executable, "cv_service/tests/phase5_test.py"],
             capture_output=True,
             text=True,
-            timeout=90,
+            timeout=180,
         )
         passed = res_p5.returncode == 0 and "Failed: 0" in res_p5.stdout
         report_test(

@@ -3,6 +3,7 @@ import { camerasRouter } from './routes/cameras';
 import { zonesRouter } from './routes/zones';
 import { eventsRouter } from './routes/events';
 import { alertsRouter } from './routes/alerts';
+import { incidentsRouter } from './routes/incidents';
 import { telemetryRouter } from './routes/telemetry';
 import { devRouter } from './routes/dev';
 import { errorHandler, notFoundHandler } from './middleware/errorHandler';
@@ -53,6 +54,7 @@ export function createApp(): express.Application {
   app.use('/api/zones', zonesRouter);
   app.use('/api/events', eventsRouter);
   app.use('/api/alerts', alertsRouter);
+  app.use('/api/incidents', incidentsRouter);
   app.use('/api/telemetry', telemetryRouter);
   app.use('/api/dev', devRouter);
 

@@ -56,6 +56,7 @@ class TrackZoneState:
         # If object is initialized already inside zone without an observed crossing, mark alerted=True to prevent false positives
         self.alerted = initial_inside
         self.first_entered_time = time.time() if initial_inside else 0.0
+        self.entry_count = 1 if initial_inside else 0
         self.last_update_time = time.time()
 
     def update(self, is_inside: bool, position: Tuple[float, float]):
@@ -182,6 +183,7 @@ class IntrusionDetector:
                 # 1. OUTSIDE -> INSIDE (Intrusion Crossing!)
                 # -------------------------------------------------------------
                 if not state.previous_inside and state.current_inside:
+                    state.entry_count += 1
                     event_id = f"evt-{int(time.time() * 1000)}"
                     alert_id = f"alt-{int(time.time() * 1000)}"
 

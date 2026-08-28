@@ -25,6 +25,9 @@ from cv_service.geometry.polygon import PolygonZone
 from cv_service.intrusion.detector import IntrusionDetector
 from cv_service.loitering.detector import LoiteringDetector
 from cv_service.risk.engine import RiskEngine
+from cv_service.evidence.circular_buffer import CircularFrameBuffer
+from cv_service.evidence.evidence_writer import EvidenceWriter
+from cv_service.evidence.incident_manager import IncidentManager
 from cv_service.output.detection_publisher import DetectionPublisher
 
 
@@ -100,6 +103,29 @@ def parse_args():
         action="store_true",
         help="Disable explainable threat assessment & risk engine",
     )
+    parser.add_argument(
+        "--pre-event-seconds",
+        type=float,
+        default=10.0,
+        help="Pre-event buffer duration in seconds (default: 10.0)",
+    )
+    parser.add_argument(
+        "--post-event-seconds",
+        type=float,
+        default=10.0,
+        help="Post-event capture duration in seconds (default: 10.0)",
+    )
+    parser.add_argument(
+        "--evidence-dir",
+        type=str,
+        default="evidence",
+        help="Directory to store MP4 forensic evidence clips (default: evidence)",
+    )
+    parser.add_argument(
+        "--no-evidence",
+        action="store_true",
+        help="Disable Phase 7 forensic incident evidence capture",
+    )
     return parser.parse_args()
 
 
@@ -116,14 +142,19 @@ def main():
         loitering_threshold_seconds=args.loitering_threshold,
         loitering_grace_period_seconds=args.loitering_grace_period,
         risk_engine_enabled=not args.no_risk,
+        evidence_enabled=not args.no_evidence,
+        evidence_pre_event_seconds=args.pre_event_seconds,
+        evidence_post_event_seconds=args.post_event_seconds,
+        evidence_dir=args.evidence_dir,
     )
 
     use_tracking = not args.no_tracking
     use_loitering = not args.no_loitering and config.loitering_enabled
     use_risk = not args.no_risk and config.risk_engine_enabled
+    use_evidence = not args.no_evidence and config.evidence_enabled
 
     print("\n===================================================================")
-    print("SEEMADRISHTI AI - INTRUSION, LOITERING & RISK PIPELINE (PHASE 6)")
+    print("SEEMADRISHTI AI - EVIDENCE, RISK & SURVEILLANCE PIPELINE (PHASE 7)")
     print("===================================================================")
     print(f" * Video Source:       {args.source}")
     print(f" * Camera ID:          {config.camera_id}")
@@ -134,6 +165,8 @@ def main():
     print(f" * Intrusion Engine:   Active (Polygon Point-in-Polygon & Transition)")
     print(f" * Loitering Engine:   {'Active (Threshold: ' + str(config.loitering_threshold_seconds) + 's)' if use_loitering else 'Disabled'}")
     print(f" * Threat Risk Engine: {'Active (Explainable 0-100 Scoring)' if use_risk else 'Disabled'}")
+    print(f" * Evidence Engine:    {'Active (Pre: ' + str(config.evidence_pre_event_seconds) + 's, Post: ' + str(config.evidence_post_event_seconds) + 's)' if use_evidence else 'Disabled'}")
+    print(f" * Evidence Output:    {config.evidence_dir}")
     print(f" * WebSocket Target:   {config.ws_url if not args.no_ws else 'Disabled'}")
     print("===================================================================")
 
@@ -208,7 +241,29 @@ def main():
             alert_threshold=config.risk_alert_threshold,
         )
 
-    # 5. Initialize WebSocket Publisher
+    # 5. Initialize Phase 7 Incident Evidence Engine
+    incident_manager = None
+    if use_evidence:
+        src_fps = meta.get("fps", 15.0) or 15.0
+        circular_buf = CircularFrameBuffer(
+            pre_event_seconds=config.evidence_pre_event_seconds,
+            max_fps=src_fps,
+        )
+        writer = EvidenceWriter(
+            evidence_dir=config.evidence_dir,
+            fps=src_fps,
+        )
+        incident_manager = IncidentManager(
+            circular_buffer=circular_buf,
+            evidence_writer=writer,
+            backend_http_url=config.http_backend_url,
+            pre_event_seconds=config.evidence_pre_event_seconds,
+            post_event_seconds=config.evidence_post_event_seconds,
+            min_risk_level=config.evidence_min_risk_level,
+            cooldown_seconds=config.evidence_cooldown_seconds,
+        )
+
+    # 6. Initialize WebSocket Publisher
     publisher = None
     if not args.no_ws:
         publisher = DetectionPublisher(config)
@@ -229,6 +284,9 @@ def main():
     total_loitering_count = 0
     total_risk_time_ms = 0.0
     total_risk_alerts_count = 0
+    total_evidence_time_ms = 0.0
+    total_incidents_count = 0
+    total_evidence_clips_count = 0
 
     t_start = time.perf_counter()
     last_log_time = time.perf_counter()
@@ -249,6 +307,19 @@ def main():
 
             processed_counter += 1
             h, w = frame.shape[:2]
+            current_frame_time = time.time()
+
+            # Record frame into circular buffer and active incident sessions
+            if incident_manager:
+                t_ev0 = time.perf_counter()
+                completed = incident_manager.record_frame(
+                    camera_id=config.camera_id,
+                    frame=frame,
+                    timestamp=current_frame_time,
+                    publisher=publisher,
+                )
+                total_evidence_time_ms += (time.perf_counter() - t_ev0) * 1000.0
+                total_evidence_clips_count += len(completed)
 
             if use_tracking and tracker:
                 # Step A: YOLO + ByteTrack
@@ -310,12 +381,14 @@ def main():
                         active_dwell = 0.0
                         reentry_ct = 0
 
-                        # Check intrusion state
+                        # Check intrusion state & re-entry count
                         for zid in intrusion_detector.zones:
                             st = intrusion_detector.track_states.get((config.camera_id, tid, zid))
                             if st and st.current_inside:
                                 is_in_zone = True
                                 has_intrus = True
+                                if hasattr(st, "entry_count") and st.entry_count > 1:
+                                    reentry_ct = max(reentry_ct, st.entry_count - 1)
                                 break
 
                         # Check loitering state
@@ -344,6 +417,30 @@ def main():
                         trk["risk_reasons"] = [r.to_dict() for r in assessment.reasons]
                         if alert_trig:
                             total_risk_alerts_count += 1
+
+                        # Step E: Phase 7 Forensic Incident Trigger
+                        if incident_manager and assessment.level in ("HIGH", "CRITICAL"):
+                            t_trig0 = time.perf_counter()
+                            active_zone = "Sector Alpha Restricted Perimeter"
+                            if intrusion_detector.zones:
+                                first_zone = next(iter(intrusion_detector.zones.values()))
+                                active_zone = getattr(first_zone, "name", active_zone)
+
+                            inc = incident_manager.check_and_trigger(
+                                camera_id=config.camera_id,
+                                track_id=tid,
+                                class_name=cls,
+                                risk_score=assessment.score,
+                                risk_level=assessment.level,
+                                reasons=[r.to_dict() for r in assessment.reasons],
+                                zone_name=active_zone,
+                                event_type="RISK_ASSESSMENT",
+                                current_time=current_frame_time,
+                                publisher=publisher,
+                            )
+                            if inc:
+                                total_incidents_count += 1
+                            total_evidence_time_ms += (time.perf_counter() - t_trig0) * 1000.0
 
                     total_risk_time_ms += (time.perf_counter() - t_risk0) * 1000.0
                     risk_engine.cleanup_inactive_tracks(
@@ -396,6 +493,12 @@ def main():
     except KeyboardInterrupt:
         print("\n[CV-Service] Stopping upon operator interrupt...")
     finally:
+        # Finalize any pending active incidents upon stream completion
+        if incident_manager and incident_manager.active_incidents:
+            for inc_id, inc in list(incident_manager.active_incidents.items()):
+                incident_manager.finalize_incident(inc, publisher=publisher)
+                total_evidence_clips_count += 1
+
         total_time = time.perf_counter() - t_start
         source.release()
         if publisher:
@@ -408,10 +511,11 @@ def main():
         avg_geometry_latency = round(total_geometry_time_ms / processed_counter, 3) if processed_counter > 0 else 0.0
         avg_loitering_latency = round(total_loitering_time_ms / processed_counter, 3) if processed_counter > 0 and loitering_detector else 0.0
         avg_risk_latency = round(total_risk_time_ms / processed_counter, 3) if processed_counter > 0 and risk_engine else 0.0
-        avg_total_latency = round(avg_inference_latency + avg_tracking_latency + avg_geometry_latency + avg_loitering_latency + avg_risk_latency, 2)
+        avg_evidence_latency = round(total_evidence_time_ms / processed_counter, 3) if processed_counter > 0 and incident_manager else 0.0
+        avg_total_latency = round(avg_inference_latency + avg_tracking_latency + avg_geometry_latency + avg_loitering_latency + avg_risk_latency + avg_evidence_latency, 2)
 
         print("\n===================================================================")
-        print("[BENCHMARK REPORT] PHASE 6 INTRUSION, LOITERING & RISK PERFORMANCE")
+        print("[BENCHMARK REPORT] PHASE 7 EVIDENCE, RISK & TRACKING PERFORMANCE")
         print("===================================================================")
         print(f" * Total Ingested Frames:          {frame_counter}")
         print(f" * Total Processed Frames:         {processed_counter}")
@@ -422,12 +526,15 @@ def main():
         print(f" * Average Zone Geometry Latency:  {avg_geometry_latency} ms")
         print(f" * Average Loitering Latency:      {avg_loitering_latency} ms")
         print(f" * Average Risk Engine Latency:    {avg_risk_latency} ms")
+        print(f" * Average Evidence Latency:       {avg_evidence_latency} ms")
         print(f" * Total Processing Latency:       {avg_total_latency} ms")
         print(f" * Total Observed Track Records:   {total_objects_count}")
         print(f" * Unique Persistent Track IDs:    {len(unique_track_ids)} IDs: {sorted(list(unique_track_ids))}")
         print(f" * Real Intrusion Alerts Triggered: {total_intrusions_count}")
         print(f" * Real Loitering Alerts Triggered: {total_loitering_count}")
         print(f" * Real Risk Alerts Triggered:      {total_risk_alerts_count}")
+        print(f" * Real Incidents Triggered:        {total_incidents_count}")
+        print(f" * Real Evidence Clips Generated:   {total_evidence_clips_count}")
         print(f" * Tracked Classes Tally:          {dict(class_frequency)}")
         print("===================================================================\n")
 

@@ -54,6 +54,14 @@ export const AlertDetailModal: React.FC<AlertDetailModalProps> = ({
     /intrusion|breach|trespass/i.test(alert.type || '');
   const hasHighConfidence = (alert.confidence ?? 0) > 90;
 
+  const isThreatAssessment = /threat assessment|risk/i.test(alert.title) || /threat assessment|risk/i.test(alert.type || '');
+  const threatReasons = isThreatAssessment && alert.description && alert.description.includes(': ')
+    ? alert.description.split(': ')[1]?.split(', ').map((r) => {
+        const match = r.match(/^(.*?)(?:\s*\(\+(\d+)\))?$/);
+        return { text: match ? match[1] : r, points: match ? match[2] : null };
+      }) || []
+    : [];
+
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/85 backdrop-blur-md">
       <div
@@ -120,6 +128,30 @@ export const AlertDetailModal: React.FC<AlertDetailModalProps> = ({
             <p className="text-slate-300 text-xs leading-relaxed mb-3 font-sans">
               {alert.description || 'Anomalous movement pattern detected across perimeter zone.'}
             </p>
+
+            {/* Explainable Threat Reasons Breakdown */}
+            {isThreatAssessment && threatReasons.length > 0 && (
+              <div className="mb-3 p-2.5 rounded-lg bg-black/40 border border-amber-500/30 space-y-1.5">
+                <span className="text-[10px] uppercase font-bold text-amber-400 tracking-wider flex items-center gap-1">
+                  <ShieldAlert size={12} className="text-amber-400" />
+                  EXPLAINABLE THREAT REASON BREAKDOWN:
+                </span>
+                <div className="space-y-1 pt-1">
+                  {threatReasons.map((r, i) => (
+                    <div key={i} className="flex items-center justify-between text-[11px] text-slate-200">
+                      <span className="flex items-center gap-1.5">
+                        <span className="text-emerald-400 font-bold">✓</span> {r.text}
+                      </span>
+                      {r.points ? (
+                        <span className="text-[10px] font-mono text-amber-300 bg-amber-950/80 px-1.5 py-0.5 rounded border border-amber-500/40">
+                          +{r.points} PTS
+                        </span>
+                      ) : null}
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
 
             {/* Metadata Grid */}
             <div className="grid grid-cols-2 gap-2 text-[11px] font-mono text-slate-300 pt-3 border-t border-white/[0.06]">

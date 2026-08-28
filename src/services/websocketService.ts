@@ -68,6 +68,42 @@ type StateListener = (state: WebSocketServiceState) => void;
 export type DetectionListener = (data: CameraDetectionsPayload) => void;
 export type TrackingListener = (data: CameraTrackingPayload) => void;
 
+export interface RiskAssessmentPayload {
+  camera_id: string;
+  track_id: number;
+  class_name: string;
+  score: number;
+  level: string;
+  reasons: Array<{
+    code: string;
+    points: number;
+    description: string;
+  }>;
+  timestamp: string;
+}
+export type RiskAssessmentListener = (data: RiskAssessmentPayload) => void;
+
+export interface IncidentPayload {
+  id: string;
+  camera_id: string;
+  track_id?: string | null;
+  event_id?: string | null;
+  event_type: string;
+  risk_score: number;
+  risk_level: string;
+  zone_name?: string | null;
+  started_at: string;
+  ended_at?: string | null;
+  evidence_path?: string | null;
+  pre_event_seconds: number;
+  post_event_seconds: number;
+  evidence_status: string;
+  metadata?: any;
+  acknowledged?: boolean;
+  created_at: string;
+}
+export type IncidentListener = (data: IncidentPayload) => void;
+
 const WS_URL_STORAGE_KEY = 'seemadrishti_ws_url_v2';
 const DEFAULT_WS_URL = 'ws://127.0.0.1:8000/ws/alerts';
 
@@ -92,6 +128,9 @@ class WebSocketService {
   private stateListeners: Set<StateListener> = new Set();
   private detectionListeners: Set<DetectionListener> = new Set();
   private trackingListeners: Set<TrackingListener> = new Set();
+  private riskListeners: Set<RiskAssessmentListener> = new Set();
+  private incidentListeners: Set<IncidentListener> = new Set();
+  private evidenceListeners: Set<IncidentListener> = new Set();
 
   constructor() {
     try {
@@ -378,6 +417,28 @@ class WebSocketService {
         }
         break;
       }
+      case 'risk_assessment' as any:
+      case 'RISK_ASSESSMENT' as any: {
+        const payload = (msg as any).data || msg.payload;
+        if (payload) {
+          this.riskListeners.forEach((listener) => listener(payload));
+        }
+        break;
+      }
+      case 'incident_created' as any: {
+        const payload = (msg as any).data || msg.payload;
+        if (payload) {
+          this.incidentListeners.forEach((listener) => listener(payload));
+        }
+        break;
+      }
+      case 'evidence_ready' as any: {
+        const payload = (msg as any).data || msg.payload;
+        if (payload) {
+          this.evidenceListeners.forEach((listener) => listener(payload));
+        }
+        break;
+      }
     }
   }
 
@@ -515,6 +576,21 @@ class WebSocketService {
   public onTracking(listener: TrackingListener): () => void {
     this.trackingListeners.add(listener);
     return () => this.trackingListeners.delete(listener);
+  }
+
+  public onRiskAssessment(listener: RiskAssessmentListener): () => void {
+    this.riskListeners.add(listener);
+    return () => this.riskListeners.delete(listener);
+  }
+
+  public onIncidentCreated(listener: IncidentListener): () => void {
+    this.incidentListeners.add(listener);
+    return () => this.incidentListeners.delete(listener);
+  }
+
+  public onEvidenceReady(listener: IncidentListener): () => void {
+    this.evidenceListeners.add(listener);
+    return () => this.evidenceListeners.delete(listener);
   }
 
   public onStateChange(listener: StateListener): () => void {

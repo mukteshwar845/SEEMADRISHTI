@@ -157,12 +157,47 @@ export const MatrixCameraCell: React.FC<MatrixCameraCellProps> = ({
             .then((res2) => {
               if (res2.success && res2.data && res2.data.length > 0) {
                 setActiveZones(res2.data.map((z) => ({ id: z.id, name: z.name, polygon: z.polygon })));
+              } else if (camera.id === 1) {
+                setActiveZones([
+                  {
+                    id: 'zone-cam-01-default',
+                    name: 'Sector Alpha Restricted Perimeter',
+                    polygon: [[0.52, 0.18], [0.92, 0.18], [0.92, 0.85], [0.52, 0.85]],
+                  },
+                ]);
               }
             })
-            .catch(() => {});
+            .catch(() => {
+              if (camera.id === 1) {
+                setActiveZones([
+                  {
+                    id: 'zone-cam-01-default',
+                    name: 'Sector Alpha Restricted Perimeter',
+                    polygon: [[0.52, 0.18], [0.92, 0.18], [0.92, 0.85], [0.52, 0.85]],
+                  },
+                ]);
+              }
+            });
         }
       })
-      .catch(() => {});
+      .catch(() => {
+        if (camera.id === 1) {
+          setActiveZones([
+            {
+              id: 'zone-cam-01-default',
+              name: 'Sector Alpha Restricted Perimeter',
+              polygon: [[0.52, 0.18], [0.92, 0.18], [0.92, 0.85], [0.52, 0.85]],
+            },
+          ]);
+        }
+      });
+
+    if (camera.id === 1) {
+      activeIntrusionRef.current = {
+        timestamp: Date.now(),
+        zoneName: 'SECTOR ALPHA RESTRICTED PERIMETER',
+      };
+    }
 
     const unsubAlert = webSocketService.onAlert((alert) => {
       const alertCam = (alert.camera || (alert as any).sector || '').toLowerCase();
@@ -833,6 +868,21 @@ export const MatrixCameraCell: React.FC<MatrixCameraCellProps> = ({
             });
           });
         } else if (camera.id === 1) {
+          // Tracked Target #17 in Sector Alpha Perimeter with Tactical Risk Badge
+          const pX = width * 0.72;
+          const pY = height * 0.48;
+          targets.push({
+            type: 'intrusion',
+            label: 'PERSON #17',
+            confidence: 0.96,
+            x: pX - 18,
+            y: pY - 26,
+            w: 36,
+            h: 62,
+            color: '#ef4444', // Crimson CRITICAL
+            subLabel: 'RISK 87 // CRITICAL',
+          });
+
           // Keep Clear Road Targets
           const car1Y = ((effectiveFrame * 2.2) % (height + 120)) - 60;
           const car1X = width * 0.48;
@@ -1020,14 +1070,15 @@ export const MatrixCameraCell: React.FC<MatrixCameraCellProps> = ({
           ctx.fillStyle = '#000000';
           ctx.fillText(tagText, x + 4, y - (isCompact ? 3 : 4));
 
-          // Sub-label
-          if (subLabel && !isCompact) {
-            ctx.font = 'bold 8px monospace';
+          // Sub-label (Tactical Risk Badge or Dwell or Speed)
+          if (subLabel) {
+            ctx.font = isCompact ? 'bold 7.5px monospace' : 'bold 8px monospace';
             const subMetrics = ctx.measureText(subLabel);
+            const subH = isCompact ? 11 : 13;
             ctx.fillStyle = 'rgba(0,0,0,0.85)';
-            ctx.fillRect(x, y + h + 2, subMetrics.width + 6, 13);
+            ctx.fillRect(x, y + h + 2, subMetrics.width + 6, subH);
             ctx.fillStyle = color;
-            ctx.fillText(subLabel, x + 3, y + h + 11);
+            ctx.fillText(subLabel, x + 3, y + h + (isCompact ? 9 : 11));
           }
           ctx.restore();
         });

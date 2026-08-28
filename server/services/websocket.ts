@@ -43,7 +43,14 @@ export function initializeWebSocketServer(server: http.Server): WebSocketServer 
         } else if (msg.type === 'detection' || msg.type === 'tracking') {
           // Fan out real YOLO detection & ByteTrack tracking payload to all connected clients (React dashboards)
           broadcastWebSocketMessage(msg.type, msg.data);
-        } else if (msg.type === 'camera_status' || msg.type === 'event_created' || msg.type === 'alert_created') {
+        } else if (
+          msg.type === 'camera_status' ||
+          msg.type === 'event_created' ||
+          msg.type === 'alert_created' ||
+          msg.type === 'risk_assessment' ||
+          msg.type === 'incident_created' ||
+          msg.type === 'evidence_ready'
+        ) {
           broadcastWebSocketMessage(msg.type, msg.data);
         }
       } catch {

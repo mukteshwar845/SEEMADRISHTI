@@ -114,6 +114,59 @@ export interface AcknowledgeAlertDTO {
 }
 
 // ----------------------------------------------------------------------------
+// Incidents (Phase 7: Forensic Evidence Capture & Reconstruction)
+// ----------------------------------------------------------------------------
+
+export type RiskLevel = 'CRITICAL' | 'HIGH' | 'MEDIUM' | 'LOW';
+export type EvidenceStatus = 'capturing' | 'ready' | 'failed';
+
+export interface IncidentEntity {
+  id: string;
+  camera_id: string;
+  track_id?: string | null;
+  event_id?: string | null;
+  event_type: string;
+  risk_score: number;
+  risk_level: RiskLevel;
+  zone_name?: string | null;
+  started_at: string;
+  ended_at?: string | null;
+  evidence_path?: string | null;
+  pre_event_seconds: number;
+  post_event_seconds: number;
+  evidence_status: EvidenceStatus;
+  metadata?: Record<string, any> | string | null;
+  acknowledged: boolean | number;
+  created_at: string;
+}
+
+export interface CreateIncidentDTO {
+  id?: string;
+  camera_id: string;
+  track_id?: string | null;
+  event_id?: string | null;
+  event_type: string;
+  risk_score: number;
+  risk_level: RiskLevel;
+  zone_name?: string | null;
+  started_at: string;
+  ended_at?: string | null;
+  evidence_path?: string | null;
+  pre_event_seconds?: number;
+  post_event_seconds?: number;
+  evidence_status?: EvidenceStatus;
+  metadata?: Record<string, any> | string | null;
+}
+
+export interface UpdateIncidentDTO {
+  ended_at?: string | null;
+  evidence_path?: string | null;
+  evidence_status?: EvidenceStatus;
+  metadata?: Record<string, any> | string | null;
+  acknowledged?: boolean;
+}
+
+// ----------------------------------------------------------------------------
 // WebSocket Messages
 // ----------------------------------------------------------------------------
 
@@ -124,6 +177,9 @@ export type WebSocketMessageType =
   | 'event_created'
   | 'alert_created'
   | 'alert_updated'
+  | 'risk_assessment'
+  | 'incident_created'
+  | 'evidence_ready'
   | 'ping'
   | 'pong'
   | 'connection_ack'

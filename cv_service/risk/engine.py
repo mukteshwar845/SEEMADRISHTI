@@ -316,6 +316,57 @@ class RiskEngine:
 
         return assessment, alert_triggered
 
+    def evaluate_signal(
+        self,
+        signal: Dict[str, Any],
+        current_time: Optional[float] = None,
+    ) -> Dict[str, Any]:
+        """
+        Directly evaluates a structured surveillance signal dictionary.
+        Input format:
+        {
+            "camera_id": "cam-01",
+            "track_id": 17,
+            "class_name": "person",
+            "intrusion": true,
+            "loitering": true,
+            "dwell_seconds": 35.2,
+            "reentry_count": 1,
+            "persistent_track": true
+        }
+        Returns:
+        {
+            "score": 87,
+            "level": "CRITICAL",
+            "reasons": [ ... ]
+        }
+        """
+        now = current_time if current_time is not None else time.monotonic()
+        cid = str(signal.get("camera_id", "cam-01"))
+        tid = int(signal.get("track_id", 0))
+        cname = str(signal.get("class_name", "person"))
+        has_intrus = bool(signal.get("intrusion", False))
+        is_loit = bool(signal.get("loitering", False))
+        dwell_sec = float(signal.get("dwell_seconds", 0.0))
+        reentry_ct = int(signal.get("reentry_count", 0))
+        is_persistent = bool(signal.get("persistent_track", False))
+
+        ctx = self.get_or_create_context(cid, tid, cname, now)
+        ctx.is_inside_zone = has_intrus or is_loit or dwell_sec > 0
+        ctx.has_active_intrusion = has_intrus
+        ctx.has_active_loitering = is_loit
+        ctx.dwell_seconds = dwell_sec
+        ctx.reentry_count = reentry_ct
+        if is_persistent and (now - ctx.first_seen_at) < self.persistence_min_seconds:
+            ctx.first_seen_at = now - self.persistence_min_seconds
+
+        assessment = self.calculate_risk(cid, tid, current_time=now)
+        return {
+            "score": assessment.score,
+            "level": assessment.level,
+            "reasons": [r.to_dict() for r in assessment.reasons],
+        }
+
     def cleanup_inactive_tracks(
         self, camera_id: str, active_track_ids: Set[int], max_idle_seconds: float = 5.0, current_time: Optional[float] = None
     ) -> int:

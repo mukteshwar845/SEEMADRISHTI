@@ -13,6 +13,8 @@ import {
   Flame,
   AlertTriangle,
   Volume2,
+  Film,
+  Download,
 } from 'lucide-react';
 import { audioAlertEngine } from '../utils/audioAlert';
 
@@ -129,29 +131,150 @@ export const AlertDetailModal: React.FC<AlertDetailModalProps> = ({
               {alert.description || 'Anomalous movement pattern detected across perimeter zone.'}
             </p>
 
+            {/* Target & Zone Details */}
+            {(alert.trackId || alert.zoneName || alert.dwellSeconds) && (
+              <div className="mb-3 p-2.5 rounded-lg bg-slate-950/80 border border-slate-800 flex flex-wrap items-center gap-3 text-[11px] font-mono">
+                {alert.trackId && (
+                  <span className="text-cyan-400 font-bold flex items-center gap-1">
+                    TARGET: #{alert.trackId} {alert.className ? `(${alert.className})` : ''}
+                  </span>
+                )}
+                {alert.zoneName && (
+                  <span className="text-amber-400 flex items-center gap-1">
+                    ZONE: {alert.zoneName}
+                  </span>
+                )}
+                {alert.dwellSeconds && (
+                  <span className="text-rose-400 flex items-center gap-1">
+                    DWELL: {Math.round(alert.dwellSeconds)}s
+                  </span>
+                )}
+              </div>
+            )}
+
             {/* Explainable Threat Reasons Breakdown */}
-            {isThreatAssessment && threatReasons.length > 0 && (
-              <div className="mb-3 p-2.5 rounded-lg bg-black/40 border border-amber-500/30 space-y-1.5">
-                <span className="text-[10px] uppercase font-bold text-amber-400 tracking-wider flex items-center gap-1">
-                  <ShieldAlert size={12} className="text-amber-400" />
-                  EXPLAINABLE THREAT REASON BREAKDOWN:
-                </span>
-                <div className="space-y-1 pt-1">
-                  {threatReasons.map((r, i) => (
-                    <div key={i} className="flex items-center justify-between text-[11px] text-slate-200">
-                      <span className="flex items-center gap-1.5">
-                        <span className="text-emerald-400 font-bold">✓</span> {r.text}
-                      </span>
-                      {r.points ? (
-                        <span className="text-[10px] font-mono text-amber-300 bg-amber-950/80 px-1.5 py-0.5 rounded border border-amber-500/40">
-                          +{r.points} PTS
+            {(alert.riskScore !== undefined || (isThreatAssessment && threatReasons.length > 0) || (alert.reasons && alert.reasons.length > 0)) && (
+              <div className="mb-3 p-3 rounded-xl bg-black/60 border border-amber-500/30 space-y-2">
+                <div className="flex items-center justify-between">
+                  <span className="text-[11px] uppercase font-bold text-amber-400 tracking-wider flex items-center gap-1.5 font-mono">
+                    <ShieldAlert size={14} className="text-amber-400" />
+                    EXPLAINABLE THREAT ASSESSMENT:
+                  </span>
+                  {alert.riskScore !== undefined && (
+                    <span className={`px-2 py-0.5 rounded font-mono font-black text-xs border ${
+                      (alert.riskScore || 0) >= 70
+                        ? 'bg-rose-950/90 text-rose-300 border-rose-500/50 shadow-[0_0_8px_rgba(244,63,94,0.3)]'
+                        : (alert.riskScore || 0) >= 40
+                        ? 'bg-amber-950/90 text-amber-300 border-amber-500/50'
+                        : 'bg-yellow-950/90 text-yellow-300 border-yellow-500/50'
+                    }`}>
+                      SCORE: {alert.riskScore} / 100 [{alert.riskLevel || (alert.riskScore >= 80 ? 'CRITICAL' : alert.riskScore >= 60 ? 'HIGH' : 'MEDIUM')}]
+                    </span>
+                  )}
+                </div>
+
+                <div className="space-y-1.5 pt-1">
+                  {alert.reasons && alert.reasons.length > 0 ? (
+                    alert.reasons.map((r, i) => (
+                      <div key={i} className="flex items-center justify-between text-[11px] text-slate-200">
+                        <span className="flex items-center gap-1.5">
+                          <span className="text-emerald-400 font-bold">✓</span> {r.description || r.code}
                         </span>
-                      ) : null}
+                        {r.points !== undefined ? (
+                          <span className="text-[10px] font-mono text-amber-300 bg-amber-950/80 px-1.5 py-0.5 rounded border border-amber-500/40">
+                            +{r.points} PTS
+                          </span>
+                        ) : null}
+                      </div>
+                    ))
+                  ) : threatReasons.length > 0 ? (
+                    threatReasons.map((r, i) => (
+                      <div key={i} className="flex items-center justify-between text-[11px] text-slate-200">
+                        <span className="flex items-center gap-1.5">
+                          <span className="text-emerald-400 font-bold">✓</span> {r.text}
+                        </span>
+                        {r.points ? (
+                          <span className="text-[10px] font-mono text-amber-300 bg-amber-950/80 px-1.5 py-0.5 rounded border border-amber-500/40">
+                            +{r.points} PTS
+                          </span>
+                        ) : null}
+                      </div>
+                    ))
+                  ) : (
+                    <div className="text-[11px] text-slate-400">
+                      Standard perimeter security rules evaluation applied.
                     </div>
+                  )}
+                </div>
+              </div>
+            )}
+
+            {/* Cross-Camera Corridor Chain (If Correlated) */}
+            {alert.cameraSequence && alert.cameraSequence.length > 0 && (
+              <div className="mb-3 p-2.5 rounded-lg bg-purple-950/30 border border-purple-500/30 space-y-1">
+                <span className="text-[10px] font-bold text-purple-300 tracking-wider flex items-center gap-1 font-mono uppercase">
+                  CORRELATED MULTI-CAMERA CORRIDOR:
+                </span>
+                <div className="flex items-center gap-2 pt-1 font-mono text-xs text-white">
+                  {alert.cameraSequence.map((c, idx) => (
+                    <React.Fragment key={idx}>
+                      <span className="px-2 py-0.5 rounded bg-purple-900/60 border border-purple-500/40 text-purple-200 font-bold">
+                        {c.toUpperCase()}
+                      </span>
+                      {idx < alert.cameraSequence!.length - 1 && (
+                        <span className="text-purple-400 font-bold">➔</span>
+                      )}
+                    </React.Fragment>
                   ))}
                 </div>
               </div>
             )}
+
+            {/* Forensic MP4 Evidence Player or Availability Notice */}
+            <div className="mb-3 p-3 rounded-xl bg-slate-950 border border-white/[0.08] space-y-2">
+              <div className="flex items-center justify-between">
+                <span className="text-[10px] uppercase font-bold text-slate-300 tracking-wider flex items-center gap-1.5 font-mono">
+                  <Film size={13} className="text-cyan-400" />
+                  FORENSIC INCIDENT EVIDENCE (PHASE 7):
+                </span>
+                {alert.hasEvidence || alert.incidentId ? (
+                  <span className="px-2 py-0.5 rounded text-[9px] font-mono font-bold bg-emerald-950/90 text-emerald-400 border border-emerald-500/40">
+                    EVIDENCE AVAILABLE
+                  </span>
+                ) : (
+                  <span className="px-2 py-0.5 rounded text-[9px] font-mono text-slate-500 bg-slate-900 border border-slate-800">
+                    EVIDENCE NOT AVAILABLE
+                  </span>
+                )}
+              </div>
+
+              {alert.hasEvidence || alert.incidentId ? (
+                <div className="space-y-2 pt-1">
+                  <div className="relative aspect-video rounded-lg overflow-hidden border border-white/10 bg-black flex items-center justify-center">
+                    <video
+                      controls
+                      src={`/api/incidents/${alert.incidentId || alert.id}/evidence`}
+                      className="w-full h-full object-contain"
+                    />
+                  </div>
+                  <div className="flex items-center justify-between text-[10px] font-mono text-slate-400">
+                    <span>BUFFER: 10s PRE-EVENT // 10s POST-EVENT</span>
+                    <a
+                      href={`/api/incidents/${alert.incidentId || alert.id}/download`}
+                      download
+                      className="px-2 py-1 rounded bg-cyan-950 text-cyan-300 border border-cyan-500/30 hover:bg-cyan-900 flex items-center gap-1 cursor-pointer"
+                    >
+                      <Download size={11} />
+                      DOWNLOAD CLIP
+                    </a>
+                  </div>
+                </div>
+              ) : (
+                <p className="text-[10px] text-slate-400 font-mono">
+                  Standard real-time telemetry alert. Dedicated MP4 buffer clips are recorded automatically during genuine high/critical perimeter breaches.
+                </p>
+              )}
+            </div>
 
             {/* Metadata Grid */}
             <div className="grid grid-cols-2 gap-2 text-[11px] font-mono text-slate-300 pt-3 border-t border-white/[0.06]">

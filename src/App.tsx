@@ -20,6 +20,8 @@ import { AlertsManagementView } from './components/AlertsManagementView';
 import { SettingsView } from './components/SettingsView';
 import { UserManagementView } from './components/UserManagementView';
 import { AlertDetailModal } from './components/AlertDetailModal';
+import { CameraDetailModal } from './components/CameraDetailModal';
+import { SihDemoGuideModal } from './components/SihDemoGuideModal';
 import { AnalyticsDashboard } from './components/AnalyticsDashboard';
 import { IncidentInspectorView } from './components/IncidentInspectorView';
 import { HistoricalLogsView } from './components/HistoricalLogsView';
@@ -28,6 +30,7 @@ import { CameraHealthDiagnosticsView } from './components/CameraHealthDiagnostic
 import { audioAlertEngine, triggerIntrusionAudioAlert } from './utils/audioAlert';
 import { ThemeProvider, useTheme } from './context/ThemeContext';
 import { webSocketService } from './services/websocketService';
+import { fetchAlerts, fetchCameras, fetchTelemetry } from './services/api';
 import { Siren, ShieldAlert } from 'lucide-react';
 
 function SeemadrishtiMainApp() {
@@ -38,16 +41,16 @@ function SeemadrishtiMainApp() {
   const [isAudioMuted, setIsAudioMuted] = useState(false);
   const [isAudioPingActive, setIsAudioPingActive] = useState(false);
   const [audioVolume, setAudioVolume] = useState(85);
+  const [isDemoGuideOpen, setIsDemoGuideOpen] = useState(false);
 
-  // Global Strobe/Flash Alert Animation State for High Severity Breaches
-  const [isGlobalFlashActive, setIsGlobalFlashActive] = useState(false);
-
-  // 9-Camera Matrix Reactive State
-  const [matrixCameras, setMatrixCameras] = useState<MatrixCameraFeed[]>(initialMatrixCameras);
+  // App Data States
   const [cameras, setCameras] = useState<CameraFeed[]>(initialCameras);
+  const [matrixCameras, setMatrixCameras] = useState<MatrixCameraFeed[]>(initialMatrixCameras);
   const [selectedCameraId, setSelectedCameraId] = useState<string>('cam-1');
   const [alerts, setAlerts] = useState<AlertItem[]>(initialAlerts);
+  const [isGlobalFlashActive, setIsGlobalFlashActive] = useState(false);
   const [selectedAlertForModal, setSelectedAlertForModal] = useState<AlertItem | null>(null);
+  const [selectedCameraForModal, setSelectedCameraForModal] = useState<CameraFeed | null>(null);
   const [telemetry, setTelemetry] = useState(initialTelemetry);
   const [confidenceThreshold, setConfidenceThreshold] = useState<number>(85);
 
@@ -109,6 +112,65 @@ function SeemadrishtiMainApp() {
   useEffect(() => {
     webSocketService.connect();
 
+    // Fetch initial alerts from database REST API
+    fetchAlerts()
+      .then((res) => {
+        if (res.success && res.data && res.data.length > 0) {
+          const mappedAlerts: AlertItem[] = res.data.map((a: any) => {
+            const meta = typeof a.metadata === 'object' && a.metadata !== null ? a.metadata : {};
+            const d = new Date(a.created_at || Date.now());
+            const sev: AlertItem['severity'] =
+              a.severity === 'CRITICAL' || a.severity === 'HIGH' || a.severity === 'High'
+                ? 'High'
+                : a.severity === 'MEDIUM' || a.severity === 'Medium'
+                ? 'Medium'
+                : 'Low';
+            return {
+              id: a.id,
+              title: a.title || 'Security Anomaly',
+              camera: a.camera_id?.toUpperCase() || 'CAM-01',
+              severity: sev,
+              time: isNaN(d.getTime()) ? '00:00:00' : d.toLocaleTimeString(),
+              type: a.type || 'PERIMETER_ALERT',
+              timestamp: isNaN(d.getTime()) ? Date.now() : d.getTime(),
+              status: a.status || 'active',
+              description: a.description || '',
+              location: a.location || 'Border Sector Alpha',
+              riskScore: a.risk_score ?? meta.risk_score,
+              riskLevel: a.risk_level ?? meta.risk_level,
+              reasons: meta.reasons,
+              trackId: a.track_id ?? meta.track_id,
+              className: meta.class_name,
+              hasEvidence: Boolean(meta.evidence_path || a.has_evidence),
+              incidentId: meta.incident_id || a.incident_id,
+              cameraSequence: meta.camera_sequence,
+              anomalyType: meta.anomaly_type,
+              dwellSeconds: meta.dwell_seconds,
+              zoneName: a.zone_name || meta.zone_name,
+            };
+          });
+          setAlerts(mappedAlerts);
+        }
+      })
+      .catch(() => {});
+
+    // Fetch initial Edge Hardware & Database Telemetry
+    fetchTelemetry()
+      .then((res) => {
+        if (res.success && res.data) {
+          const hw = res.data.hardware;
+          setTelemetry((prev) => ({
+            ...prev,
+            cpuUsage: hw.loadAverage?.[0] ? Math.round(hw.loadAverage[0] * 10) : prev.cpuUsage,
+            cpuLoad: `${hw.cpuCores}-Core (${hw.cpuModel})`,
+            memoryUsedGb: hw.memoryUsedGb,
+            memoryTotalGb: hw.memoryTotalGb,
+            database: res.data.database,
+          } as any));
+        }
+      })
+      .catch(() => {});
+
     // Ingest Live Stream Alerts from WebSocket Server
     const unsubAlerts = webSocketService.onAlert((incomingAlert) => {
       setAlerts((prev) => {
@@ -147,17 +209,27 @@ function SeemadrishtiMainApp() {
     return unsubscribe;
   }, []);
 
-  // Refresh handler
+  // Refresh handler with real telemetry fetch
   const handleRefresh = () => {
     setIsRefreshing(true);
-    setTimeout(() => {
-      setTelemetry((prev) => ({
-        ...prev,
-        cpuUsage: 45,
-        networkMbps: 250,
-      }));
-      setIsRefreshing(false);
-    }, 500);
+    fetchTelemetry()
+      .then((res) => {
+        if (res.success && res.data) {
+          const hw = res.data.hardware;
+          setTelemetry((prev) => ({
+            ...prev,
+            cpuUsage: hw.loadAverage?.[0] ? Math.round(hw.loadAverage[0] * 10) : prev.cpuUsage,
+            cpuLoad: `${hw.cpuCores}-Core (${hw.cpuModel})`,
+            memoryUsedGb: hw.memoryUsedGb,
+            memoryTotalGb: hw.memoryTotalGb,
+            database: res.data.database,
+          } as any));
+        }
+      })
+      .catch(() => {})
+      .finally(() => {
+        setIsRefreshing(false);
+      });
   };
 
   // Simulate Anomaly Intrusion
@@ -315,6 +387,7 @@ function SeemadrishtiMainApp() {
           onRefresh={handleRefresh}
           isRefreshing={isRefreshing}
           activeAlertCount={alerts.length}
+          onOpenDemoMode={() => setIsDemoGuideOpen(true)}
         />
 
         {/* Dynamic Main Body by Current View */}
@@ -323,10 +396,10 @@ function SeemadrishtiMainApp() {
             <>
               {/* 3. Top Metrics Row */}
               <KpiCards
-                totalCameras={matrixCameras.length}
+                totalCameras={(telemetry as any)?.database?.totalCameras ?? matrixCameras.length}
                 activeCameras={matrixCameras.filter((c) => c.status === 'Online').length}
                 alertsToday={alerts.length}
-                totalDetections={'4,892'}
+                totalDetections={(telemetry as any)?.database?.totalEvents ? (telemetry as any).database.totalEvents.toLocaleString() : '4,892'}
                 onCardClick={(type) => {
                   if (type === 'cameras' || type === 'active') setCurrentView('cameras');
                   if (type === 'alerts') setCurrentView('alerts');
@@ -345,6 +418,14 @@ function SeemadrishtiMainApp() {
                     onTriggerAlert={handleSimulateIntrusion}
                     onSelectCameraForDetails={(cam) => {
                       setSelectedCameraId(String(cam.id));
+                      const match = cameras.find((c) => c.id === String(cam.id)) || {
+                        id: String(cam.id),
+                        name: cam.name,
+                        location: (cam as any).location || 'Border Sector',
+                        status: cam.status as any,
+                        imageUrl: cam.src,
+                      };
+                      setSelectedCameraForModal(match as any);
                     }}
                     confidenceThreshold={confidenceThreshold}
                     onConfidenceThresholdChange={setConfidenceThreshold}
@@ -376,7 +457,14 @@ function SeemadrishtiMainApp() {
               onTriggerAlert={handleSimulateIntrusion}
               onSelectCameraForDetails={(cam) => {
                 setSelectedCameraId(String(cam.id));
-                setCurrentView('dashboard');
+                const match = cameras.find((c) => c.id === String(cam.id)) || {
+                  id: String(cam.id),
+                  name: cam.name,
+                  location: (cam as any).location || 'Border Sector',
+                  status: cam.status as any,
+                  imageUrl: cam.src,
+                };
+                setSelectedCameraForModal(match as any);
               }}
               confidenceThreshold={confidenceThreshold}
               onConfidenceThresholdChange={setConfidenceThreshold}
@@ -449,6 +537,21 @@ function SeemadrishtiMainApp() {
           onResolveAlert={handleResolveAlert}
         />
       )}
+
+      {/* Deep Inspection Camera Node Modal */}
+      {selectedCameraForModal && (
+        <CameraDetailModal
+          camera={selectedCameraForModal}
+          onClose={() => setSelectedCameraForModal(null)}
+        />
+      )}
+
+      {/* SIH 23-Point Judge Presentation Guide Modal */}
+      <SihDemoGuideModal
+        isOpen={isDemoGuideOpen}
+        onClose={() => setIsDemoGuideOpen(false)}
+        onNavigateView={(view) => setCurrentView(view as ViewMode)}
+      />
     </div>
   );
 }

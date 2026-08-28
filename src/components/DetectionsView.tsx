@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { DetectionItem } from '../types';
 import { initialDetections } from '../data/mockData';
 import {
@@ -13,11 +13,85 @@ import {
   User,
   ShieldAlert,
 } from 'lucide-react';
+import { fetchEvents, exportDetectionsCSV } from '../services/api';
+import { webSocketService } from '../services/websocketService';
 
 export const DetectionsView: React.FC = () => {
   const [detections, setDetections] = useState<DetectionItem[]>(initialDetections);
   const [filterClass, setFilterClass] = useState<string>('ALL');
   const [searchTerm, setSearchTerm] = useState('');
+
+  useEffect(() => {
+    fetchEvents()
+      .then((res) => {
+        if (res.success && res.data && res.data.length > 0) {
+          const mapped: DetectionItem[] = res.data.map((evt: any) => {
+            const meta = typeof evt.metadata === 'object' && evt.metadata !== null ? evt.metadata : {};
+            const d = new Date(evt.timestamp);
+            const timeStr = isNaN(d.getTime()) ? '00:00:00' : d.toLocaleTimeString();
+            const labelStr = (meta.class_name || evt.event_type || 'PERSON').toUpperCase();
+            const label: DetectionItem['label'] =
+              labelStr === 'VEHICLE' || labelStr === 'CAR' || labelStr === 'TRUCK'
+                ? 'VEHICLE'
+                : labelStr === 'NO_HELMET'
+                ? 'NO_HELMET'
+                : labelStr === 'LOITERING'
+                ? 'LOITERING'
+                : labelStr === 'INTRUSION'
+                ? 'INTRUSION'
+                : 'PERSON';
+            return {
+              id: evt.id,
+              camera: evt.camera_id?.toUpperCase() || 'CAM-01',
+              location: evt.zone_name || 'Border Sector Alpha',
+              label,
+              confidence: (evt.confidence || 0.95) > 1 ? (evt.confidence || 95) / 100 : (evt.confidence || 0.95),
+              riskScore: evt.risk_score !== undefined ? evt.risk_score : 50,
+              time: timeStr,
+              bbox: meta.bbox || { x: 100, y: 100, width: 60, height: 120 },
+              color: label === 'INTRUSION' ? '#f43f5e' : label === 'VEHICLE' ? '#f59e0b' : '#10b981',
+            };
+          });
+          setDetections(mapped);
+        }
+      })
+      .catch(() => {});
+
+    const unsubDet = webSocketService.onDetection((item: any) => {
+      const labelStr = (item.label || 'PERSON').toUpperCase();
+      const label: DetectionItem['label'] =
+        labelStr === 'VEHICLE'
+          ? 'VEHICLE'
+          : labelStr === 'NO_HELMET'
+          ? 'NO_HELMET'
+          : labelStr === 'LOITERING'
+          ? 'LOITERING'
+          : labelStr === 'INTRUSION'
+          ? 'INTRUSION'
+          : 'PERSON';
+      const newItem: DetectionItem = {
+        id: item.id || `det-${Date.now()}`,
+        camera: item.camera?.toUpperCase() || 'CAM-01',
+        location: item.location || 'Border Sector Alpha',
+        label,
+        confidence: item.confidence || 0.95,
+        riskScore: item.riskScore || 50,
+        time: item.time || new Date().toLocaleTimeString(),
+        bbox: item.bbox || { x: 100, y: 100, width: 60, height: 120 },
+        color: item.color || '#10b981',
+      };
+      setDetections((prev) => [newItem, ...prev.slice(0, 49)]);
+    });
+
+    return () => {
+      unsubDet();
+    };
+  }, []);
+
+  const personCount = detections.filter((d) => d.label === 'PERSON').length;
+  const vehicleCount = detections.filter((d) => ['VEHICLE', 'CAR', 'TRUCK', 'BUS', 'MOTORCYCLE'].includes(d.label)).length;
+  const intrusionCount = detections.filter((d) => d.label === 'INTRUSION' || d.riskScore >= 70).length;
+  const ppeCount = detections.filter((d) => d.label.includes('HELMET') || d.label.includes('PPE')).length;
 
   const filtered = detections.filter((d) => {
     const matchesClass = filterClass === 'ALL' || d.label === filterClass;
@@ -38,8 +112,8 @@ export const DetectionsView: React.FC = () => {
           </div>
           <div>
             <p className="text-xs font-semibold text-slate-400 uppercase">PERSON DETECTIONS</p>
-            <p className="text-2xl font-extrabold text-white">1,245</p>
-            <p className="text-[10px] text-emerald-400">43.6% of total traffic</p>
+            <p className="text-2xl font-extrabold text-white">{personCount}</p>
+            <p className="text-[10px] text-emerald-400">Verified neural tracks</p>
           </div>
         </div>
 
@@ -49,8 +123,8 @@ export const DetectionsView: React.FC = () => {
           </div>
           <div>
             <p className="text-xs font-semibold text-slate-400 uppercase">VEHICLE DETECTIONS</p>
-            <p className="text-2xl font-extrabold text-white">1,102</p>
-            <p className="text-[10px] text-amber-400">38.8% of total traffic</p>
+            <p className="text-2xl font-extrabold text-white">{vehicleCount}</p>
+            <p className="text-[10px] text-amber-400">Ground transport telemetry</p>
           </div>
         </div>
 
@@ -60,7 +134,7 @@ export const DetectionsView: React.FC = () => {
           </div>
           <div>
             <p className="text-xs font-semibold text-slate-400 uppercase">INTRUSION DETECTIONS</p>
-            <p className="text-2xl font-extrabold text-white">134</p>
+            <p className="text-2xl font-extrabold text-white">{intrusionCount}</p>
             <p className="text-[10px] text-red-400">Restricted zone breaches</p>
           </div>
         </div>
@@ -71,8 +145,8 @@ export const DetectionsView: React.FC = () => {
           </div>
           <div>
             <p className="text-xs font-semibold text-slate-400 uppercase">SAFETY / PPE</p>
-            <p className="text-2xl font-extrabold text-white">341</p>
-            <p className="text-[10px] text-blue-400">Helmet & vest anomalies</p>
+            <p className="text-2xl font-extrabold text-white">{ppeCount}</p>
+            <p className="text-[10px] text-blue-400">Compliance checkpoints</p>
           </div>
         </div>
       </div>
@@ -112,11 +186,11 @@ export const DetectionsView: React.FC = () => {
           </div>
 
           <button
-            onClick={() => alert('Exporting Detection Log CSV/JSON...')}
+            onClick={() => exportDetectionsCSV(filtered.length > 0 ? filtered : detections)}
             className="flex items-center justify-center gap-1.5 px-3 py-1.5 rounded-lg bg-[#182338] hover:bg-[#202f4a] text-slate-300 border border-[#223452] text-xs font-semibold cursor-pointer"
           >
             <Download size={13} />
-            <span>Export Detections</span>
+            <span>Export Detections CSV</span>
           </button>
         </div>
 

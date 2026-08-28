@@ -46,12 +46,12 @@ export const KpiCards: React.FC<KpiCardsProps> = ({
         </div>
 
         <div className="mt-2.5 pt-2 border-t border-slate-800 flex items-center justify-between text-[9px] font-mono text-slate-400">
-          <span className="text-emerald-400">9 ALLOCATED NODES</span>
+          <span className="text-emerald-400">{totalCameras} ALLOCATED NODES</span>
           <ArrowUpRight size={12} className="text-cyan-400 group-hover:text-white transition-colors" />
         </div>
       </div>
 
-      {/* 2. Active Feeds: 9 */}
+      {/* 2. Active Feeds */}
       <div
         id="kpi-active-cameras"
         onClick={() => onCardClick && onCardClick('active')}
@@ -73,18 +73,18 @@ export const KpiCards: React.FC<KpiCardsProps> = ({
             {activeCameras}
           </p>
           <span className="text-[9px] font-mono text-emerald-300 font-bold bg-emerald-950/90 px-1.5 py-0.5 rounded border border-emerald-500/40 flex items-center gap-1">
-            <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-ping"></span>
-            100% ONLINE
+            <span className={`w-1.5 h-1.5 rounded-full ${activeCameras === totalCameras ? 'bg-emerald-400 animate-ping' : 'bg-amber-400'}`}></span>
+            {Math.round(((activeCameras || 0) / (totalCameras || 1)) * 100)}% ONLINE
           </span>
         </div>
 
         <div className="mt-2.5 pt-2 border-t border-slate-800 flex items-center justify-between text-[9px] font-mono text-slate-400">
-          <span>H.265 // 0% LOSS</span>
+          <span>{activeCameras === totalCameras ? 'ALL CHANNELS SYNCHRONIZED' : `${totalCameras - activeCameras} NODES REQUIRE ATTENTION`}</span>
           <ArrowUpRight size={12} className="text-emerald-400 group-hover:text-white transition-colors" />
         </div>
       </div>
 
-      {/* 3. Alerts Today: 19 */}
+      {/* 3. Alerts Today */}
       <div
         id="kpi-alerts-today"
         onClick={() => onCardClick && onCardClick('alerts')}
@@ -106,17 +106,17 @@ export const KpiCards: React.FC<KpiCardsProps> = ({
             {alertsToday}
           </p>
           <span className="text-[9px] font-mono text-rose-300 font-bold bg-rose-950 px-1.5 py-0.5 rounded border border-rose-500/50">
-            4 HIGH RISK
+            {alertsToday > 0 ? `${alertsToday} LOGGED` : 'ZERO THREATS'}
           </span>
         </div>
 
         <div className="mt-2.5 pt-2 border-t border-slate-800 flex items-center justify-between text-[9px] font-mono text-rose-400">
-          <span>PERIMETER BREACHES</span>
+          <span>{alertsToday > 0 ? 'REAL-TIME BREACHES' : 'PERIMETER SECURE'}</span>
           <ArrowUpRight size={12} className="text-rose-400 group-hover:text-white transition-colors" />
         </div>
       </div>
 
-      {/* 4. Total Detections: 4,892 */}
+      {/* 4. Total Detections */}
       <div
         id="kpi-total-detections"
         onClick={() => onCardClick && onCardClick('detections')}
@@ -138,12 +138,12 @@ export const KpiCards: React.FC<KpiCardsProps> = ({
             {totalDetections}
           </p>
           <span className="text-[9px] font-mono text-purple-300 font-bold bg-purple-950/90 px-1.5 py-0.5 rounded border border-purple-500/30">
-            60 FPS INFERENCE
+            YOLOv8 EDGE INFERENCE
           </span>
         </div>
 
         <div className="mt-2.5 pt-2 border-t border-slate-800 flex items-center justify-between text-[9px] font-mono text-slate-400">
-          <span>LATENCY: 14ms</span>
+          <span>EVENT STREAM ACTIVE</span>
           <ArrowUpRight size={12} className="text-purple-400 group-hover:text-white transition-colors" />
         </div>
       </div>

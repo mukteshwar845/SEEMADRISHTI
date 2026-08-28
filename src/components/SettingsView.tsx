@@ -153,6 +153,9 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
           <div className="flex items-center gap-2 text-sm font-bold text-white uppercase">
             <Activity size={18} className="text-cyan-400 animate-pulse" />
             <span>Anomaly Movement Detection System — Sensitivity Threshold</span>
+            <span className="text-[9px] font-mono px-2 py-0.5 rounded bg-cyan-950 text-cyan-300 border border-cyan-500/40 font-bold ml-2">
+              EDGE CV RUNTIME GATING
+            </span>
           </div>
           <div className="flex items-center gap-2">
             <span className="text-[10px] font-mono font-bold text-slate-400 uppercase">ACTIVE THRESHOLD:</span>
@@ -223,6 +226,9 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
           <div className="flex items-center gap-2 text-sm font-bold text-white uppercase">
             <GitBranch size={16} className="text-emerald-400" />
             <span>Pedestrian Trajectory Prediction Dataset & Model</span>
+            <span className="text-[9px] font-mono px-2 py-0.5 rounded bg-emerald-950 text-emerald-400 border border-emerald-500/40 font-bold ml-2">
+              MODEL &amp; DATASET SPECIFICATION
+            </span>
           </div>
           <span className="text-[10px] font-mono text-emerald-400 bg-emerald-950/80 px-2 py-0.5 rounded border border-emerald-500/40">
             GITLAB CLOUD SYNCHRONIZED
@@ -289,6 +295,9 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
           <div className="flex items-center gap-2 text-sm font-bold text-white uppercase">
             <Volume2 size={18} className={`text-cyan-400 ${isTestSoundPlaying ? 'animate-bounce' : ''}`} />
             <span>Web Audio API — Low-Frequency Intrusion Alert System</span>
+            <span className="text-[9px] font-mono px-2 py-0.5 rounded bg-purple-950 text-purple-400 border border-purple-500/40 font-bold ml-2">
+              OPERATOR FRONTEND PREFERENCE
+            </span>
           </div>
           <div className="flex items-center gap-2">
             <span className="text-[10px] font-mono font-bold text-slate-400 uppercase">PING THRESHOLD:</span>
@@ -446,6 +455,9 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
         <div className="flex items-center gap-2 pb-2 border-b border-[#1c273c] text-sm font-bold text-white uppercase">
           <Sparkles size={16} className="text-emerald-400" />
           <span>AI Detection Confidence Thresholds</span>
+          <span className="text-[9px] font-mono px-2 py-0.5 rounded bg-cyan-950 text-cyan-300 border border-cyan-500/40 font-bold ml-2">
+            EDGE CV RUNTIME GATING
+          </span>
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-xs">

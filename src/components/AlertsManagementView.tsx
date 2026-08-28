@@ -300,6 +300,32 @@ export const AlertsManagementView: React.FC<AlertsManagementViewProps> = ({
                         {alert.confidence}% CONF
                       </span>
                     )}
+                    {alert.trackId && (
+                      <span className="text-[10px] font-mono px-1.5 py-0.2 rounded bg-cyan-950 text-cyan-300 border border-cyan-500/40 font-bold">
+                        TRK #{alert.trackId}
+                      </span>
+                    )}
+                    {alert.riskScore !== undefined && (
+                      <span className={`text-[10px] font-mono px-1.5 py-0.2 rounded font-bold border ${
+                        alert.riskScore >= 70
+                          ? 'bg-rose-950 text-rose-300 border-rose-500/40'
+                          : alert.riskScore >= 40
+                          ? 'bg-amber-950 text-amber-300 border-amber-500/40'
+                          : 'bg-yellow-950 text-yellow-300 border-yellow-500/40'
+                      }`}>
+                        RISK {alert.riskScore}
+                      </span>
+                    )}
+                    {alert.hasEvidence && (
+                      <span className="text-[10px] font-mono px-1.5 py-0.2 rounded bg-emerald-950 text-emerald-300 border border-emerald-500/40 font-bold">
+                        EVIDENCE
+                      </span>
+                    )}
+                    {alert.cameraSequence && alert.cameraSequence.length > 0 && (
+                      <span className="text-[10px] font-mono px-1.5 py-0.2 rounded bg-purple-950 text-purple-300 border border-purple-500/40 font-bold">
+                        CORRIDOR
+                      </span>
+                    )}
                   </div>
 
                   <p
@@ -317,6 +343,11 @@ export const AlertsManagementView: React.FC<AlertsManagementViewProps> = ({
                     </span>
                     <span>Location: {alert.location || 'Border Zone A'}</span>
                     <span>Unit: {alert.assignedUnit || 'Patrol Squad 1'}</span>
+                    {alert.dwellSeconds && (
+                      <span className="text-amber-400 font-bold">
+                        Dwell: {Math.round(alert.dwellSeconds)}s
+                      </span>
+                    )}
                   </div>
                 </div>
               </div>

@@ -33,6 +33,8 @@ import {
   Disc,
 } from 'lucide-react';
 import { recordingEngine, ActiveRecording } from '../utils/recordingManager';
+import { fetchEnvironmentStates } from '../services/api';
+import { webSocketService } from '../services/websocketService';
 
 interface QuadLiveStreamViewProps {
   cameras: CameraFeed[];
@@ -55,8 +57,8 @@ export const QuadLiveStreamView: React.FC<QuadLiveStreamViewProps> = ({
   const [globalZones, setGlobalZones] = useState(true);
   const [nightVisionMap, setNightVisionMap] = useState<Record<string, boolean>>({
     'cam-1': false,
-    'cam-2': true,
-    'cam-3': true,
+    'cam-2': false,
+    'cam-3': false,
     'cam-4': false,
   });
   const [activeAudioCam, setActiveAudioCam] = useState<string | null>(null);
@@ -64,6 +66,32 @@ export const QuadLiveStreamView: React.FC<QuadLiveStreamViewProps> = ({
   const [snapshotFlash, setSnapshotFlash] = useState<string | null>(null);
   const [liveTimestamp, setLiveTimestamp] = useState('10:45:22 AM');
   const [activeRecordings, setActiveRecordings] = useState<Map<string, ActiveRecording>>(new Map());
+
+  // Ingest real environment states for night vision
+  useEffect(() => {
+    fetchEnvironmentStates()
+      .then((res) => {
+        if (res.success && res.data) {
+          const map: Record<string, boolean> = {};
+          res.data.forEach((r) => {
+            map[r.camera_id] = r.low_light || r.mode === 'NIGHT' || r.mode === 'LOW_LIGHT';
+          });
+          setNightVisionMap((prev) => ({ ...prev, ...map }));
+        }
+      })
+      .catch(() => {});
+
+    const unsubEnv = webSocketService.onEnvironmentUpdate((p) => {
+      setNightVisionMap((prev) => ({
+        ...prev,
+        [p.camera_id]: p.low_light || p.mode === 'NIGHT' || p.mode === 'LOW_LIGHT',
+      }));
+    });
+
+    return () => {
+      unsubEnv();
+    };
+  }, []);
 
   // Subscribe to recording engine
   useEffect(() => {

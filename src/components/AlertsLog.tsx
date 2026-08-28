@@ -177,6 +177,41 @@ export const AlertsLog: React.FC<AlertsLogProps> = ({
                   </p>
                 )}
 
+                {/* Rich Badges Line */}
+                <div className="flex flex-wrap items-center gap-1 mt-1.5 font-mono text-[8px]">
+                  {alert.trackId && (
+                    <span className="px-1 py-0.2 rounded bg-cyan-950 text-cyan-300 border border-cyan-500/30 font-bold">
+                      #{alert.trackId} {alert.className || ''}
+                    </span>
+                  )}
+                  {alert.riskScore !== undefined && (
+                    <span className={`px-1 py-0.2 rounded font-bold border ${
+                      alert.riskScore >= 70
+                        ? 'bg-rose-950 text-rose-300 border-rose-500/40'
+                        : alert.riskScore >= 40
+                        ? 'bg-amber-950 text-amber-300 border-amber-500/40'
+                        : 'bg-yellow-950 text-yellow-300 border-yellow-500/40'
+                    }`}>
+                      RISK {alert.riskScore}
+                    </span>
+                  )}
+                  {alert.hasEvidence && (
+                    <span className="px-1 py-0.2 rounded bg-emerald-950 text-emerald-300 border border-emerald-500/30 font-bold">
+                      EVIDENCE
+                    </span>
+                  )}
+                  {alert.cameraSequence && alert.cameraSequence.length > 0 && (
+                    <span className="px-1 py-0.2 rounded bg-purple-950 text-purple-300 border border-purple-500/30 font-bold">
+                      CORRIDOR
+                    </span>
+                  )}
+                  {alert.dwellSeconds && (
+                    <span className="px-1 py-0.2 rounded bg-amber-950 text-amber-300 border border-amber-500/30 font-bold">
+                      {Math.round(alert.dwellSeconds)}s DWELL
+                    </span>
+                  )}
+                </div>
+
                 {/* Subtitle / Meta Line */}
                 <div className="flex justify-between items-center mt-2 pt-1.5 border-t border-slate-800/80">
                   <span className={`text-[8px] font-mono font-bold px-1.5 py-0.5 rounded border ${style.badge} tracking-wider`}>

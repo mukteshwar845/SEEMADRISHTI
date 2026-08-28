@@ -234,6 +234,13 @@ class WebSocketService {
   private anomalyListeners: Set<AnomalyListener> = new Set();
   private groupMovementListeners: Set<GroupMovementListener> = new Set();
   private latestEnvironmentStates: Map<string, EnvironmentUpdatePayload> = new Map();
+  private latestOccupancyStates: Map<string, OccupancyUpdatePayload> = new Map();
+  private latestRiskStates: Map<string, any> = new Map();
+  private latestAnomalies: Map<string, AnalyticsAnomalyPayload[]> = new Map();
+  private latestGroups: Map<string, GroupMovementPayload[]> = new Map();
+  private latestMovementUpdates: Map<string, MovementUpdatePayload[]> = new Map();
+  private recentAlertIds: Set<string> = new Set();
+  private lastEventTimestamp: number = Date.now();
 
   constructor() {
     try {
@@ -275,6 +282,24 @@ class WebSocketService {
     };
   }
 
+  public getLastEventTime(): number {
+    return this.lastEventTimestamp;
+  }
+
+  public isLive(): boolean {
+    return this.status === 'CONNECTED' && (Date.now() - this.lastEventTimestamp < 30000);
+  }
+
+  private pushAlert(uiAlert: AlertItem) {
+    if (this.recentAlertIds.has(uiAlert.id)) return;
+    this.recentAlertIds.add(uiAlert.id);
+    if (this.recentAlertIds.size > 200) {
+      const first = this.recentAlertIds.values().next().value;
+      if (first) this.recentAlertIds.delete(first);
+    }
+    this.alertListeners.forEach((listener) => listener(uiAlert));
+  }
+
   public toggleEmulation(enabled: boolean) {
     this.isEmulationEnabled = enabled;
     this.notifyState();
@@ -300,6 +325,7 @@ class WebSocketService {
 
       this.socket.onmessage = (event) => {
         this.packetsReceived++;
+        this.lastEventTimestamp = Date.now();
         try {
           const data: WebSocketMessage = JSON.parse(event.data);
           this.handleIncomingMessage(data);
@@ -450,8 +476,16 @@ class WebSocketService {
             location: payload.camera_id ? `Sector ${payload.camera_id.toUpperCase()}` : 'Sector Alpha',
             confidence: payload.confidence || 0.95,
             audioTriggered: true,
+            trackId: payload.track_id || payload.metadata?.track_id,
+            className: payload.class_name || payload.metadata?.class_name,
+            riskScore: payload.risk_score || payload.metadata?.risk_score,
+            riskLevel: payload.risk_level || payload.metadata?.risk_level,
+            reasons: payload.metadata?.reasons,
+            hasEvidence: Boolean(payload.evidence_path || payload.metadata?.has_evidence),
+            incidentId: payload.incident_id || payload.metadata?.incident_id,
+            zoneName: payload.zone_name || payload.metadata?.zone_name,
           };
-          this.alertListeners.forEach((listener) => listener(uiAlert));
+          this.pushAlert(uiAlert);
         }
         break;
       }
@@ -474,8 +508,12 @@ class WebSocketService {
             location: payload.camera_id ? `Sector ${payload.camera_id.toUpperCase()}` : 'Sector Alpha',
             confidence: payload.metadata?.confidence || 0.95,
             audioTriggered: true,
+            trackId: payload.object_id,
+            className: payload.metadata?.class_name,
+            zoneName: payload.metadata?.zone_name,
+            riskScore: payload.metadata?.risk_score,
           };
-          this.alertListeners.forEach((listener) => listener(uiAlert));
+          this.pushAlert(uiAlert);
         } else if (payload && payload.event_type === 'LOITERING') {
           const uiAlert: AlertItem = {
             id: payload.id ? `alt-from-${payload.id}` : `alt-${Date.now()}`,
@@ -492,11 +530,16 @@ class WebSocketService {
             location: payload.camera_id ? `Sector ${payload.camera_id.toUpperCase()}` : 'Sector Alpha',
             confidence: 0.98,
             audioTriggered: true,
+            trackId: payload.object_id,
+            className: payload.metadata?.class_name,
+            zoneName: payload.metadata?.zone_name,
+            dwellSeconds: payload.metadata?.dwell_seconds,
+            riskScore: payload.metadata?.risk_score,
           };
-          this.alertListeners.forEach((listener) => listener(uiAlert));
+          this.pushAlert(uiAlert);
         } else if (payload && payload.event_type === 'RISK_ASSESSMENT') {
           const reasonsList = Array.isArray(payload.metadata?.reasons)
-            ? payload.metadata.reasons.map((r: any) => `${r.description} (+${r.points})`).join(', ')
+            ? payload.metadata.reasons.map((r: any) => `${r.description || r.code} (+${r.points})`).join(', ')
             : 'Multiple threat indicators detected';
           const level = (payload.metadata?.risk_level || 'HIGH').toUpperCase();
           const score = payload.metadata?.risk_score ?? 0;
@@ -515,8 +558,13 @@ class WebSocketService {
             location: payload.camera_id ? `Sector ${payload.camera_id.toUpperCase()}` : 'Sector Alpha',
             confidence: 0.99,
             audioTriggered: true,
+            trackId: payload.object_id,
+            className: payload.metadata?.class_name,
+            riskScore: score,
+            riskLevel: level,
+            reasons: payload.metadata?.reasons,
           };
-          this.alertListeners.forEach((listener) => listener(uiAlert));
+          this.pushAlert(uiAlert);
         }
         break;
       }
@@ -524,6 +572,9 @@ class WebSocketService {
       case 'RISK_ASSESSMENT' as any: {
         const payload = (msg as any).data || msg.payload;
         if (payload) {
+          if (payload.camera_id) {
+            this.latestRiskStates.set(payload.camera_id.toLowerCase(), payload);
+          }
           this.riskListeners.forEach((listener) => listener(payload));
         }
         break;
@@ -532,6 +583,28 @@ class WebSocketService {
         const payload = (msg as any).data || msg.payload;
         if (payload) {
           this.incidentListeners.forEach((listener) => listener(payload));
+          const uiAlert: AlertItem = {
+            id: `inc-${payload.id || Date.now()}`,
+            title: `INCIDENT [${payload.risk_level || 'CRITICAL'}]`,
+            camera: (payload.camera_id || 'CAM-01').toUpperCase(),
+            severity: payload.risk_level === 'CRITICAL' || payload.risk_level === 'HIGH' ? 'High' : 'Medium',
+            time: payload.started_at ? new Date(payload.started_at).toLocaleTimeString() : new Date().toLocaleTimeString(),
+            type: payload.event_type || 'SECURITY BREACH',
+            timestamp: payload.started_at ? new Date(payload.started_at).getTime() : Date.now(),
+            status: 'active',
+            description: `Incident verified on Track #${payload.track_id || '?'} in ${payload.zone_name || 'Restricted Zone'} (Risk ${payload.risk_score}/100)`,
+            location: `Sector ${(payload.camera_id || 'Alpha').toUpperCase()}`,
+            confidence: 0.99,
+            audioTriggered: true,
+            trackId: payload.track_id,
+            riskScore: payload.risk_score,
+            riskLevel: payload.risk_level,
+            hasEvidence: true,
+            incidentId: payload.id,
+            zoneName: payload.zone_name,
+            reasons: payload.metadata?.reasons,
+          };
+          this.alertListeners.forEach((listener) => listener(uiAlert));
         }
         break;
       }
@@ -629,6 +702,16 @@ class WebSocketService {
       case 'movement_update' as any: {
         const payload = (msg as any).data || msg.payload;
         if (payload) {
+          if (Array.isArray(payload)) {
+            payload.forEach((item: any) => {
+              if (item.camera_id) {
+                const list = this.latestMovementUpdates.get(item.camera_id.toLowerCase()) || [];
+                list.unshift(item);
+                if (list.length > 50) list.pop();
+                this.latestMovementUpdates.set(item.camera_id.toLowerCase(), list);
+              }
+            });
+          }
           this.movementListeners.forEach((listener) => listener(payload));
         }
         break;
@@ -636,6 +719,9 @@ class WebSocketService {
       case 'occupancy_update' as any: {
         const payload = (msg as any).data || msg.payload;
         if (payload) {
+          if (payload.camera_id) {
+            this.latestOccupancyStates.set(payload.camera_id.toLowerCase(), payload);
+          }
           this.occupancyListeners.forEach((listener) => listener(payload));
         }
         break;
@@ -643,6 +729,12 @@ class WebSocketService {
       case 'analytics_anomaly' as any: {
         const payload = (msg as any).data || msg.payload;
         if (payload) {
+          if (payload.camera_id) {
+            const list = this.latestAnomalies.get(payload.camera_id.toLowerCase()) || [];
+            list.unshift(payload);
+            if (list.length > 20) list.pop();
+            this.latestAnomalies.set(payload.camera_id.toLowerCase(), list);
+          }
           this.anomalyListeners.forEach((listener) => listener(payload));
           if (payload.severity === 'HIGH' || payload.severity === 'CRITICAL') {
             const uiAlert: AlertItem = {
@@ -658,6 +750,9 @@ class WebSocketService {
               location: payload.zone_id ? `Zone ${payload.zone_id}` : 'Surveillance Grid',
               confidence: 0.94,
               audioTriggered: true,
+              anomalyType: payload.anomaly_type,
+              riskScore: payload.score,
+              riskLevel: payload.severity,
             };
             this.alertListeners.forEach((listener) => listener(uiAlert));
           }
@@ -667,6 +762,12 @@ class WebSocketService {
       case 'group_movement' as any: {
         const payload = (msg as any).data || msg.payload;
         if (payload) {
+          if (payload.camera_id) {
+            const list = this.latestGroups.get(payload.camera_id.toLowerCase()) || [];
+            list.unshift(payload);
+            if (list.length > 20) list.pop();
+            this.latestGroups.set(payload.camera_id.toLowerCase(), list);
+          }
           this.groupMovementListeners.forEach((listener) => listener(payload));
         }
         break;
@@ -871,6 +972,26 @@ class WebSocketService {
 
   public getAllEnvironmentStates(): Map<string, EnvironmentUpdatePayload> {
     return new Map(this.latestEnvironmentStates);
+  }
+
+  public getLatestOccupancy(cameraId: string): OccupancyUpdatePayload | undefined {
+    return this.latestOccupancyStates.get(cameraId.toLowerCase());
+  }
+
+  public getLatestRisk(cameraId: string): any | undefined {
+    return this.latestRiskStates.get(cameraId.toLowerCase());
+  }
+
+  public getLatestAnomalies(cameraId: string): AnalyticsAnomalyPayload[] {
+    return this.latestAnomalies.get(cameraId.toLowerCase()) || [];
+  }
+
+  public getLatestGroups(cameraId: string): GroupMovementPayload[] {
+    return this.latestGroups.get(cameraId.toLowerCase()) || [];
+  }
+
+  public getLatestMovement(cameraId: string): MovementUpdatePayload[] {
+    return this.latestMovementUpdates.get(cameraId.toLowerCase()) || [];
   }
 
   public onStateChange(listener: StateListener): () => void {

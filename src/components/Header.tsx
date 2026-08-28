@@ -11,6 +11,7 @@ import {
   Sun,
   Moon,
   Terminal,
+  Compass,
 } from 'lucide-react';
 import { useTheme } from '../context/ThemeContext';
 import { webSocketService, WebSocketServiceState } from '../services/websocketService';
@@ -20,6 +21,7 @@ interface HeaderProps {
   onRefresh: () => void;
   isRefreshing?: boolean;
   activeAlertCount?: number;
+  onOpenDemoMode?: () => void;
 }
 
 export const Header: React.FC<HeaderProps> = ({
@@ -27,6 +29,7 @@ export const Header: React.FC<HeaderProps> = ({
   onRefresh,
   isRefreshing = false,
   activeAlertCount = 12,
+  onOpenDemoMode,
 }) => {
   const { theme, toggleTheme, isDaylight } = useTheme();
   const [dateString, setDateString] = useState('MON, SEP 16, 2026');
@@ -218,6 +221,19 @@ export const Header: React.FC<HeaderProps> = ({
             </>
           )}
         </button>
+
+        {/* SIH 23-Point Judge Demo Flow Guide */}
+        {onOpenDemoMode && (
+          <button
+            id="btn-sih-demo-flow"
+            onClick={onOpenDemoMode}
+            title="Open SIH Judge 23-Point Live Demo Sequence"
+            className="p-1.5 px-2.5 rounded-lg border border-purple-500/40 bg-purple-950/60 hover:bg-purple-900/80 text-purple-300 font-mono text-[11px] font-bold flex items-center gap-1.5 shadow-[0_0_12px_rgba(168,85,247,0.3)] transition-all cursor-pointer active:scale-95"
+          >
+            <Compass size={13} className="text-purple-400 animate-spin-slow" />
+            <span className="hidden sm:inline">SIH DEMO FLOW</span>
+          </button>
+        )}
 
         {/* Real-time Clock HUD */}
         <div

@@ -109,6 +109,29 @@ export const MatrixCameraCell: React.FC<MatrixCameraCellProps> = ({
     brightness: number;
   } | null>(null);
 
+  // Real Phase 6 Threat Risk Assessment state
+  const [riskState, setRiskState] = useState<{
+    risk_score: number;
+    risk_level: string;
+    reasons?: any[];
+  } | null>(null);
+
+  // Real Phase 10 Occupancy, Movement, Anomaly and Group states
+  const [occupancyState, setOccupancyState] = useState<{
+    occupants: number;
+    peak: number;
+    classes: Record<string, number>;
+  } | null>(null);
+
+  const [activeAnomaly, setActiveAnomaly] = useState<{
+    type: string;
+    reason: string;
+    severity: string;
+    timestamp: number;
+  } | null>(null);
+
+  const [groupCount, setGroupCount] = useState<number>(0);
+
   useEffect(() => {
     const unsubDet = webSocketService.onDetection((payload) => {
       const targetId = String(payload.camera_id).toLowerCase().trim();
@@ -158,10 +181,73 @@ export const MatrixCameraCell: React.FC<MatrixCameraCellProps> = ({
       }
     });
 
+    const unsubRisk = webSocketService.onRiskAssessment((payload) => {
+      const targetId = String(payload.camera_id).toLowerCase().trim();
+      const myTag = camera.tag.toLowerCase().trim();
+      const myId = String(camera.id).toLowerCase().trim();
+      const myTagPadded = `cam-0${camera.id}`.toLowerCase();
+
+      if (targetId === myTag || targetId === myId || targetId === myTagPadded) {
+        setRiskState({
+          risk_score: payload.score,
+          risk_level: payload.level,
+          reasons: payload.reasons,
+        });
+      }
+    });
+
+    const unsubOcc = webSocketService.onOccupancyUpdate((payload) => {
+      const targetId = String(payload.camera_id).toLowerCase().trim();
+      const myTag = camera.tag.toLowerCase().trim();
+      const myId = String(camera.id).toLowerCase().trim();
+      const myTagPadded = `cam-0${camera.id}`.toLowerCase();
+
+      if (targetId === myTag || targetId === myId || targetId === myTagPadded) {
+        setOccupancyState({
+          occupants: payload.current_occupants,
+          peak: payload.peak_occupants,
+          classes: payload.class_breakdown || {},
+        });
+      }
+    });
+
+    const unsubAnom = webSocketService.onAnalyticsAnomaly((payload) => {
+      const targetId = String(payload.camera_id).toLowerCase().trim();
+      const myTag = camera.tag.toLowerCase().trim();
+      const myId = String(camera.id).toLowerCase().trim();
+      const myTagPadded = `cam-0${camera.id}`.toLowerCase();
+
+      if (targetId === myTag || targetId === myId || targetId === myTagPadded) {
+        setActiveAnomaly({
+          type: payload.anomaly_type,
+          reason: payload.reason,
+          severity: payload.severity,
+          timestamp: Date.now(),
+        });
+        setTimeout(() => setActiveAnomaly(null), 8000);
+      }
+    });
+
+    const unsubGroup = webSocketService.onGroupMovement((payload) => {
+      const targetId = String(payload.camera_id).toLowerCase().trim();
+      const myTag = camera.tag.toLowerCase().trim();
+      const myId = String(camera.id).toLowerCase().trim();
+      const myTagPadded = `cam-0${camera.id}`.toLowerCase();
+
+      if (targetId === myTag || targetId === myId || targetId === myTagPadded) {
+        setGroupCount((prev) => prev + 1);
+        setTimeout(() => setGroupCount((prev) => Math.max(0, prev - 1)), 6000);
+      }
+    });
+
     return () => {
       unsubDet();
       unsubTrack();
       unsubEnv();
+      unsubRisk();
+      unsubOcc();
+      unsubAnom();
+      unsubGroup();
     };
   }, [camera.id, camera.tag]);
 
@@ -841,6 +927,10 @@ export const MatrixCameraCell: React.FC<MatrixCameraCellProps> = ({
             }
 
             const trackTag = trk.track_id < 10 ? `0${trk.track_id}` : `${trk.track_id}`;
+            const direction = (trk as any).direction;
+            const speed = (trk as any).speed_px_per_sec || (trk as any).speed;
+            const inGroup = (trk as any).is_in_group;
+
             let subLabel = `TRACK ID: ${trk.track_id} [${Math.round(trk.confidence * 100)}%]`;
             if (riskScore !== undefined && riskScore > 0 && riskLevel) {
               subLabel = `RISK ${riskScore} // ${riskLevel}`;
@@ -848,6 +938,33 @@ export const MatrixCameraCell: React.FC<MatrixCameraCellProps> = ({
               subLabel = `LOITERING ${dwellSec ? Math.round(dwellSec) + 's' : ''}`;
             } else if (dwellSec && dwellSec > 2) {
               subLabel = `DWELL ${Math.round(dwellSec)}s`;
+            }
+
+            if (direction && direction !== 'UNKNOWN' && direction !== 'STATIONARY') {
+              subLabel += ` [${direction}]`;
+            }
+            if (speed && speed > 2) {
+              subLabel += ` ${Math.round(speed)}px/s`;
+            }
+            if (inGroup) {
+              subLabel += ` [GROUP]`;
+            }
+
+            // Draw trajectory path on canvas if available
+            const trajectory = (trk as any).trajectory;
+            if (Array.isArray(trajectory) && trajectory.length > 1) {
+              ctx.save();
+              ctx.strokeStyle = `${color}88`;
+              ctx.lineWidth = 1.5;
+              ctx.beginPath();
+              trajectory.forEach((pt: any, idx: number) => {
+                const px = (Array.isArray(pt) ? pt[0] : pt.x) * scaleX;
+                const py = (Array.isArray(pt) ? pt[1] : pt.y) * scaleY;
+                if (idx === 0) ctx.moveTo(px, py);
+                else ctx.lineTo(px, py);
+              });
+              ctx.stroke();
+              ctx.restore();
             }
 
             targets.push({
@@ -1350,6 +1467,38 @@ export const MatrixCameraCell: React.FC<MatrixCameraCellProps> = ({
             >
               <span className="w-1 h-1 rounded-full bg-current animate-pulse"></span>
               {envState.mode} // VIS {Math.round(envState.visibility_score)}%
+            </span>
+          )}
+          {/* Phase 6 Threat Risk Badge */}
+          {riskState && riskState.risk_score > 0 && (
+            <span
+              className={`px-1.5 py-0.5 text-[8px] font-mono font-black rounded border backdrop-blur-md flex items-center gap-1 ${
+                riskState.risk_level === 'CRITICAL'
+                  ? 'bg-rose-950/90 text-rose-300 border-rose-500/50 shadow-[0_0_8px_rgba(244,63,94,0.4)] animate-pulse'
+                  : riskState.risk_level === 'HIGH'
+                  ? 'bg-amber-950/90 text-amber-300 border-amber-500/50'
+                  : 'bg-yellow-950/90 text-yellow-300 border-yellow-500/50'
+              }`}
+            >
+              RISK: {riskState.risk_score} [{riskState.risk_level}]
+            </span>
+          )}
+          {/* Phase 10 Occupancy Badge */}
+          {occupancyState && occupancyState.occupants > 0 && (
+            <span className="px-1.5 py-0.5 text-[8px] font-mono font-bold rounded border bg-slate-950/90 text-cyan-300 border-cyan-500/40 backdrop-blur-md">
+              OCCUPANTS: {occupancyState.occupants}
+            </span>
+          )}
+          {/* Phase 10 Movement Anomaly Alert Badge */}
+          {activeAnomaly && (
+            <span className="px-1.5 py-0.5 text-[8px] font-mono font-bold rounded border bg-rose-950/90 text-rose-300 border-rose-500/50 backdrop-blur-md animate-pulse">
+              ANOMALY: {activeAnomaly.type}
+            </span>
+          )}
+          {/* Phase 10 Group Movement Badge */}
+          {groupCount > 0 && (
+            <span className="px-1.5 py-0.5 text-[8px] font-mono font-bold rounded border bg-purple-950/90 text-purple-300 border-purple-500/50 backdrop-blur-md">
+              GROUP MOVEMENT
             </span>
           )}
           {camera.batteryLevel !== undefined && (

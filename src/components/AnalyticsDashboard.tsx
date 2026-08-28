@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import {
   AreaChart,
   Area,
@@ -40,8 +40,22 @@ import {
   ArrowDownRight,
   Radio,
   Zap,
+  Navigation,
+  Compass,
+  Users,
 } from 'lucide-react';
 import { CameraFeed } from '../types';
+import {
+  fetchAnalyticsSummary,
+  fetchOccupancy,
+  fetchMovementAnomalies,
+  fetchCorridors,
+  MovementAnalytics,
+  OccupancyStats,
+  MovementAnomaly,
+  CorridorStats,
+} from '../services/api';
+import { webSocketService } from '../services/websocketService';
 
 interface AnalyticsDashboardProps {
   cameras?: CameraFeed[];
@@ -177,12 +191,103 @@ const radarThreatDistribution = [
   { subject: 'Blindspot Infiltration', CAM1: 30, CAM2: 92, CAM3: 65, CAM4: 35 },
 ];
 
-export const AnalyticsDashboard: React.FC<AnalyticsDashboardProps> = () => {
+export const AnalyticsDashboard: React.FC<AnalyticsDashboardProps> = ({ cameras }) => {
   const [timeRange, setTimeRange] = useState<'24h' | '12h' | '6h'>('24h');
   const [selectedCameraFilter, setSelectedCameraFilter] = useState<string>('all');
   const [chartMetric, setChartMetric] = useState<'all' | 'anomalies' | 'classes'>('all');
   const [isSimulatingLive, setIsSimulatingLive] = useState(false);
   const [notificationMsg, setNotificationMsg] = useState<string | null>(null);
+
+  // Phase 10 Real Movement, Flow & Anomaly Analytics State
+  const [analyticsSummary, setAnalyticsSummary] = useState<MovementAnalytics | null>(null);
+  const [liveOccupancy, setLiveOccupancy] = useState<OccupancyStats[]>([]);
+  const [anomaliesList, setAnomaliesList] = useState<MovementAnomaly[]>([]);
+  const [corridorsList, setCorridorsList] = useState<CorridorStats[]>([]);
+
+  useEffect(() => {
+    const camId = selectedCameraFilter !== 'all' ? selectedCameraFilter.toUpperCase() : undefined;
+
+    fetchAnalyticsSummary(camId)
+      .then((res) => {
+        if (res.success && res.data) setAnalyticsSummary(res.data);
+      })
+      .catch(() => {});
+
+    fetchOccupancy(camId)
+      .then((res) => {
+        if (res.success && res.data) setLiveOccupancy(res.data);
+      })
+      .catch(() => {});
+
+    fetchMovementAnomalies(camId)
+      .then((res) => {
+        if (res.success && res.data) setAnomaliesList(res.data);
+      })
+      .catch(() => {});
+
+    fetchCorridors()
+      .then((res) => {
+        if (res.success && res.data) setCorridorsList(res.data);
+      })
+      .catch(() => {});
+
+    const unsubMov = webSocketService.onMovementUpdate((payload) => {
+      setAnalyticsSummary((prev) => {
+        if (!prev) return prev;
+        const isEntry = Array.isArray(payload)
+          ? payload.some((p) => p.event_type === 'ENTRY')
+          : (payload as any).event_type === 'ENTRY';
+        const isExit = Array.isArray(payload)
+          ? payload.some((p) => p.event_type === 'EXIT')
+          : (payload as any).event_type === 'EXIT';
+        return {
+          ...prev,
+          total_entries: prev.total_entries + (isEntry ? 1 : 0),
+          total_exits: prev.total_exits + (isExit ? 1 : 0),
+        };
+      });
+    });
+
+    const unsubOcc = webSocketService.onOccupancyUpdate((payload) => {
+      setLiveOccupancy((prev) => {
+        const match = prev.find((o) => o.zone_id === payload.zone_id);
+        if (match) {
+          return prev.map((o) =>
+            o.zone_id === payload.zone_id
+              ? {
+                  ...o,
+                  current_occupants: payload.current_occupants,
+                  peak_occupants: payload.peak_occupants,
+                  class_breakdown: payload.class_breakdown,
+                }
+              : o
+          );
+        }
+        return [
+          ...prev,
+          {
+            zone_id: payload.zone_id,
+            camera_id: payload.camera_id,
+            current_occupants: payload.current_occupants,
+            peak_occupants: payload.peak_occupants,
+            average_occupants: payload.current_occupants,
+            occupancy_duration_sec: 0,
+            class_breakdown: payload.class_breakdown,
+          },
+        ];
+      });
+    });
+
+    const unsubAnom = webSocketService.onAnalyticsAnomaly((payload) => {
+      setAnomaliesList((prev) => [payload as any, ...prev.slice(0, 15)]);
+    });
+
+    return () => {
+      unsubMov();
+      unsubOcc();
+      unsubAnom();
+    };
+  }, [selectedCameraFilter]);
 
   // Raw 24-hour surveillance timeline
   const baseTimeline = useMemo(() => generate24HourData(), []);
@@ -224,10 +329,14 @@ export const AnalyticsDashboard: React.FC<AnalyticsDashboardProps> = () => {
   // Export report simulation
   const handleExportReport = () => {
     const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify({
-      reportTitle: "SEEMADRISHTI AI Surveillance 24H Analytics Report",
+      reportTitle: "SEEMADRISHTI AI Surveillance 24H Analytics & Flow Report",
       generatedAt: new Date().toISOString(),
       timeRange,
       summaryStats,
+      phase10_movementSummary: analyticsSummary,
+      phase10_zoneOccupancy: liveOccupancy,
+      phase10_statisticalAnomalies: anomaliesList,
+      phase10_crossCameraCorridors: corridorsList,
       timeline: filteredTimeline,
       cameraBreakdown: cameraSummaryData,
     }, null, 2));
@@ -239,7 +348,7 @@ export const AnalyticsDashboard: React.FC<AnalyticsDashboardProps> = () => {
     downloadAnchor.click();
     downloadAnchor.remove();
 
-    setNotificationMsg('Analytics 24-Hour telemetry report exported successfully.');
+    setNotificationMsg('Analytics 24-Hour & Phase 10 flow telemetry exported successfully.');
     setTimeout(() => setNotificationMsg(null), 3000);
   };
 
@@ -294,11 +403,21 @@ export const AnalyticsDashboard: React.FC<AnalyticsDashboardProps> = () => {
             onChange={(e) => setSelectedCameraFilter(e.target.value)}
             className="px-3 py-1.5 rounded-xl bg-[#060911] border border-white/[0.08] text-xs font-mono text-slate-300 focus:outline-none focus:border-blue-500 transition-colors cursor-pointer"
           >
-            <option value="all">All 4 Cameras</option>
-            <option value="cam-1">CAM 1 - Main Checkpoint</option>
-            <option value="cam-2">CAM 2 - Perimeter Fence</option>
-            <option value="cam-3">CAM 3 - Armory Logistics</option>
-            <option value="cam-4">CAM 4 - Server Lobby</option>
+            <option value="all">All Monitored Nodes ({cameras && cameras.length > 0 ? cameras.length : 9})</option>
+            {cameras && cameras.length > 0 ? (
+              cameras.map((c) => (
+                <option key={c.id} value={c.id}>
+                  {c.code} - {c.name}
+                </option>
+              ))
+            ) : (
+              <>
+                <option value="cam-1">CAM-01 - Main Checkpoint</option>
+                <option value="cam-2">CAM-02 - Perimeter Fence</option>
+                <option value="cam-3">CAM-03 - Armory Logistics</option>
+                <option value="cam-4">CAM-04 - Server Lobby</option>
+              </>
+            )}
           </select>
 
           {/* Export Report Button */}
@@ -309,6 +428,128 @@ export const AnalyticsDashboard: React.FC<AnalyticsDashboardProps> = () => {
             <Download size={13} className="text-cyan-400" />
             <span>EXPORT JSON/CSV</span>
           </button>
+        </div>
+      </div>
+
+      {/* PHASE 10: REAL MOVEMENT, TRAFFIC FLOW & BEHAVIOR ANALYTICS */}
+      <div className="p-5 bg-[#0a0f1d] border border-cyan-500/20 rounded-2xl shadow-[0_4px_30px_rgba(0,0,0,0.8)] space-y-4">
+        <div className="flex items-center justify-between border-b border-white/[0.08] pb-3">
+          <div className="flex items-center gap-2">
+            <Navigation size={18} className="text-cyan-400" />
+            <div>
+              <h3 className="text-sm font-black text-white font-mono uppercase tracking-wider">
+                REAL MOVEMENT, TRAFFIC FLOW & BEHAVIOR INTELLIGENCE (PHASE 10)
+              </h3>
+              <p className="text-xs text-slate-400 font-mono">
+                Statistical anomaly detection, learned speed/count baselines, zone occupancy & multi-camera flow
+              </p>
+            </div>
+          </div>
+          <span className="px-2.5 py-1 rounded-lg bg-cyan-950/80 text-cyan-300 border border-cyan-500/40 text-xs font-mono font-bold">
+            LIVE ENGINE ACTIVE
+          </span>
+        </div>
+
+        {/* Real Phase 10 Flow KPI Metrics */}
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+          <div className="p-3 bg-black/40 border border-white/[0.06] rounded-xl font-mono">
+            <span className="text-[10px] text-slate-400 font-bold uppercase">TOTAL ENTRIES</span>
+            <p className="text-2xl font-black text-emerald-400 mt-1">
+              {analyticsSummary?.total_entries ?? 0}
+            </p>
+            <span className="text-[10px] text-slate-500">Crossed Ingress Line</span>
+          </div>
+
+          <div className="p-3 bg-black/40 border border-white/[0.06] rounded-xl font-mono">
+            <span className="text-[10px] text-slate-400 font-bold uppercase">TOTAL EXITS</span>
+            <p className="text-2xl font-black text-blue-400 mt-1">
+              {analyticsSummary?.total_exits ?? 0}
+            </p>
+            <span className="text-[10px] text-slate-500">Crossed Egress Line</span>
+          </div>
+
+          <div className="p-3 bg-black/40 border border-white/[0.06] rounded-xl font-mono">
+            <span className="text-[10px] text-slate-400 font-bold uppercase">CURRENT OCCUPANTS</span>
+            <p className="text-2xl font-black text-amber-400 mt-1">
+              {analyticsSummary?.current_occupants ?? 0}
+            </p>
+            <span className="text-[10px] text-slate-500">Inside Perimeter Zones</span>
+          </div>
+
+          <div className="p-3 bg-black/40 border border-white/[0.06] rounded-xl font-mono">
+            <span className="text-[10px] text-slate-400 font-bold uppercase">MONITORED ZONES</span>
+            <p className="text-2xl font-black text-purple-400 mt-1">
+              {analyticsSummary?.zones_monitored ?? 4}
+            </p>
+            <span className="text-[10px] text-slate-500">Active Polygons</span>
+          </div>
+        </div>
+
+        {/* Live Zone Occupancy & Anomalies Grid */}
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+          {/* Zone Occupancy Table */}
+          <div className="p-3 bg-black/30 border border-white/[0.06] rounded-xl font-mono space-y-2">
+            <span className="text-xs font-bold text-slate-300 uppercase tracking-wider flex items-center gap-1.5">
+              <Users size={13} className="text-amber-400" />
+              LIVE ZONE OCCUPANCY BREAKDOWN
+            </span>
+
+            {liveOccupancy.length === 0 ? (
+              <div className="p-4 text-center text-slate-500 text-xs">
+                No active occupants currently inside monitored polygons.
+              </div>
+            ) : (
+              <div className="space-y-1.5">
+                {liveOccupancy.map((zone) => (
+                  <div
+                    key={zone.zone_id}
+                    className="p-2 rounded-lg bg-white/[0.02] border border-white/[0.04] flex items-center justify-between text-xs"
+                  >
+                    <div>
+                      <span className="font-bold text-white uppercase">{zone.zone_id}</span>
+                      <span className="text-slate-400 text-[10px] ml-2">Node: {zone.camera_id}</span>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <span className="px-2 py-0.5 rounded bg-amber-950/80 text-amber-300 border border-amber-500/30 font-bold">
+                        {zone.current_occupants} OCCUPANTS (PEAK: {zone.peak_occupants})
+                      </span>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+
+          {/* Statistical Movement Anomalies Feed */}
+          <div className="p-3 bg-black/30 border border-white/[0.06] rounded-xl font-mono space-y-2">
+            <span className="text-xs font-bold text-slate-300 uppercase tracking-wider flex items-center gap-1.5">
+              <AlertTriangle size={13} className="text-rose-400" />
+              STATISTICAL MOVEMENT ANOMALIES (LEARNED BASELINES)
+            </span>
+
+            {anomaliesList.length === 0 ? (
+              <div className="p-4 text-center text-slate-500 text-xs">
+                No statistical anomalies detected. Flow patterns are within learned normal distributions.
+              </div>
+            ) : (
+              <div className="space-y-1.5 max-h-48 overflow-y-auto">
+                {anomaliesList.slice(0, 5).map((anom, idx) => (
+                  <div
+                    key={idx}
+                    className="p-2 rounded-lg bg-rose-950/20 border border-rose-500/30 flex items-center justify-between text-xs"
+                  >
+                    <div>
+                      <span className="font-bold text-rose-300 uppercase">{anom.anomaly_type}</span>
+                      <p className="text-[10px] text-slate-400 mt-0.5">{anom.details}</p>
+                    </div>
+                    <span className="px-2 py-0.5 rounded bg-rose-950 text-rose-300 border border-rose-500/40 text-[10px] font-bold">
+                      SCORE: {anom.anomaly_score}
+                    </span>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
         </div>
       </div>
 

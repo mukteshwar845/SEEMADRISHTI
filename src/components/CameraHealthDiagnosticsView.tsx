@@ -22,6 +22,7 @@ import {
 } from 'lucide-react';
 import { CameraDiagnosticMetric } from '../types';
 import { webSocketService, WebSocketServiceState } from '../services/websocketService';
+import { measureNetworkPing } from '../services/api';
 import { useTheme } from '../context/ThemeContext';
 
 export const CameraHealthDiagnosticsView: React.FC = () => {
@@ -58,29 +59,30 @@ export const CameraHealthDiagnosticsView: React.FC = () => {
     };
   }, []);
 
-  const handlePingTest = (cam: CameraDiagnosticMetric) => {
+  const handlePingTest = async (cam: CameraDiagnosticMetric) => {
     setIsPingingId(cam.cameraId);
-    const logEntry = `[${new Date().toLocaleTimeString()}] Pinging node ${cam.tag} (${cam.name})...`;
+    const logEntry = `[${new Date().toLocaleTimeString()}] Measuring round-trip latency to node ${cam.tag} (${cam.name})...`;
     setDiagnosticLogs((prev) => [logEntry, ...prev.slice(0, 30)]);
 
-    setTimeout(() => {
-      const simulatedLatency = Math.round(10 + Math.random() * 12);
-      setMetrics((prev) =>
-        prev.map((c) =>
-          c.cameraId === cam.cameraId
-            ? {
-                ...c,
-                latencyMs: simulatedLatency,
-                lastPingTimestamp: Date.now(),
-                historyLatency: [...c.historyLatency.slice(1), simulatedLatency],
-              }
-            : c
-        )
-      );
-      setIsPingingId(null);
-      const resEntry = `[${new Date().toLocaleTimeString()}] Ping ACK from ${cam.tag}: ${simulatedLatency}ms. Jitter: ${cam.jitterMs}ms (PASS)`;
-      setDiagnosticLogs((prev) => [resEntry, ...prev.slice(0, 30)]);
-    }, 600);
+    const result = await measureNetworkPing('/api/health');
+    const measuredLatency = result.rttMs;
+
+    setMetrics((prev) =>
+      prev.map((c) =>
+        c.cameraId === cam.cameraId
+          ? {
+              ...c,
+              latencyMs: measuredLatency,
+              lastPingTimestamp: Date.now(),
+              historyLatency: [...c.historyLatency.slice(1), measuredLatency],
+              status: result.ok ? 'Online' : 'Degraded',
+            }
+          : c
+      )
+    );
+    setIsPingingId(null);
+    const resEntry = `[${new Date().toLocaleTimeString()}] Ping ACK from ${cam.tag}: ${measuredLatency}ms (HTTP ${result.status} ${result.ok ? 'PASS' : 'DEGRADED'})`;
+    setDiagnosticLogs((prev) => [resEntry, ...prev.slice(0, 30)]);
   };
 
   const handleForceReconnect = (cam: CameraDiagnosticMetric) => {

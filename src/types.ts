@@ -83,6 +83,19 @@ export interface AlertItem {
   assignedUnit?: string;
   audioTriggered?: boolean;
   thresholdAtTime?: number;
+  trackId?: number | string;
+  className?: string;
+  riskScore?: number;
+  riskLevel?: string;
+  reasons?: Array<{ code?: string; description?: string; points?: number }>;
+  hasEvidence?: boolean;
+  incidentId?: string;
+  correlationId?: string;
+  cameraSequence?: string[];
+  anomalyType?: string;
+  dwellSeconds?: number;
+  zoneName?: string;
+  isNight?: boolean;
 }
 
 export interface DetectionItem {

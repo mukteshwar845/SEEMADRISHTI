@@ -28,6 +28,8 @@ import {
   Sparkles,
 } from 'lucide-react';
 import { AlertItem } from '../types';
+import { fetchIncidents, acknowledgeIncident, IncidentRecord } from '../services/api';
+import { webSocketService } from '../services/websocketService';
 
 interface IncidentEvidence {
   id: string;
@@ -54,6 +56,9 @@ interface IncidentEvidence {
   }[];
   notes: string;
   status: 'pending' | 'dispatched' | 'acknowledged' | 'resolved';
+  hasRealVideo?: boolean;
+  evidenceUrl?: string;
+  downloadUrl?: string;
 }
 
 const INCIDENTS_DATA: IncidentEvidence[] = [
@@ -200,7 +205,61 @@ const INCIDENTS_DATA: IncidentEvidence[] = [
   },
 ];
 
+function mapRecordToEvidence(rec: IncidentRecord): IncidentEvidence {
+  const meta = typeof rec.metadata === 'object' && rec.metadata !== null ? rec.metadata : {};
+  const reasons: any[] = Array.isArray(meta.reasons) ? meta.reasons : [];
+  const inferenceWeights = reasons.map((r) => ({
+    label: (r.description || r.code || 'PERIMETER ANOMALY').toUpperCase(),
+    valueText: `+${r.points || 15} Points`,
+    weight: (r.points || 15) / 100,
+    weightPercent: Math.min(100, (r.points || 15) * 2),
+    isViolation: true,
+    color: (r.points || 15) >= 30 ? '#ffb4ab' : '#4cd7f6',
+  }));
+
+  if (inferenceWeights.length === 0) {
+    inferenceWeights.push({
+      label: 'RESTRICTED PERIMETER INTRUSION',
+      valueText: 'Violation Detected',
+      weight: 0.4,
+      weightPercent: 80,
+      isViolation: true,
+      color: '#ffb4ab',
+    });
+  }
+
+  const d = new Date(rec.started_at);
+  const timeStr = isNaN(d.getTime()) ? '02:14:03 AM' : d.toLocaleTimeString();
+  const dateStr = isNaN(d.getTime()) ? '2026.08.28' : d.toISOString().slice(0, 10).replace(/-/g, '.');
+
+  return {
+    id: rec.id,
+    logId: `INC: #${rec.id.slice(0, 8).toUpperCase()}`,
+    cameraName: rec.camera_id.toUpperCase(),
+    cameraCode: `${rec.camera_id.toUpperCase()}-NODE`,
+    timestamp: timeStr,
+    date: dateStr,
+    targetId: rec.track_id ? `ID: TRK-${rec.track_id}` : 'ID: UNKN-PERSON',
+    targetLabel: `${meta.class_name || 'person'} [${rec.event_type || 'INTRUSION'}]`,
+    totalDurationSeconds: Math.round((rec.pre_event_seconds || 10) + (rec.post_event_seconds || 10)),
+    incidentTimeSeconds: Math.round(rec.pre_event_seconds || 10),
+    imageUrl: rec.evidence_status === 'ready' || rec.evidence_path
+      ? `/api/incidents/${rec.id}/evidence`
+      : 'https://images.unsplash.com/photo-1508974239320-0a029497e820?auto=format&fit=crop&w=1200&q=80',
+    altText: `Incident recorded on ${rec.camera_id} in ${rec.zone_name || 'Restricted Perimeter'}`,
+    riskScore: rec.risk_score || 85,
+    riskSeverity: rec.risk_level === 'CRITICAL' ? 'CRITICAL EVENT' : rec.risk_level === 'HIGH' ? 'HIGH RISK' : 'ELEVATED RISK',
+    inferenceWeights,
+    notes: `Verified security breach on ${rec.camera_id} (${rec.zone_name || 'Zone Alpha'}). Risk Score: ${rec.risk_score}/100 [${rec.risk_level}]. Status: ${rec.evidence_status}.`,
+    status: rec.acknowledged ? 'acknowledged' : 'pending',
+    hasRealVideo: rec.evidence_status === 'ready' || Boolean(rec.evidence_path),
+    evidenceUrl: `/api/incidents/${rec.id}/evidence`,
+    downloadUrl: `/api/incidents/${rec.id}/download`,
+  };
+}
+
 export const IncidentInspectorView: React.FC = () => {
+  const [incidentsList, setIncidentsList] = useState<IncidentEvidence[]>(INCIDENTS_DATA);
   const [selectedIncidentIndex, setSelectedIncidentIndex] = useState(0);
   const [isPlaying, setIsPlaying] = useState(true);
   const [currentTimeSec, setCurrentTimeSec] = useState(42);
@@ -211,7 +270,43 @@ export const IncidentInspectorView: React.FC = () => {
   const [toastMessage, setToastMessage] = useState<string | null>(null);
   const [qrtCountdown, setQrtCountdown] = useState(180); // 3 minutes ETA
 
-  const currentIncident = INCIDENTS_DATA[selectedIncidentIndex];
+  useEffect(() => {
+    fetchIncidents()
+      .then((res) => {
+        if (res.success && res.data && res.data.length > 0) {
+          const realMapped = res.data.map(mapRecordToEvidence);
+          setIncidentsList(realMapped);
+        }
+      })
+      .catch(() => {});
+
+    const unsubInc = webSocketService.onIncidentCreated((inc) => {
+      const mapped = mapRecordToEvidence(inc as any);
+      setIncidentsList((prev) => [mapped, ...prev.filter((p) => p.id !== mapped.id)]);
+    });
+
+    const unsubEv = webSocketService.onEvidenceReady((ev) => {
+      setIncidentsList((prev) =>
+        prev.map((item) =>
+          item.id === ev.id
+            ? {
+                ...item,
+                hasRealVideo: true,
+                evidenceUrl: `/api/incidents/${ev.id}/evidence`,
+                downloadUrl: `/api/incidents/${ev.id}/download`,
+              }
+            : item
+        )
+      );
+    });
+
+    return () => {
+      unsubInc();
+      unsubEv();
+    };
+  }, []);
+
+  const currentIncident = incidentsList[selectedIncidentIndex] || incidentsList[0] || INCIDENTS_DATA[0];
 
   // Playback timer simulation
   useEffect(() => {
@@ -263,6 +358,9 @@ export const IncidentInspectorView: React.FC = () => {
   const handleAcknowledge = () => {
     setAcknowledged(true);
     setToastMessage(`INCIDENT ${currentIncident.logId} ACKNOWLEDGED & LOGGED BY OPERATOR`);
+    if (currentIncident.id && !currentIncident.id.startsWith('inc-00')) {
+      acknowledgeIncident(currentIncident.id).catch(() => {});
+    }
     setTimeout(() => setToastMessage(null), 4000);
   };
 
@@ -323,7 +421,7 @@ export const IncidentInspectorView: React.FC = () => {
 
         {/* Incidents Carousel Tabs */}
         <div className="flex items-center gap-2 overflow-x-auto">
-          {INCIDENTS_DATA.map((inc, idx) => {
+          {incidentsList.map((inc, idx) => {
             const isSelected = selectedIncidentIndex === idx;
             return (
               <button
@@ -407,18 +505,29 @@ export const IncidentInspectorView: React.FC = () => {
           {/* Video Feed Screen Box with HUD trim */}
           <div className="hud-trim border border-[#3d494c] bg-[#191f31]/60 backdrop-blur-md relative h-[560px] w-full p-2 group rounded-xl shadow-2xl overflow-hidden">
             <div className="relative w-full h-full border border-[#3d494c]/40 overflow-hidden bg-black flex items-center justify-center rounded-lg">
-              {/* Tactical Camera Image Feed */}
-              <div
-                className={`absolute inset-0 bg-cover bg-center transition-all duration-300 ${
-                  visionFilter === 'night'
-                    ? 'mix-blend-screen opacity-85 filter contrast-125 saturate-0'
-                    : visionFilter === 'thermal'
-                    ? 'opacity-90 filter grayscale(40%) sepia(100%) invert(85%) hue-rotate(190deg) saturate(380%) contrast(175%)'
-                    : 'opacity-90 filter contrast-110'
-                }`}
-                style={{ backgroundImage: `url('${currentIncident.imageUrl}')` }}
-                data-alt={currentIncident.altText}
-              />
+              {/* Tactical Camera Image or MP4 Video Feed */}
+              {currentIncident.hasRealVideo ? (
+                <video
+                  key={currentIncident.id}
+                  src={currentIncident.evidenceUrl}
+                  controls
+                  autoPlay
+                  loop
+                  className="absolute inset-0 w-full h-full object-contain z-10"
+                />
+              ) : (
+                <div
+                  className={`absolute inset-0 bg-cover bg-center transition-all duration-300 ${
+                    visionFilter === 'night'
+                      ? 'mix-blend-screen opacity-85 filter contrast-125 saturate-0'
+                      : visionFilter === 'thermal'
+                      ? 'opacity-90 filter grayscale(40%) sepia(100%) invert(85%) hue-rotate(190deg) saturate(380%) contrast(175%)'
+                      : 'opacity-90 filter contrast-110'
+                  }`}
+                  style={{ backgroundImage: `url('${currentIncident.imageUrl}')` }}
+                  data-alt={currentIncident.altText}
+                />
+              )}
 
               {/* Night Vision Tint */}
               {visionFilter === 'night' && (

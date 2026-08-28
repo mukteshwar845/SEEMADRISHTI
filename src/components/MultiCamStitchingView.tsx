@@ -10,7 +10,11 @@ import {
   Eye,
   Radio,
   Sliders,
+  Clock,
+  CheckCircle,
 } from 'lucide-react';
+import { fetchCorrelations, CorrelatedIncidentRecord } from '../services/api';
+import { webSocketService } from '../services/websocketService';
 
 export const MultiCamStitchingView: React.FC = () => {
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
@@ -18,6 +22,41 @@ export const MultiCamStitchingView: React.FC = () => {
   const [showPredictiveVectors, setShowPredictiveVectors] = useState(true);
   const [reidTrackingActive, setReidTrackingActive] = useState(true);
   const [stitchingStatus, setStitchingStatus] = useState('SYNCED & HOMOGRAPHY CALIBRATED');
+  const [correlations, setCorrelations] = useState<CorrelatedIncidentRecord[]>([]);
+  const [selectedCorrIndex, setSelectedCorrIndex] = useState(0);
+
+  useEffect(() => {
+    fetchCorrelations()
+      .then((res) => {
+        if (res.success && res.data && res.data.length > 0) {
+          setCorrelations(res.data);
+        }
+      })
+      .catch(() => {});
+
+    const unsubCreate = webSocketService.onCorrelationCreated((payload) => {
+      setCorrelations((prev) => [payload as any, ...prev.filter((p) => p.id !== payload.id)]);
+    });
+
+    const unsubUpdate = webSocketService.onCorrelationUpdated((payload) => {
+      setCorrelations((prev) =>
+        prev.map((item) => (item.id === payload.id ? { ...item, ...payload } : item))
+      );
+    });
+
+    const unsubEscalate = webSocketService.onCorrelationEscalated((payload) => {
+      const entity = (payload as any).entity || payload;
+      setCorrelations((prev) =>
+        prev.map((item) => (item.id === entity.id ? { ...item, ...entity, status: 'ACTIVE' } : item))
+      );
+    });
+
+    return () => {
+      unsubCreate();
+      unsubUpdate();
+      unsubEscalate();
+    };
+  }, []);
 
   // Multi-camera stitched canvas simulation
   useEffect(() => {
@@ -307,6 +346,118 @@ export const MultiCamStitchingView: React.FC = () => {
             Intercept vector predicted at checkpoint gate within 45 seconds.
           </p>
         </div>
+      </div>
+
+      {/* Real Phase 8 Cross-Camera Threat Correlation Corridors Panel */}
+      <div className="p-5 bg-[#0a0f1d] border border-white/[0.08] rounded-2xl shadow-[0_4px_30px_rgba(0,0,0,0.8)] space-y-4">
+        <div className="flex items-center justify-between border-b border-white/[0.08] pb-3">
+          <div className="flex items-center gap-2">
+            <ShieldAlert size={18} className="text-purple-400" />
+            <div>
+              <h3 className="text-sm font-black text-white font-mono uppercase tracking-wider">
+                CROSS-CAMERA THREAT CORRIDORS (PHASE 8 MULTI-CAMERA ENGINE)
+              </h3>
+              <p className="text-xs text-slate-400 font-mono">
+                Persistent target handover and trajectory correlation across non-overlapping blind spots
+              </p>
+            </div>
+          </div>
+
+          <span className="px-2.5 py-1 rounded-lg bg-purple-950/80 text-purple-300 border border-purple-500/40 text-xs font-mono font-bold">
+            {correlations.length} ACTIVE CORRIDORS
+          </span>
+        </div>
+
+        {correlations.length === 0 ? (
+          <div className="p-8 text-center rounded-xl bg-slate-950/60 border border-slate-800 text-slate-500 font-mono text-xs">
+            NO ACTIVE CROSS-CAMERA CORRELATIONS // ALL CAMERA SECTORS OPERATING INDEPENDENTLY
+          </div>
+        ) : (
+          <div className="space-y-3">
+            {correlations.map((corr, idx) => {
+              const seq = corr.camera_sequence || [];
+              const obs = corr.observations || [];
+              const reasons = corr.reasons || [];
+              return (
+                <div
+                  key={corr.id || idx}
+                  className="p-4 rounded-xl bg-black/40 border border-purple-500/30 hover:border-purple-500/60 transition-all font-mono text-xs space-y-3"
+                >
+                  <div className="flex flex-wrap items-center justify-between gap-2">
+                    <div className="flex items-center gap-2">
+                      <span className="px-2 py-0.5 rounded bg-purple-950 text-purple-300 border border-purple-500/40 font-bold">
+                        CORRIDOR #{corr.id.slice(0, 8).toUpperCase()}
+                      </span>
+                      <span className={`px-2 py-0.5 rounded font-bold uppercase ${
+                        corr.correlation_level === 'CRITICAL'
+                          ? 'bg-rose-950 text-rose-300 border border-rose-500/50 animate-pulse'
+                          : 'bg-amber-950 text-amber-300 border border-amber-500/50'
+                      }`}>
+                        SCORE: {corr.correlation_score} / 100 [{corr.correlation_level}]
+                      </span>
+                    </div>
+
+                    <div className="flex items-center gap-3 text-slate-400 text-[11px]">
+                      <span>STARTED: {new Date(corr.started_at).toLocaleTimeString()}</span>
+                      <span>LAST SEEN: {new Date(corr.last_seen_at).toLocaleTimeString()}</span>
+                    </div>
+                  </div>
+
+                  {/* Camera Sequence Chain */}
+                  <div className="flex items-center gap-2 flex-wrap bg-slate-950/80 p-2.5 rounded-lg border border-white/[0.06]">
+                    <span className="text-[10px] text-slate-400 font-bold uppercase tracking-wider mr-1">
+                      HANDOVER CHAIN:
+                    </span>
+                    {seq.map((cam, sIdx) => (
+                      <React.Fragment key={sIdx}>
+                        <span className="px-2.5 py-1 rounded bg-purple-900/60 border border-purple-500/40 text-purple-200 font-bold">
+                          {cam.toUpperCase()}
+                        </span>
+                        {sIdx < seq.length - 1 && (
+                          <span className="text-purple-400 font-black">➔</span>
+                        )}
+                      </React.Fragment>
+                    ))}
+                  </div>
+
+                  {/* Observations & Reasons */}
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-3 text-[11px]">
+                    <div className="space-y-1 p-2 rounded bg-white/[0.02] border border-white/[0.04]">
+                      <span className="text-[10px] text-slate-400 font-bold uppercase">OBSERVATIONS ACROSS NODES:</span>
+                      {obs.length > 0 ? (
+                        obs.map((o, oIdx) => (
+                          <div key={oIdx} className="text-slate-300 flex items-center justify-between">
+                            <span>{o.camera_id.toUpperCase()}: Track #{o.track_id || '?'} ({o.class_name || 'person'})</span>
+                            <span className="text-cyan-400">{new Date(o.timestamp).toLocaleTimeString()}</span>
+                          </div>
+                        ))
+                      ) : (
+                        <div className="text-slate-500">Autonomous spatial correlation registered.</div>
+                      )}
+                    </div>
+
+                    <div className="space-y-1 p-2 rounded bg-white/[0.02] border border-white/[0.04]">
+                      <span className="text-[10px] text-slate-400 font-bold uppercase">CORRELATION EVIDENCE:</span>
+                      {reasons.length > 0 ? (
+                        reasons.map((r, rIdx) => (
+                          <div key={rIdx} className="text-slate-300 flex items-center justify-between">
+                            <span className="flex items-center gap-1">
+                              <CheckCircle size={11} className="text-emerald-400" />
+                              {r.message || r.code}
+                            </span>
+                            <span className="text-amber-400">+{r.points} PTS</span>
+                          </div>
+                        ))
+                      ) : (
+                        <div className="text-slate-500">Consistent direction and velocity vector alignment.</div>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        )}
       </div>
     </div>
   );

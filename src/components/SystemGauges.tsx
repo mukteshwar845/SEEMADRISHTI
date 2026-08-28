@@ -19,6 +19,16 @@ export const SystemGauges: React.FC<SystemGaugesProps> = ({
     networkStatus: '(Stable 250Mbps)',
   },
 }) => {
+  const cpuPercent = Math.min(100, Math.max(0, Math.round(telemetry?.cpuUsage ?? 45)));
+  const memUsed = telemetry?.memoryUsedGb ?? 6.2;
+  const memTotal = telemetry?.memoryTotalGb ?? 16;
+  const memPercent = Math.min(100, Math.max(0, Math.round((memUsed / (memTotal || 1)) * 100)));
+  const storPercent = Math.min(100, Math.max(0, Math.round(telemetry?.storageUsedPercent ?? 78)));
+  const storUsed = telemetry?.storageUsedTb ?? 2.34;
+  const storTotal = telemetry?.storageTotalTb ?? 3.0;
+  const netMbps = telemetry?.networkMbps ?? 250;
+  const netPercent = Math.min(100, Math.max(0, Math.round((netMbps / 1000) * 100)));
+
   return (
     <div
       id="system-status-section"
@@ -32,12 +42,12 @@ export const SystemGauges: React.FC<SystemGaugesProps> = ({
           </h3>
         </div>
         <span className="text-[9px] font-mono text-emerald-400 bg-emerald-950/80 px-2 py-0.5 rounded border border-emerald-500/40 font-bold">
-          JETSON ORIN AGX // 60 FPS ACTIVE
+          EDGE AI NODE // REAL-TIME METRICS
         </span>
       </div>
 
       <div className="grid grid-cols-2 md:grid-cols-4 gap-3 sm:gap-4" id="telemetry-gauges-grid">
-        {/* 1. CPU 45% */}
+        {/* 1. CPU Load */}
         <div className="flex items-center gap-3 p-3 rounded-lg bg-slate-950 border border-slate-800/90" id="gauge-cpu">
           <div className="relative w-12 h-12 shrink-0">
             <svg className="w-full h-full rotate-[-90deg]" viewBox="0 0 36 36">
@@ -50,7 +60,7 @@ export const SystemGauges: React.FC<SystemGaugesProps> = ({
               <path
                 className="stroke-emerald-400"
                 strokeWidth="3.5"
-                strokeDasharray="45, 100"
+                strokeDasharray={`${cpuPercent}, 100`}
                 strokeLinecap="round"
                 fill="none"
                 style={{ filter: 'drop-shadow(0 0 5px rgba(52,211,153,0.7))' }}
@@ -58,7 +68,7 @@ export const SystemGauges: React.FC<SystemGaugesProps> = ({
               />
             </svg>
             <div className="absolute inset-0 flex items-center justify-center text-[11px] font-black text-emerald-300 font-mono">
-              45%
+              {cpuPercent}%
             </div>
           </div>
           <div>
@@ -67,12 +77,12 @@ export const SystemGauges: React.FC<SystemGaugesProps> = ({
               <span>CPU LOAD</span>
             </div>
             <p className="text-[12px] font-mono text-emerald-400 font-bold mt-0.5">
-              45% (8-Core)
+              {cpuPercent}% Capacity
             </p>
           </div>
         </div>
 
-        {/* 2. GPU 6.2GB */}
+        {/* 2. GPU / System Memory */}
         <div className="flex items-center gap-3 p-3 rounded-lg bg-slate-950 border border-slate-800/90" id="gauge-memory">
           <div className="relative w-12 h-12 shrink-0">
             <svg className="w-full h-full rotate-[-90deg]" viewBox="0 0 36 36">
@@ -85,7 +95,7 @@ export const SystemGauges: React.FC<SystemGaugesProps> = ({
               <path
                 className="stroke-cyan-400"
                 strokeWidth="3.5"
-                strokeDasharray="39, 100"
+                strokeDasharray={`${memPercent}, 100`}
                 strokeLinecap="round"
                 fill="none"
                 style={{ filter: 'drop-shadow(0 0 5px rgba(34,211,238,0.7))' }}
@@ -93,21 +103,21 @@ export const SystemGauges: React.FC<SystemGaugesProps> = ({
               />
             </svg>
             <div className="absolute inset-0 flex items-center justify-center text-[10px] font-black text-cyan-300 font-mono">
-              6.2G
+              {memUsed.toFixed(1)}G
             </div>
           </div>
           <div>
             <div className="flex items-center gap-1 text-[9px] uppercase font-bold text-slate-400 font-mono">
               <Layers size={12} className="text-cyan-400" />
-              <span>GPU MEMORY</span>
+              <span>MEMORY</span>
             </div>
             <p className="text-[12px] font-mono text-cyan-300 font-bold mt-0.5">
-              6.2 GB / 16 GB
+              {memUsed.toFixed(1)} GB / {memTotal} GB
             </p>
           </div>
         </div>
 
-        {/* 3. Storage 78% */}
+        {/* 3. Storage */}
         <div className="flex items-center gap-3 p-3 rounded-lg bg-slate-950 border border-slate-800/90" id="gauge-storage">
           <div className="relative w-12 h-12 shrink-0">
             <svg className="w-full h-full rotate-[-90deg]" viewBox="0 0 36 36">
@@ -120,7 +130,7 @@ export const SystemGauges: React.FC<SystemGaugesProps> = ({
               <path
                 className="stroke-amber-400"
                 strokeWidth="3.5"
-                strokeDasharray="78, 100"
+                strokeDasharray={`${storPercent}, 100`}
                 strokeLinecap="round"
                 fill="none"
                 style={{ filter: 'drop-shadow(0 0 5px rgba(251,191,36,0.7))' }}
@@ -128,7 +138,7 @@ export const SystemGauges: React.FC<SystemGaugesProps> = ({
               />
             </svg>
             <div className="absolute inset-0 flex items-center justify-center text-[11px] font-black text-amber-300 font-mono">
-              78%
+              {storPercent}%
             </div>
           </div>
           <div>
@@ -137,12 +147,12 @@ export const SystemGauges: React.FC<SystemGaugesProps> = ({
               <span>STORAGE</span>
             </div>
             <p className="text-[12px] font-mono text-amber-400 font-bold mt-0.5">
-              78% (2.34 / 3 TB)
+              {storPercent}% ({storUsed.toFixed(2)} / {storTotal} TB)
             </p>
           </div>
         </div>
 
-        {/* 4. Network 250Mbps */}
+        {/* 4. Network Link */}
         <div className="flex items-center gap-3 p-3 rounded-lg bg-slate-950 border border-slate-800/90" id="gauge-network">
           <div className="relative w-12 h-12 shrink-0">
             <svg className="w-full h-full rotate-[-90deg]" viewBox="0 0 36 36">
@@ -155,7 +165,7 @@ export const SystemGauges: React.FC<SystemGaugesProps> = ({
               <path
                 className="stroke-purple-400"
                 strokeWidth="3.5"
-                strokeDasharray="80, 100"
+                strokeDasharray={`${netPercent}, 100`}
                 strokeLinecap="round"
                 fill="none"
                 style={{ filter: 'drop-shadow(0 0 5px rgba(192,132,252,0.7))' }}
@@ -163,7 +173,7 @@ export const SystemGauges: React.FC<SystemGaugesProps> = ({
               />
             </svg>
             <div className="absolute inset-0 flex items-center justify-center text-[10px] font-black text-purple-300 font-mono">
-              250M
+              {netMbps}M
             </div>
           </div>
           <div>
@@ -172,7 +182,7 @@ export const SystemGauges: React.FC<SystemGaugesProps> = ({
               <span>NETWORK</span>
             </div>
             <p className="text-[12px] font-mono text-purple-400 font-bold mt-0.5">
-              250 Mbps (Stable)
+              {netMbps} Mbps (Active)
             </p>
           </div>
         </div>

@@ -52,7 +52,9 @@ export function initializeWebSocketServer(server: http.Server): WebSocketServer 
           msg.type === 'evidence_ready' ||
           msg.type === 'correlation_created' ||
           msg.type === 'correlation_updated' ||
-          msg.type === 'correlation_escalated'
+          msg.type === 'correlation_escalated' ||
+          msg.type === 'environment_update' ||
+          msg.type === 'night_movement'
         ) {
           broadcastWebSocketMessage(msg.type, msg.data);
         }

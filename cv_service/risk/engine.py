@@ -77,6 +77,7 @@ class TrackRiskContext:
         self.has_active_loitering: bool = False
         self.dwell_seconds: float = 0.0
         self.reentry_count: int = 0
+        self.has_night_movement: bool = False
 
         # State tracking for alerts
         self.last_score: int = 0
@@ -97,6 +98,7 @@ class RiskEngine:
         reentry_points: int = 15,
         persistence_points: int = 7,
         persistence_min_seconds: float = 10.0,
+        night_movement_points: int = 10,
         max_score: int = 100,
         target_classes: Optional[List[str]] = None,
         api_base_url: str = "http://127.0.0.1:8000/api",
@@ -107,6 +109,7 @@ class RiskEngine:
         self.reentry_points: int = int(reentry_points)
         self.persistence_points: int = int(persistence_points)
         self.persistence_min_seconds: float = float(persistence_min_seconds)
+        self.night_movement_points: int = int(night_movement_points)
         self.max_score: int = int(max_score)
         self.target_classes: List[str] = [c.lower() for c in (target_classes or ["person"])]
         self.api_base_url: str = api_base_url
@@ -241,6 +244,18 @@ class RiskEngine:
                 )
             )
 
+        # 5. Night Movement Condition (+10 points)
+        if ctx.has_night_movement:
+            pts = self.night_movement_points
+            score += pts
+            reasons.append(
+                RiskReason(
+                    code="NIGHT_MOVEMENT",
+                    points=pts,
+                    description="Person movement detected during low-light/night conditions",
+                )
+            )
+
         # Cap score at configured max (100)
         score = min(score, self.max_score)
         level = self.classify_score(score)
@@ -269,6 +284,7 @@ class RiskEngine:
         reentry_count: int,
         current_time: Optional[float] = None,
         publisher: Optional[Any] = None,
+        has_night_movement: bool = False,
     ) -> Tuple[RiskAssessment, bool]:
         """
         Updates track state and assesses risk.
@@ -285,6 +301,7 @@ class RiskEngine:
         ctx.has_active_loitering = is_loitering
         ctx.dwell_seconds = dwell_seconds
         ctx.reentry_count = reentry_count
+        ctx.has_night_movement = has_night_movement
 
         assessment = self.calculate_risk(camera_id, tid, current_time=now)
 

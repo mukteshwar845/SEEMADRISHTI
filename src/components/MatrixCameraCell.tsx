@@ -101,6 +101,14 @@ export const MatrixCameraCell: React.FC<MatrixCameraCellProps> = ({
     frameHeight: number;
   } | null>(null);
 
+  // Real Phase 9 environmental illumination and scene visibility state
+  const [envState, setEnvState] = useState<{
+    mode: string;
+    visibility_score: number;
+    low_light: boolean;
+    brightness: number;
+  } | null>(null);
+
   useEffect(() => {
     const unsubDet = webSocketService.onDetection((payload) => {
       const targetId = String(payload.camera_id).toLowerCase().trim();
@@ -134,9 +142,26 @@ export const MatrixCameraCell: React.FC<MatrixCameraCellProps> = ({
       }
     });
 
+    const unsubEnv = webSocketService.onEnvironmentUpdate((payload) => {
+      const targetId = String(payload.camera_id).toLowerCase().trim();
+      const myTag = camera.tag.toLowerCase().trim();
+      const myId = String(camera.id).toLowerCase().trim();
+      const myTagPadded = `cam-0${camera.id}`.toLowerCase();
+
+      if (targetId === myTag || targetId === myId || targetId === myTagPadded) {
+        setEnvState({
+          mode: payload.mode,
+          visibility_score: payload.visibility_score,
+          low_light: payload.low_light,
+          brightness: payload.brightness,
+        });
+      }
+    });
+
     return () => {
       unsubDet();
       unsubTrack();
+      unsubEnv();
     };
   }, [camera.id, camera.tag]);
 
@@ -1313,6 +1338,20 @@ export const MatrixCameraCell: React.FC<MatrixCameraCellProps> = ({
           <span className="px-1.5 py-0.5 bg-slate-950/85 text-slate-300 text-[8px] font-mono font-bold rounded border border-slate-700">
             {camera.alertType}
           </span>
+          {envState && (
+            <span
+              className={`px-1.5 py-0.5 text-[8px] font-mono font-bold rounded border backdrop-blur-md flex items-center gap-1 ${
+                envState.mode === 'NIGHT'
+                  ? 'bg-indigo-950/80 text-indigo-300 border-indigo-500/40'
+                  : envState.low_light
+                  ? 'bg-amber-950/80 text-amber-300 border-amber-500/40'
+                  : 'bg-emerald-950/80 text-emerald-300 border-emerald-500/40'
+              }`}
+            >
+              <span className="w-1 h-1 rounded-full bg-current animate-pulse"></span>
+              {envState.mode} // VIS {Math.round(envState.visibility_score)}%
+            </span>
+          )}
           {camera.batteryLevel !== undefined && (
             <span className={`px-1.5 py-0.5 bg-black/80 text-[8px] font-mono font-bold rounded border flex items-center gap-0.5 backdrop-blur-md ${
               camera.batteryLevel > 50 

@@ -233,6 +233,33 @@ export interface UpdateCorrelationDTO {
 // WebSocket Messages
 // ----------------------------------------------------------------------------
 
+export type EnvironmentMode = 'DAY' | 'DAWN' | 'DUSK' | 'NIGHT' | 'LOW_LIGHT';
+
+export interface EnvironmentStateEntity {
+  camera_id: string;
+  mode: EnvironmentMode;
+  brightness: number;
+  contrast: number;
+  visibility_score: number;
+  low_light: number; // 0 or 1
+  confidence: number;
+  adaptive_skip: number;
+  enhancement_enabled: number; // 0 or 1
+  updated_at: string;
+}
+
+export interface UpdateEnvironmentDTO {
+  camera_id: string;
+  mode: EnvironmentMode;
+  brightness: number;
+  contrast: number;
+  visibility_score: number;
+  low_light: boolean | number;
+  confidence?: number;
+  adaptive_skip?: number;
+  enhancement_enabled?: boolean | number;
+}
+
 export type WebSocketMessageType =
   | 'camera_status'
   | 'detection'
@@ -246,6 +273,8 @@ export type WebSocketMessageType =
   | 'correlation_created'
   | 'correlation_updated'
   | 'correlation_escalated'
+  | 'environment_update'
+  | 'night_movement'
   | 'ping'
   | 'pong'
   | 'connection_ack'

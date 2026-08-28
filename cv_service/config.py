@@ -75,4 +75,27 @@ class CVConfig:
     correlation_topology_path: Optional[str] = os.getenv("CORRELATION_TOPOLOGY_PATH", None)
     correlation_max_dormant_seconds: float = float(os.getenv("CORRELATION_MAX_DORMANT_SECONDS", "300.0"))
 
+    # Phase 9 Night Intelligence + Low-Light Robustness + Adaptive Surveillance
+    environment_enabled: bool = os.getenv("ENVIRONMENT_ENABLED", "true").lower() in ("true", "1", "yes")
+    night_brightness_threshold: float = float(os.getenv("NIGHT_BRIGHTNESS_THRESHOLD", "40.0"))
+    low_light_brightness_threshold: float = float(os.getenv("LOW_LIGHT_BRIGHTNESS_THRESHOLD", "75.0"))
+    low_light_contrast_threshold: float = float(os.getenv("LOW_LIGHT_CONTRAST_THRESHOLD", "25.0"))
+    dawn_threshold: float = float(os.getenv("DAWN_THRESHOLD", "90.0"))
+    dusk_threshold: float = float(os.getenv("DUSK_THRESHOLD", "60.0"))
+    day_confidence_threshold: float = float(os.getenv("DAY_CONFIDENCE_THRESHOLD", "0.40"))
+    night_confidence_threshold: float = float(os.getenv("NIGHT_CONFIDENCE_THRESHOLD", "0.30"))
+    low_light_confidence_threshold: float = float(os.getenv("LOW_LIGHT_CONFIDENCE_THRESHOLD", "0.35"))
+    enable_low_light_enhancement: bool = os.getenv("ENABLE_LOW_LIGHT_ENHANCEMENT", "true").lower() in ("true", "1", "yes")
+    enhancement_method: str = os.getenv("ENHANCEMENT_METHOD", "clahe")
+    enhancement_clahe_clip: float = float(os.getenv("ENHANCEMENT_CLAHE_CLIP", "3.0"))
+    enhancement_gamma: float = float(os.getenv("ENHANCEMENT_GAMMA", "1.5"))
+    enable_adaptive_sampling: bool = os.getenv("ENABLE_ADAPTIVE_SAMPLING", "true").lower() in ("true", "1", "yes")
+    adaptive_normal_skip: int = int(os.getenv("ADAPTIVE_NORMAL_SKIP", "3"))
+    adaptive_night_skip: int = int(os.getenv("ADAPTIVE_NIGHT_SKIP", "2"))
+    adaptive_threat_skip: int = int(os.getenv("ADAPTIVE_THREAT_SKIP", "1"))
+    night_movement_points: int = int(os.getenv("NIGHT_MOVEMENT_POINTS", "10"))
+    min_night_movement_frames: int = int(os.getenv("MIN_NIGHT_MOVEMENT_FRAMES", "2"))
+    min_night_displacement_px: float = float(os.getenv("MIN_NIGHT_DISPLACEMENT_PX", "5.0"))
+
+
 

@@ -30,6 +30,10 @@ from cv_service.evidence.evidence_writer import EvidenceWriter
 from cv_service.evidence.incident_manager import IncidentManager
 from cv_service.correlation.camera_topology import CameraTopology
 from cv_service.correlation.correlation_engine import CorrelationEngine
+from cv_service.environment.environment_analyzer import EnvironmentAnalyzer
+from cv_service.environment.enhancement import LowLightEnhancer
+from cv_service.environment.night_movement import NightMovementDetector
+from cv_service.adaptive.adaptive_sampler import AdaptiveSampler
 from cv_service.output.detection_publisher import DetectionPublisher
 
 
@@ -139,6 +143,21 @@ def parse_args():
         default=None,
         help="Path to camera topology JSON configuration",
     )
+    parser.add_argument(
+        "--no-environment",
+        action="store_true",
+        help="Disable Phase 9 environmental illumination analysis",
+    )
+    parser.add_argument(
+        "--no-enhancement",
+        action="store_true",
+        help="Disable Phase 9 low-light image enhancement",
+    )
+    parser.add_argument(
+        "--no-adaptive",
+        action="store_true",
+        help="Disable Phase 9 adaptive frame sampling",
+    )
     return parser.parse_args()
 
 
@@ -161,6 +180,9 @@ def main():
         evidence_dir=args.evidence_dir,
         correlation_enabled=not args.no_correlation,
         correlation_topology_path=args.topology_config,
+        environment_enabled=not args.no_environment,
+        enable_low_light_enhancement=not args.no_enhancement,
+        enable_adaptive_sampling=not args.no_adaptive,
     )
 
     use_tracking = not args.no_tracking
@@ -168,9 +190,12 @@ def main():
     use_risk = not args.no_risk and config.risk_engine_enabled
     use_evidence = not args.no_evidence and config.evidence_enabled
     use_correlation = not args.no_correlation and config.correlation_enabled
+    use_environment = not args.no_environment and config.environment_enabled
+    use_enhancement = not args.no_enhancement and config.enable_low_light_enhancement
+    use_adaptive = not args.no_adaptive and config.enable_adaptive_sampling
 
     print("\n===================================================================")
-    print("SEEMADRISHTI AI - MULTI-CAMERA CORRELATION & THREAT ENGINE (PHASE 8)")
+    print("SEEMADRISHTI AI - NIGHT INTEL, RISK & SURVEILLANCE PIPELINE (PHASE 9)")
     print("===================================================================")
     print(f" * Video Source:       {args.source}")
     print(f" * Camera ID:          {config.camera_id}")
@@ -184,6 +209,9 @@ def main():
     print(f" * Evidence Engine:    {'Active (Pre: ' + str(config.evidence_pre_event_seconds) + 's, Post: ' + str(config.evidence_post_event_seconds) + 's)' if use_evidence else 'Disabled'}")
     print(f" * Evidence Output:    {config.evidence_dir}")
     print(f" * Correlation Engine: {'Active (Spatial-Temporal Cross-Camera Correlation)' if use_correlation else 'Disabled'}")
+    print(f" * Environment Engine: {'Active (Day/Night/Low-Light Pixel Analysis)' if use_environment else 'Disabled'}")
+    print(f" * Optical Enhancement:{'Active (' + config.enhancement_method.upper() + ')' if use_enhancement else 'Disabled'}")
+    print(f" * Adaptive Sampling:  {'Active (Dynamic FPS Policy)' if use_adaptive else 'Disabled'}")
     print(f" * WebSocket Target:   {config.ws_url if not args.no_ws else 'Disabled'}")
     print("===================================================================")
 
@@ -291,7 +319,37 @@ def main():
             max_dormant_seconds=config.correlation_max_dormant_seconds,
         )
 
-    # 7. Initialize WebSocket Publisher
+    # 7. Initialize Phase 9 Environment, Enhancement & Adaptive Engines
+    env_analyzer = None
+    enhancer = None
+    adaptive_sampler = None
+    night_movement_detector = None
+    if use_environment:
+        env_analyzer = EnvironmentAnalyzer(
+            night_brightness_threshold=config.night_brightness_threshold,
+            low_light_brightness_threshold=config.low_light_brightness_threshold,
+            low_light_contrast_threshold=config.low_light_contrast_threshold,
+            dawn_threshold=config.dawn_threshold,
+            dusk_threshold=config.dusk_threshold,
+        )
+        night_movement_detector = NightMovementDetector(
+            min_consecutive_frames=config.min_night_movement_frames,
+            min_displacement_px=config.min_night_displacement_px,
+        )
+    if use_enhancement:
+        enhancer = LowLightEnhancer(
+            default_method=config.enhancement_method,
+            clahe_clip_limit=config.enhancement_clahe_clip,
+            gamma=config.enhancement_gamma,
+        )
+    if use_adaptive:
+        adaptive_sampler = AdaptiveSampler(
+            normal_skip=config.adaptive_normal_skip,
+            night_skip=config.adaptive_night_skip,
+            threat_skip=config.adaptive_threat_skip,
+        )
+
+    # 8. Initialize WebSocket Publisher
     publisher = None
     if not args.no_ws:
         publisher = DetectionPublisher(config)
@@ -317,6 +375,11 @@ def main():
     total_evidence_clips_count = 0
     total_correlation_time_ms = 0.0
     total_correlations_count = 0
+    total_env_time_ms = 0.0
+    total_enh_time_ms = 0.0
+    total_enhanced_frames_count = 0
+    total_night_movement_count = 0
+    last_known_mode = "DAY"
 
     t_start = time.perf_counter()
     last_log_time = time.perf_counter()
@@ -331,15 +394,46 @@ def main():
 
             frame_counter += 1
 
-            # Skip frames if configured
-            if frame_counter % config.frame_skip != 0:
-                continue
+            # Determine whether to sample frame via Phase 9 Adaptive Sampler
+            current_env_mode = last_known_mode
+            has_active_threat = (total_intrusions_count > 0 or total_risk_alerts_count > 0)
+            if adaptive_sampler:
+                should_run, cur_skip, policy = adaptive_sampler.should_process_frame(
+                    config.camera_id, frame_counter, current_env_mode, has_active_threat
+                )
+                if not should_run:
+                    continue
+            else:
+                if frame_counter % config.frame_skip != 0:
+                    continue
 
             processed_counter += 1
             h, w = frame.shape[:2]
             current_frame_time = time.time()
 
-            # Record frame into circular buffer and active incident sessions
+            # Phase 9: Real Environment Luminance & Scene Analysis
+            env_metrics = None
+            if env_analyzer:
+                t_env0 = time.perf_counter()
+                env_metrics = env_analyzer.analyze_frame(
+                    frame, camera_id=config.camera_id, current_time=current_frame_time
+                )
+                total_env_time_ms += (time.perf_counter() - t_env0) * 1000.0
+                last_known_mode = env_metrics.mode
+
+                # Broadcast environment update over WebSocket (periodic or state changes)
+                if publisher and (processed_counter % 10 == 0 or env_metrics.low_light):
+                    publisher.publish(env_metrics.to_dict(), message_type="environment_update")
+
+            # Phase 9: Non-destructive low-light enhancement for detection
+            detection_frame = frame
+            if enhancer and env_metrics and env_metrics.low_light:
+                t_enh0 = time.perf_counter()
+                detection_frame = enhancer.enhance(frame)
+                total_enh_time_ms += (time.perf_counter() - t_enh0) * 1000.0
+                total_enhanced_frames_count += 1
+
+            # Rule #7: Pass ORIGINAL pristine frame to evidence buffer
             if incident_manager:
                 t_ev0 = time.perf_counter()
                 completed = incident_manager.record_frame(
@@ -352,8 +446,8 @@ def main():
                 total_evidence_clips_count += len(completed)
 
             if use_tracking and tracker:
-                # Step A: YOLO + ByteTrack
-                output = tracker.track(frame, camera_id=config.camera_id)
+                # Step A: YOLO + ByteTrack (using enhanced detection_frame)
+                output = tracker.track(detection_frame, camera_id=config.camera_id)
                 count = output["track_count"]
                 total_objects_count += count
                 total_inference_time_ms += output.get("inference_ms", 0.0)
@@ -431,6 +525,27 @@ def main():
                                     if lst.loitering_alerted:
                                         is_loit = True
 
+                        # Check Phase 9 Night Movement
+                        has_night_mvmt = False
+                        if night_movement_detector and env_metrics:
+                            nm_event = night_movement_detector.process_track(
+                                camera_id=config.camera_id,
+                                track_id=tid,
+                                class_name=cls,
+                                bbox=trk["bbox"],
+                                environment_mode=env_metrics.mode,
+                                brightness=env_metrics.brightness,
+                                visibility_score=env_metrics.visibility_score,
+                                current_time=current_frame_time,
+                            )
+                            if nm_event:
+                                has_night_mvmt = True
+                                total_night_movement_count += 1
+                                if publisher:
+                                    publisher.publish(nm_event.to_dict(), message_type="night_movement")
+                                if adaptive_sampler:
+                                    adaptive_sampler.register_threat(config.camera_id, 30)
+
                         assessment, alert_trig = risk_engine.evaluate_track(
                             camera_id=config.camera_id,
                             track=trk,
@@ -439,6 +554,7 @@ def main():
                             is_loitering=is_loit,
                             dwell_seconds=active_dwell,
                             reentry_count=reentry_ct,
+                            has_night_movement=has_night_mvmt,
                             publisher=publisher,
                         )
 
@@ -562,15 +678,20 @@ def main():
         avg_risk_latency = round(total_risk_time_ms / processed_counter, 3) if processed_counter > 0 and risk_engine else 0.0
         avg_evidence_latency = round(total_evidence_time_ms / processed_counter, 3) if processed_counter > 0 and incident_manager else 0.0
         avg_correlation_latency = round(total_correlation_time_ms / processed_counter, 3) if processed_counter > 0 and correlation_engine else 0.0
-        avg_total_latency = round(avg_inference_latency + avg_tracking_latency + avg_geometry_latency + avg_loitering_latency + avg_risk_latency + avg_evidence_latency + avg_correlation_latency, 2)
+        avg_env_latency = round(total_env_time_ms / processed_counter, 3) if processed_counter > 0 and env_analyzer else 0.0
+        avg_enh_latency = round(total_enh_time_ms / total_enhanced_frames_count, 3) if total_enhanced_frames_count > 0 else 0.0
+        avg_total_latency = round(avg_inference_latency + avg_tracking_latency + avg_geometry_latency + avg_loitering_latency + avg_risk_latency + avg_evidence_latency + avg_correlation_latency + avg_env_latency, 2)
 
         print("\n===================================================================")
-        print("[BENCHMARK REPORT] PHASE 8 CORRELATION, EVIDENCE & RISK PERFORMANCE")
+        print("[BENCHMARK REPORT] PHASE 9 NIGHT, ADAPTIVE & THREAT PIPELINE")
         print("===================================================================")
         print(f" * Total Ingested Frames:          {frame_counter}")
         print(f" * Total Processed Frames:         {processed_counter}")
         print(f" * Total Execution Time:           {round(total_time, 2)}s")
         print(f" * Average Processed FPS:          {avg_fps}")
+        print(f" * Environmental Mode Observed:    {last_known_mode}")
+        print(f" * Average Environment Latency:    {avg_env_latency} ms")
+        print(f" * Average Enhancement Latency:    {avg_enh_latency} ms ({total_enhanced_frames_count} frames enhanced)")
         print(f" * Average YOLO Inference Latency: {avg_inference_latency} ms")
         print(f" * Average ByteTrack Latency:      {avg_tracking_latency} ms")
         print(f" * Average Zone Geometry Latency:  {avg_geometry_latency} ms")
@@ -583,6 +704,7 @@ def main():
         print(f" * Unique Persistent Track IDs:    {len(unique_track_ids)} IDs: {sorted(list(unique_track_ids))}")
         print(f" * Real Intrusion Alerts Triggered: {total_intrusions_count}")
         print(f" * Real Loitering Alerts Triggered: {total_loitering_count}")
+        print(f" * Real Night Movement Triggered:  {total_night_movement_count}")
         print(f" * Real Risk Alerts Triggered:      {total_risk_alerts_count}")
         print(f" * Real Incidents Triggered:        {total_incidents_count}")
         print(f" * Real Evidence Clips Generated:   {total_evidence_clips_count}")

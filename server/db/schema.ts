@@ -111,5 +111,23 @@ export function initializeSchema(): void {
     CREATE INDEX IF NOT EXISTS idx_corr_level ON correlated_incidents(correlation_level);
     CREATE INDEX IF NOT EXISTS idx_corr_started_at ON correlated_incidents(started_at);
     CREATE INDEX IF NOT EXISTS idx_corr_last_seen_at ON correlated_incidents(last_seen_at);
+
+    -- Environment States table (Night intelligence & low-light surveillance - Phase 9)
+    CREATE TABLE IF NOT EXISTS environment_states (
+      camera_id TEXT PRIMARY KEY,
+      mode TEXT NOT NULL CHECK(mode IN ('DAY', 'DAWN', 'DUSK', 'NIGHT', 'LOW_LIGHT')),
+      brightness REAL NOT NULL,
+      contrast REAL NOT NULL,
+      visibility_score REAL NOT NULL,
+      low_light INTEGER NOT NULL DEFAULT 0,
+      confidence REAL NOT NULL DEFAULT 1.0,
+      adaptive_skip INTEGER NOT NULL DEFAULT 2,
+      enhancement_enabled INTEGER NOT NULL DEFAULT 0,
+      updated_at TEXT NOT NULL
+    );
+
+    CREATE INDEX IF NOT EXISTS idx_env_mode ON environment_states(mode);
+    CREATE INDEX IF NOT EXISTS idx_env_low_light ON environment_states(low_light);
+    CREATE INDEX IF NOT EXISTS idx_env_updated_at ON environment_states(updated_at);
   `);
 }

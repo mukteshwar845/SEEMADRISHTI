@@ -134,6 +134,20 @@ export interface CorrelationPayload {
 }
 export type CorrelationListener = (data: CorrelationPayload) => void;
 
+export interface EnvironmentUpdatePayload {
+  camera_id: string;
+  mode: 'DAY' | 'DAWN' | 'DUSK' | 'NIGHT' | 'LOW_LIGHT';
+  brightness: number;
+  contrast: number;
+  visibility_score: number;
+  low_light: boolean;
+  confidence?: number;
+  adaptive_skip?: number;
+  enhancement_enabled?: boolean;
+  updated_at?: string;
+}
+export type EnvironmentListener = (data: EnvironmentUpdatePayload) => void;
+
 const WS_URL_STORAGE_KEY = 'seemadrishti_ws_url_v2';
 const DEFAULT_WS_URL = 'ws://127.0.0.1:8000/ws/alerts';
 
@@ -164,6 +178,8 @@ class WebSocketService {
   private correlationCreatedListeners: Set<CorrelationListener> = new Set();
   private correlationUpdatedListeners: Set<CorrelationListener> = new Set();
   private correlationEscalatedListeners: Set<CorrelationListener> = new Set();
+  private environmentListeners: Set<EnvironmentListener> = new Set();
+  private latestEnvironmentStates: Map<string, EnvironmentUpdatePayload> = new Map();
 
   constructor() {
     try {
@@ -527,6 +543,35 @@ class WebSocketService {
         }
         break;
       }
+      case 'environment_update' as any: {
+        const payload = (msg as any).data || msg.payload;
+        if (payload && payload.camera_id) {
+          this.latestEnvironmentStates.set(payload.camera_id.toLowerCase(), payload);
+          this.environmentListeners.forEach((listener) => listener(payload));
+        }
+        break;
+      }
+      case 'night_movement' as any: {
+        const payload = (msg as any).data || msg.payload;
+        if (payload) {
+          const uiAlert: AlertItem = {
+            id: `night-${payload.track_id}-${Date.now()}`,
+            title: `NIGHT MOVEMENT [${payload.environment_mode || 'NIGHT'}]`,
+            camera: (payload.camera_id || 'CAM-01').toUpperCase(),
+            severity: 'Medium',
+            time: new Date().toLocaleTimeString(),
+            type: 'NIGHT INTELLIGENCE',
+            timestamp: Date.now(),
+            status: 'active',
+            description: payload.reason || `Human movement detected in ${payload.environment_mode} (Visibility: ${payload.visibility_score}%)`,
+            location: `Sector ${payload.camera_id || 'Alpha'}`,
+            confidence: payload.confidence || 0.85,
+            audioTriggered: false,
+          };
+          this.alertListeners.forEach((listener) => listener(uiAlert));
+        }
+        break;
+      }
     }
   }
 
@@ -691,9 +736,22 @@ class WebSocketService {
     return () => this.correlationUpdatedListeners.delete(listener);
   }
 
-  public onCorrelationEscalated(listener: CorrelationListener): () => void {
+  public onCorrelationEscalated(listener: CorrelationListener) {
     this.correlationEscalatedListeners.add(listener);
     return () => this.correlationEscalatedListeners.delete(listener);
+  }
+
+  public onEnvironmentUpdate(listener: EnvironmentListener) {
+    this.environmentListeners.add(listener);
+    return () => this.environmentListeners.delete(listener);
+  }
+
+  public getLatestEnvironment(cameraId: string): EnvironmentUpdatePayload | undefined {
+    return this.latestEnvironmentStates.get(cameraId.toLowerCase());
+  }
+
+  public getAllEnvironmentStates(): Map<string, EnvironmentUpdatePayload> {
+    return new Map(this.latestEnvironmentStates);
   }
 
   public onStateChange(listener: StateListener): () => void {

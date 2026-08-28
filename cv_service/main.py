@@ -28,6 +28,8 @@ from cv_service.risk.engine import RiskEngine
 from cv_service.evidence.circular_buffer import CircularFrameBuffer
 from cv_service.evidence.evidence_writer import EvidenceWriter
 from cv_service.evidence.incident_manager import IncidentManager
+from cv_service.correlation.camera_topology import CameraTopology
+from cv_service.correlation.correlation_engine import CorrelationEngine
 from cv_service.output.detection_publisher import DetectionPublisher
 
 
@@ -126,6 +128,17 @@ def parse_args():
         action="store_true",
         help="Disable Phase 7 forensic incident evidence capture",
     )
+    parser.add_argument(
+        "--no-correlation",
+        action="store_true",
+        help="Disable Phase 8 multi-camera threat correlation",
+    )
+    parser.add_argument(
+        "--topology-config",
+        type=str,
+        default=None,
+        help="Path to camera topology JSON configuration",
+    )
     return parser.parse_args()
 
 
@@ -146,15 +159,18 @@ def main():
         evidence_pre_event_seconds=args.pre_event_seconds,
         evidence_post_event_seconds=args.post_event_seconds,
         evidence_dir=args.evidence_dir,
+        correlation_enabled=not args.no_correlation,
+        correlation_topology_path=args.topology_config,
     )
 
     use_tracking = not args.no_tracking
     use_loitering = not args.no_loitering and config.loitering_enabled
     use_risk = not args.no_risk and config.risk_engine_enabled
     use_evidence = not args.no_evidence and config.evidence_enabled
+    use_correlation = not args.no_correlation and config.correlation_enabled
 
     print("\n===================================================================")
-    print("SEEMADRISHTI AI - EVIDENCE, RISK & SURVEILLANCE PIPELINE (PHASE 7)")
+    print("SEEMADRISHTI AI - MULTI-CAMERA CORRELATION & THREAT ENGINE (PHASE 8)")
     print("===================================================================")
     print(f" * Video Source:       {args.source}")
     print(f" * Camera ID:          {config.camera_id}")
@@ -167,6 +183,7 @@ def main():
     print(f" * Threat Risk Engine: {'Active (Explainable 0-100 Scoring)' if use_risk else 'Disabled'}")
     print(f" * Evidence Engine:    {'Active (Pre: ' + str(config.evidence_pre_event_seconds) + 's, Post: ' + str(config.evidence_post_event_seconds) + 's)' if use_evidence else 'Disabled'}")
     print(f" * Evidence Output:    {config.evidence_dir}")
+    print(f" * Correlation Engine: {'Active (Spatial-Temporal Cross-Camera Correlation)' if use_correlation else 'Disabled'}")
     print(f" * WebSocket Target:   {config.ws_url if not args.no_ws else 'Disabled'}")
     print("===================================================================")
 
@@ -263,7 +280,18 @@ def main():
             cooldown_seconds=config.evidence_cooldown_seconds,
         )
 
-    # 6. Initialize WebSocket Publisher
+    # 6. Initialize Phase 8 Multi-Camera Correlation Engine
+    correlation_engine = None
+    if use_correlation:
+        topology = CameraTopology(config.correlation_topology_path)
+        correlation_engine = CorrelationEngine(
+            topology=topology,
+            backend_http_url=config.http_backend_url,
+            min_correlation_score=config.correlation_min_score,
+            max_dormant_seconds=config.correlation_max_dormant_seconds,
+        )
+
+    # 7. Initialize WebSocket Publisher
     publisher = None
     if not args.no_ws:
         publisher = DetectionPublisher(config)
@@ -287,6 +315,8 @@ def main():
     total_evidence_time_ms = 0.0
     total_incidents_count = 0
     total_evidence_clips_count = 0
+    total_correlation_time_ms = 0.0
+    total_correlations_count = 0
 
     t_start = time.perf_counter()
     last_log_time = time.perf_counter()
@@ -442,6 +472,25 @@ def main():
                                 total_incidents_count += 1
                             total_evidence_time_ms += (time.perf_counter() - t_trig0) * 1000.0
 
+                        # Step F: Phase 8 Multi-Camera Threat Correlation
+                        if correlation_engine and assessment.level in ("HIGH", "CRITICAL"):
+                            t_corr0 = time.perf_counter()
+                            corr = correlation_engine.ingest_event(
+                                camera_id=config.camera_id,
+                                track_id=str(tid),
+                                class_name=cls,
+                                event_type="RISK_ASSESSMENT",
+                                risk_score=assessment.score,
+                                risk_level=assessment.level,
+                                zone_name=active_zone,
+                                timestamp=current_frame_time,
+                                incident_id=(inc.id if inc else None),
+                                publisher=publisher,
+                            )
+                            if corr:
+                                total_correlations_count += 1
+                            total_correlation_time_ms += (time.perf_counter() - t_corr0) * 1000.0
+
                     total_risk_time_ms += (time.perf_counter() - t_risk0) * 1000.0
                     risk_engine.cleanup_inactive_tracks(
                         config.camera_id, {t["track_id"] for t in output["tracks"]}
@@ -512,10 +561,11 @@ def main():
         avg_loitering_latency = round(total_loitering_time_ms / processed_counter, 3) if processed_counter > 0 and loitering_detector else 0.0
         avg_risk_latency = round(total_risk_time_ms / processed_counter, 3) if processed_counter > 0 and risk_engine else 0.0
         avg_evidence_latency = round(total_evidence_time_ms / processed_counter, 3) if processed_counter > 0 and incident_manager else 0.0
-        avg_total_latency = round(avg_inference_latency + avg_tracking_latency + avg_geometry_latency + avg_loitering_latency + avg_risk_latency + avg_evidence_latency, 2)
+        avg_correlation_latency = round(total_correlation_time_ms / processed_counter, 3) if processed_counter > 0 and correlation_engine else 0.0
+        avg_total_latency = round(avg_inference_latency + avg_tracking_latency + avg_geometry_latency + avg_loitering_latency + avg_risk_latency + avg_evidence_latency + avg_correlation_latency, 2)
 
         print("\n===================================================================")
-        print("[BENCHMARK REPORT] PHASE 7 EVIDENCE, RISK & TRACKING PERFORMANCE")
+        print("[BENCHMARK REPORT] PHASE 8 CORRELATION, EVIDENCE & RISK PERFORMANCE")
         print("===================================================================")
         print(f" * Total Ingested Frames:          {frame_counter}")
         print(f" * Total Processed Frames:         {processed_counter}")
@@ -527,6 +577,7 @@ def main():
         print(f" * Average Loitering Latency:      {avg_loitering_latency} ms")
         print(f" * Average Risk Engine Latency:    {avg_risk_latency} ms")
         print(f" * Average Evidence Latency:       {avg_evidence_latency} ms")
+        print(f" * Average Correlation Latency:    {avg_correlation_latency} ms")
         print(f" * Total Processing Latency:       {avg_total_latency} ms")
         print(f" * Total Observed Track Records:   {total_objects_count}")
         print(f" * Unique Persistent Track IDs:    {len(unique_track_ids)} IDs: {sorted(list(unique_track_ids))}")
@@ -535,6 +586,7 @@ def main():
         print(f" * Real Risk Alerts Triggered:      {total_risk_alerts_count}")
         print(f" * Real Incidents Triggered:        {total_incidents_count}")
         print(f" * Real Evidence Clips Generated:   {total_evidence_clips_count}")
+        print(f" * Real Correlated Threat Events:   {total_correlations_count}")
         print(f" * Tracked Classes Tally:          {dict(class_frequency)}")
         print("===================================================================\n")
 

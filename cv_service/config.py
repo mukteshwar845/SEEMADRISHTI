@@ -1,6 +1,6 @@
 import os
 from dataclasses import dataclass, field
-from typing import Dict, List
+from typing import Dict, List, Optional
 
 @dataclass
 class CVConfig:
@@ -68,4 +68,11 @@ class CVConfig:
     evidence_min_risk_level: str = os.getenv("MIN_EVIDENCE_RISK_LEVEL", "HIGH")
     evidence_fps: float = float(os.getenv("EVIDENCE_FPS", "15.0"))
     evidence_cooldown_seconds: float = float(os.getenv("EVIDENCE_COOLDOWN_SECONDS", "15.0"))
+
+    # Phase 8 Multi-Camera Intelligent Threat Correlation Configuration
+    correlation_enabled: bool = os.getenv("CORRELATION_ENABLED", "true").lower() in ("true", "1", "yes")
+    correlation_min_score: int = int(os.getenv("CORRELATION_MIN_SCORE", "50"))
+    correlation_topology_path: Optional[str] = os.getenv("CORRELATION_TOPOLOGY_PATH", None)
+    correlation_max_dormant_seconds: float = float(os.getenv("CORRELATION_MAX_DORMANT_SECONDS", "300.0"))
+
 

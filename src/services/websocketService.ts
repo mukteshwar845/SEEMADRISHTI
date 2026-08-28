@@ -104,6 +104,36 @@ export interface IncidentPayload {
 }
 export type IncidentListener = (data: IncidentPayload) => void;
 
+export interface CorrelationPayload {
+  id: string;
+  status: 'ACTIVE' | 'CLOSED' | 'ARCHIVED';
+  correlation_score: number;
+  correlation_level: string;
+  started_at: string;
+  last_seen_at: string;
+  camera_sequence: string[];
+  linked_incidents: string[];
+  observations: Array<{
+    camera_id: string;
+    track_id: string;
+    class_name?: string;
+    event_type?: string;
+    risk_score?: number;
+    risk_level?: string;
+    zone_name?: string | null;
+    timestamp: string;
+    incident_id?: string | null;
+  }>;
+  reasons: Array<{
+    code: string;
+    points: number;
+    message: string;
+  }>;
+  created_at: string;
+  updated_at: string;
+}
+export type CorrelationListener = (data: CorrelationPayload) => void;
+
 const WS_URL_STORAGE_KEY = 'seemadrishti_ws_url_v2';
 const DEFAULT_WS_URL = 'ws://127.0.0.1:8000/ws/alerts';
 
@@ -131,6 +161,9 @@ class WebSocketService {
   private riskListeners: Set<RiskAssessmentListener> = new Set();
   private incidentListeners: Set<IncidentListener> = new Set();
   private evidenceListeners: Set<IncidentListener> = new Set();
+  private correlationCreatedListeners: Set<CorrelationListener> = new Set();
+  private correlationUpdatedListeners: Set<CorrelationListener> = new Set();
+  private correlationEscalatedListeners: Set<CorrelationListener> = new Set();
 
   constructor() {
     try {
@@ -439,6 +472,61 @@ class WebSocketService {
         }
         break;
       }
+      case 'correlation_created' as any: {
+        const payload = (msg as any).data || msg.payload;
+        if (payload) {
+          this.correlationCreatedListeners.forEach((listener) => listener(payload));
+          // Synthesize a tactical cross-camera alert for the alert feed
+          const seq = payload.camera_sequence ? payload.camera_sequence.join(' → ') : 'MULTI-CAM';
+          const uiAlert: AlertItem = {
+            id: `corr-${payload.id || Date.now()}`,
+            title: `CORRELATED INCIDENT [${payload.correlation_level || 'HIGH'}]`,
+            camera: payload.camera_sequence?.[0]?.toUpperCase() || 'CAM-01',
+            severity: 'High',
+            time: payload.started_at ? new Date(payload.started_at).toLocaleTimeString() : new Date().toLocaleTimeString(),
+            type: 'CROSS-CAMERA THREAT',
+            timestamp: payload.started_at ? new Date(payload.started_at).getTime() : Date.now(),
+            status: 'active',
+            description: `Cross-camera movement across ${seq} (${payload.correlation_score}/100 [${payload.correlation_level}]): ${(payload.reasons || []).map((r: any) => r.code).join(', ')}`,
+            location: seq,
+            confidence: (payload.correlation_score || 75) / 100,
+            audioTriggered: true,
+          };
+          this.alertListeners.forEach((listener) => listener(uiAlert));
+        }
+        break;
+      }
+      case 'correlation_updated' as any: {
+        const payload = (msg as any).data || msg.payload;
+        if (payload) {
+          this.correlationUpdatedListeners.forEach((listener) => listener(payload));
+        }
+        break;
+      }
+      case 'correlation_escalated' as any: {
+        const payload = (msg as any).data || msg.payload;
+        if (payload) {
+          this.correlationEscalatedListeners.forEach((listener) => listener(payload));
+          const entity = payload.entity || payload;
+          const seq = payload.camera_sequence ? payload.camera_sequence.join(' → ') : (entity.camera_sequence?.join(' → ') || 'MULTI-CAM');
+          const uiAlert: AlertItem = {
+            id: `corr-esc-${payload.correlation_id || entity.id || Date.now()}`,
+            title: `THREAT ESCALATION // CRITICAL`,
+            camera: payload.camera_sequence?.[payload.camera_sequence.length - 1]?.toUpperCase() || 'CAM-03',
+            severity: 'High',
+            time: new Date().toLocaleTimeString(),
+            type: 'CROSS-CAMERA ESCALATION',
+            timestamp: Date.now(),
+            status: 'active',
+            description: `Cross-camera corridor ${seq} escalated to CRITICAL (${payload.score || 85}/100)`,
+            location: seq,
+            confidence: 0.99,
+            audioTriggered: true,
+          };
+          this.alertListeners.forEach((listener) => listener(uiAlert));
+        }
+        break;
+      }
     }
   }
 
@@ -591,6 +679,21 @@ class WebSocketService {
   public onEvidenceReady(listener: IncidentListener): () => void {
     this.evidenceListeners.add(listener);
     return () => this.evidenceListeners.delete(listener);
+  }
+
+  public onCorrelationCreated(listener: CorrelationListener): () => void {
+    this.correlationCreatedListeners.add(listener);
+    return () => this.correlationCreatedListeners.delete(listener);
+  }
+
+  public onCorrelationUpdated(listener: CorrelationListener): () => void {
+    this.correlationUpdatedListeners.add(listener);
+    return () => this.correlationUpdatedListeners.delete(listener);
+  }
+
+  public onCorrelationEscalated(listener: CorrelationListener): () => void {
+    this.correlationEscalatedListeners.add(listener);
+    return () => this.correlationEscalatedListeners.delete(listener);
   }
 
   public onStateChange(listener: StateListener): () => void {

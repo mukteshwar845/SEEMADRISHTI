@@ -49,7 +49,10 @@ export function initializeWebSocketServer(server: http.Server): WebSocketServer 
           msg.type === 'alert_created' ||
           msg.type === 'risk_assessment' ||
           msg.type === 'incident_created' ||
-          msg.type === 'evidence_ready'
+          msg.type === 'evidence_ready' ||
+          msg.type === 'correlation_created' ||
+          msg.type === 'correlation_updated' ||
+          msg.type === 'correlation_escalated'
         ) {
           broadcastWebSocketMessage(msg.type, msg.data);
         }

@@ -90,5 +90,26 @@ export function initializeSchema(): void {
     CREATE INDEX IF NOT EXISTS idx_incidents_risk_level ON incidents(risk_level);
     CREATE INDEX IF NOT EXISTS idx_incidents_evidence_status ON incidents(evidence_status);
     CREATE INDEX IF NOT EXISTS idx_incidents_created_at ON incidents(created_at);
+
+    -- Correlated Incidents table (Multi-camera intelligent threat correlation - Phase 8)
+    CREATE TABLE IF NOT EXISTS correlated_incidents (
+      id TEXT PRIMARY KEY,
+      status TEXT NOT NULL DEFAULT 'ACTIVE' CHECK(status IN ('ACTIVE', 'CLOSED', 'ARCHIVED')),
+      correlation_score INTEGER NOT NULL,
+      correlation_level TEXT NOT NULL CHECK(correlation_level IN ('CRITICAL', 'HIGH', 'MEDIUM', 'LOW')),
+      started_at TEXT NOT NULL,
+      last_seen_at TEXT NOT NULL,
+      camera_sequence TEXT NOT NULL,
+      linked_incidents TEXT NOT NULL DEFAULT '[]',
+      observations TEXT NOT NULL,
+      reasons TEXT NOT NULL,
+      created_at TEXT NOT NULL,
+      updated_at TEXT NOT NULL
+    );
+
+    CREATE INDEX IF NOT EXISTS idx_corr_status ON correlated_incidents(status);
+    CREATE INDEX IF NOT EXISTS idx_corr_level ON correlated_incidents(correlation_level);
+    CREATE INDEX IF NOT EXISTS idx_corr_started_at ON correlated_incidents(started_at);
+    CREATE INDEX IF NOT EXISTS idx_corr_last_seen_at ON correlated_incidents(last_seen_at);
   `);
 }

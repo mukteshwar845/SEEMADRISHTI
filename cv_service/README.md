@@ -1,4 +1,4 @@
-# SEEMADRISHTI AI — Computer Vision, Tracking, Intrusion, Risk & Evidence Pipeline (Phase 7)
+# SEEMADRISHTI AI — Computer Vision, Tracking, Intrusion, Risk, Evidence & Multi-Camera Correlation Pipeline (Phase 8)
 
 **Team:** IQ100  
 **SIH Problem Statement:** SIH26187 — AI-Based Intelligent Video Analytics Platform for Border Surveillance using Existing CCTV Infrastructure  
@@ -8,13 +8,13 @@
 
 ## 1. Overview & Architecture
 
-The SEEMADRISHTI Computer Vision service (`cv_service`) provides edge-ready real-time object detection, multi-object tracking (MOT), geometric virtual perimeter intrusion detection, abnormal dwell-time loitering detection, an **Explainable Threat Assessment & Risk Engine**, and an automated **Incident Evidence Capture & Reconstruction Engine** for border surveillance.
+The SEEMADRISHTI Computer Vision service (`cv_service`) provides edge-ready real-time object detection, multi-object tracking (MOT), geometric virtual perimeter intrusion detection, abnormal dwell-time loitering detection, an **Explainable Threat Assessment & Risk Engine**, an automated **Incident Evidence Capture Engine**, and a **Multi-Camera Intelligent Threat Correlation Engine** for border surveillance.
 
 ### Pipeline Flow:
 ```
 ┌──────────────┐     ┌──────────────┐     ┌──────────────┐     ┌──────────────┐
-│ VIDEO SOURCE │ ──▶ │ OPENCV &YOLO │ ──▶ │  BYTETRACK   │ ──▶ │ RAY-CASTING  │
-│(MP4 / Webcam)│     │(yolov8n.pt)  │     │(PersistentID)│     │ (Intrusion)  │
+│ VIDEO CAMERAS│ ──▶ │ OPENCV &YOLO │ ──▶ │  BYTETRACK   │ ──▶ │ RAY-CASTING  │
+│(MP4 / RTSP)  │     │(yolov8n.pt)  │     │(PersistentID)│     │ (Intrusion)  │
 └──────────────┘     └──────────────┘     └──────────────┘     └──────────────┘
        │                                                              │
        ▼                                                              ▼
@@ -28,14 +28,26 @@ The SEEMADRISHTI Computer Vision service (`cv_service`) provides edge-ready real
 │EVIDENCE WRITE│ ◀── │INCIDENT TRIG │ ◀── │SQLITE PERSIST│ ◀── │ RISK ENGINE  │
 │ (MP4 Clip)   │     │(HIGH/CRITIC) │     │ & WS (/ws)   │     │(0-100 Score) │
 └──────────────┘     └──────────────┘     └──────────────┘     └──────────────┘
+                            │
+                            ▼
+               ┌──────────────────────────┐
+               │  MULTI-CAMERA CORRELATOR │
+               │ (Spatial-Temporal Graph) │
+               └────────────┬─────────────┘
+                            ▼
+               ┌──────────────────────────┐
+               │ CORRELATED INCIDENT (DB) │
+               │   (CAM-01 -> 02 -> 03)   │
+               └──────────────────────────┘
 ```
 
 1. **YOLOv8n Neural Network**: Real-time edge object detection classifying `person`, `car`, `truck`, `bus`, and `motorcycle`.
-2. **ByteTrack Engine**: Frame-to-frame association assigning persistent, unique `track_id` values.
+2. **ByteTrack Engine**: Frame-to-frame association assigning persistent, unique `track_id` values per camera.
 3. **Ray-Casting Intrusion Geometry**: Evaluates physical target centroids against virtual `PolygonZones` to detect `OUTSIDE ➔ INSIDE` crossings.
-4. **Loitering Engine**: Monitors continuous dwell time within restricted perimeters with anti-duplicate alert gating and grace-period track retention.
-5. **Explainable Risk Engine**: Deterministically synthesizes contextual surveillance signals into a 0–100 risk score and maps to tactical threat levels (**LOW**, **MEDIUM**, **HIGH**, **CRITICAL**) with itemized reason codes.
-6. **Incident Evidence Engine**: Continuously buffers pre-event frames in an in-memory circular buffer, triggers on HIGH/CRITICAL events, collects post-event frames, burns a tactical forensic HUD overlay, and writes a standalone MP4 evidence clip.
+4. **Loitering Engine**: Monitors continuous dwell time within restricted perimeters with anti-duplicate alert gating.
+5. **Explainable Risk Engine**: Deterministically synthesizes contextual surveillance signals into a 0–100 risk score and maps to tactical threat levels (**LOW**, **MEDIUM**, **HIGH**, **CRITICAL**).
+6. **Incident Evidence Engine**: Continuously buffers pre-event frames, triggers on HIGH/CRITICAL events, collects post-event frames, burns a tactical HUD overlay, and saves MP4 evidence clips.
+7. **Multi-Camera Correlation Engine**: Correlates events across camera networks based on spatial topology, temporal windows, class compatibility, and sequence progression.
 
 ### Directory Structure
 ```
@@ -52,10 +64,13 @@ cv_service/
 ├── loitering/                  # LoiteringDetector, monotonic dwell timing & alert gating
 ├── risk/                       # Explainable Threat Assessment & Risk Engine
 ├── evidence/                   # Incident Evidence Capture & Reconstruction Engine
-│   ├── __init__.py
 │   ├── circular_buffer.py      # Bounded in-memory circular frame buffer per camera
 │   ├── evidence_writer.py      # Forensic MP4 video writer with HUD overlay
-│   └── incident_manager.py     # Incident lifecycle, triggering & post-capture
+│   └── incident_manager.py     # Incident lifecycle coordinator
+├── correlation/                # Multi-Camera Intelligent Threat Correlation (Phase 8)
+│   ├── camera_topology.py      # Camera relationship graph, sector boundaries, travel time
+│   ├── correlation_models.py   # Observation, CorrelationReason, CorrelatedIncident
+│   └── correlation_engine.py   # Multi-camera evaluation engine, explainable scoring
 ├── output/                     # WebSocket publisher with HTTP fallback
 └── tests/
     ├── phase2_test.py          # Phase 2 Detection verification (12 tests)
@@ -64,104 +79,49 @@ cv_service/
     ├── phase5_test.py          # Phase 5 Loitering verification (31 tests)
     ├── phase6_test.py          # Phase 6 Risk Engine verification (36 tests)
     ├── phase7_test.py          # Phase 7 Evidence Engine verification (28 tests)
-    └── fixtures/               # Test videos (intrusion_test.mp4, loitering_test.mp4, etc.)
+    └── phase8_test.py          # Phase 8 Threat Correlation verification (37 tests)
 ```
 
 ---
 
-## 2. Forensic Evidence Capture & Reconstruction
+## 2. Multi-Camera Threat Correlation
 
-### Core Capabilities:
-- **Configurable Pre-Event Buffer**: Retains past $N$ seconds of real frames (default: `10.0s`) per camera without unbounded memory growth.
-- **Configurable Post-Event Capture**: Accumulates $N$ seconds of real frames after incident trigger (default: `10.0s`).
-- **Forensic HUD Overlay**: Automatically burns forensic metadata into every video frame:
-  - Tactical header with UTC timestamp & frame counter
-  - Camera ID, Track ID, Class Name, Event Type, and Zone Name
-  - Threat Level & Score badge (Crimson Red for CRITICAL, Deep Amber for HIGH)
-  - Itemized reason indicators (`[INTRUSION: +40] [LOITERING: +25]`)
-- **Multi-Camera Isolation**: Buffers and evidence files are strictly separated by camera identifier.
-- **REST Streaming & Downloads**:
-  - `GET /api/incidents`: List all incidents with filters.
-  - `GET /api/incidents/:id`: Fetch incident metadata.
-  - `GET /api/incidents/:id/evidence`: Stream or download forensic MP4 video.
-  - `POST /api/incidents/:id/acknowledge`: Operator acknowledgment.
+### Scoring & Rules
+- **Class Match (+30)**: Validates target classes (`person`, `car`, etc.) match between cameras.
+- **Camera Topology (+30)**: Enforces physical proximity and connectivity between camera sectors.
+- **Temporal Match (+25)**: Evaluates whether transit time elapsed falls within `[min_travel, max_travel]` seconds.
+- **Sequence Compatibility (+15)**: Checks plausible breach progression.
+- **Multi-Hop Escalation (+10)**: Escalates cross-corridor threats across 3+ cameras to CRITICAL.
+
+### REST Endpoints
+- `GET /api/correlations`: List cross-camera correlated incidents.
+- `GET /api/correlations/:id`: Fetch correlated incident details.
+- `GET /api/correlations/:id/timeline`: Chronological sequence of multi-camera hops with transit time elapsed.
+- `GET /api/correlations/:id/incidents`: Fetch linked incident video evidence packages.
 
 ---
 
 ## 3. How to Run
 
-### Run Phase 7 Pipeline on Video Fixture:
+### Run Integrated Pipeline with Phase 8 Correlation:
 ```bash
 py -3.12 cv_service/main.py --source cv_service/tests/fixtures/intrusion_test.mp4 --camera-id cam-01 --loitering-threshold 1.0
 ```
 
-### Run on Live Webcam:
+### Run Phase 8 Automated Test Suite (37 Tests):
 ```bash
-py -3.12 cv_service/main.py --source 0 --camera-id cam-01
+py -3.12 cv_service/tests/phase8_test.py
 ```
 
-### Run Benchmark with Pre/Post Custom Windows:
-```bash
-py -3.12 cv_service/main.py --source cv_service/tests/fixtures/intrusion_test.mp4 --camera-id cam-01 --pre-event-seconds 5.0 --post-event-seconds 5.0 --max-frames 35
-```
-
----
-
-## 4. Configuration Options
-
-| Argument | Environment Variable | Default | Description |
-| :--- | :--- | :--- | :--- |
-| `--source` | `VIDEO_SOURCE` | `intrusion_test.mp4` | Video file path or webcam index (`0`) |
-| `--camera-id` | `CAMERA_ID` | `cam-01` | Target camera ID (matches matrix cell) |
-| `--model` | `YOLO_MODEL` | `yolov8n.pt` | Ultralytics model weights |
-| `--conf` | `CONFIDENCE_THRESHOLD` | `0.40` | Detection confidence threshold (0.0–1.0) |
-| `--frame-skip`| `FRAME_SKIP` | `1` | Process every Nth frame (1 = smooth trajectory) |
-| `--max-frames`| `BENCHMARK_FRAMES` | `0` | Frames to process before exit (0 = loop) |
-| `--loitering-threshold` | `LOITERING_THRESHOLD_SECONDS` | `30.0` | Dwell duration in seconds to trigger loitering |
-| `--pre-event-seconds` | `PRE_EVENT_SECONDS` | `10.0` | Duration of pre-event buffer in seconds |
-| `--post-event-seconds` | `POST_EVENT_SECONDS` | `10.0` | Duration of post-event capture in seconds |
-| `--evidence-dir` | `EVIDENCE_DIR` | `evidence` | Directory to store MP4 evidence clips |
-| `--no-evidence`| `EVIDENCE_ENABLED` | `False` | Disable Phase 7 forensic incident evidence capture |
-| `--no-risk` | `RISK_ENGINE_ENABLED` | `False` | Disable threat assessment & risk engine |
-| `--no-loitering`| `LOITERING_ENABLED` | `False` | Disable dwell-time loitering engine |
-| `--no-tracking`| `DISABLE_TRACKING` | `False` | Disable ByteTrack and emit raw detections |
-| `--no-ws` | `DISABLE_WS` | `False` | Run offline without connecting to `/ws` |
-
----
-
-## 5. Automated Verification Suites
-
-### Run Phase 7 Evidence Engine Test Suite (28 Tests)
+### Run All Regressions:
 ```bash
 py -3.12 cv_service/tests/phase7_test.py
-```
-
-### Run Phase 6 Risk Engine Test Suite (36 Tests)
-```bash
 py -3.12 cv_service/tests/phase6_test.py
-```
-
-### Run Phase 5 Loitering Test Suite (31 Tests)
-```bash
 py -3.12 cv_service/tests/phase5_test.py
-```
-
-### Run Phase 4 Intrusion Test Suite (22 Tests)
-```bash
 py -3.12 cv_service/tests/phase4_test.py
-```
-
-### Run Phase 3 Tracking Test Suite (12 Tests)
-```bash
 py -3.12 cv_service/tests/phase3_test.py
-```
-
-### Run Phase 2 Detection Test Suite (12 Tests)
-```bash
 py -3.12 cv_service/tests/phase2_test.py
-```
-
-### Run Phase 1 Backend Test Suite (13 Tests)
-```bash
 npm.cmd run test:phase1
+npm.cmd run lint
+npm.cmd run build
 ```

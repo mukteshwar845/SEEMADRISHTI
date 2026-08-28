@@ -167,6 +167,69 @@ export interface UpdateIncidentDTO {
 }
 
 // ----------------------------------------------------------------------------
+// Multi-Camera Threat Correlation (Phase 8)
+// ----------------------------------------------------------------------------
+
+export type CorrelationStatus = 'ACTIVE' | 'CLOSED' | 'ARCHIVED';
+
+export interface CorrelationObservation {
+  camera_id: string;
+  track_id: string;
+  class_name?: string;
+  event_type?: string;
+  risk_score?: number;
+  risk_level?: RiskLevel;
+  zone_name?: string | null;
+  timestamp: string;
+  incident_id?: string | null;
+}
+
+export interface CorrelationReason {
+  code: string;
+  points: number;
+  message: string;
+}
+
+export interface CorrelatedIncidentEntity {
+  id: string;
+  status: CorrelationStatus;
+  correlation_score: number;
+  correlation_level: RiskLevel;
+  started_at: string;
+  last_seen_at: string;
+  camera_sequence: string[];
+  linked_incidents: string[];
+  observations: CorrelationObservation[];
+  reasons: CorrelationReason[];
+  created_at: string;
+  updated_at: string;
+}
+
+export interface CreateCorrelationDTO {
+  id?: string;
+  status?: CorrelationStatus;
+  correlation_score: number;
+  correlation_level: RiskLevel;
+  started_at: string;
+  last_seen_at: string;
+  camera_sequence: string[];
+  linked_incidents?: string[];
+  observations: CorrelationObservation[];
+  reasons: CorrelationReason[];
+}
+
+export interface UpdateCorrelationDTO {
+  status?: CorrelationStatus;
+  correlation_score?: number;
+  correlation_level?: RiskLevel;
+  last_seen_at?: string;
+  camera_sequence?: string[];
+  linked_incidents?: string[];
+  observations?: CorrelationObservation[];
+  reasons?: CorrelationReason[];
+}
+
+// ----------------------------------------------------------------------------
 // WebSocket Messages
 // ----------------------------------------------------------------------------
 
@@ -180,6 +243,9 @@ export type WebSocketMessageType =
   | 'risk_assessment'
   | 'incident_created'
   | 'evidence_ready'
+  | 'correlation_created'
+  | 'correlation_updated'
+  | 'correlation_escalated'
   | 'ping'
   | 'pong'
   | 'connection_ack'

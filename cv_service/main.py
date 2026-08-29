@@ -423,7 +423,11 @@ def main():
     try:
         print("[CV-Service] Video tracking, intrusion, loitering & risk monitoring running. Press Ctrl+C to stop.")
         while True:
-            t_frame_start = time.perf_counter()
+            if getattr(source, "did_loop", False):
+                print(f"\n[CV-Service] Source {config.camera_id} looped/reset. Resetting session states.")
+                intrusion_detector.reset_session(config.camera_id)
+                if tracker and hasattr(tracker, "reset"):
+                    tracker.reset()
             ret, frame = source.read_frame()
             if not ret or frame is None:
                 print("[CV-Service] End of video stream reached.")
@@ -461,6 +465,7 @@ def main():
                     continue
 
             processed_counter += 1
+            t_frame_start = time.perf_counter()
             h, w = frame.shape[:2]
             current_frame_time = time.time()
 
@@ -764,6 +769,8 @@ def main():
                     obj_cnt = counts_payload["visible"].get("total", len(output.get("tracks", [])))
                     tw_evs = [ev.to_dict() for ev in events if ev.event_type == "TRIPWIRE_CROSSING" or ev.direction in ("IN", "OUT")] if events else []
                     zn_evs = [ev.to_dict() for ev in events if ev.event_type in ("RESTRICTED_ZONE_ENTRY", "RESTRICTED_ZONE_EXIT")] if events else []
+                    ingress_info = intrusion_detector.get_ingress_counts(config.camera_id)
+                    counts_payload["ingress_egress"] = ingress_info
 
                     frame_state = {
                         "type": "frame_state",
@@ -782,6 +789,10 @@ def main():
                         "person_count": person_cnt,
                         "vehicle_count": vehicle_cnt,
                         "object_count": obj_cnt,
+                        "entries": ingress_info.get("entries", 0),
+                        "exits": ingress_info.get("exits", 0),
+                        "net_occupancy": ingress_info.get("net_occupancy", 0),
+                        "ingress_egress": ingress_info,
                         "tripwire_events": tw_evs,
                         "zone_events": zn_evs,
                         "alerts": [ev.to_dict() for ev in events] if events else [],

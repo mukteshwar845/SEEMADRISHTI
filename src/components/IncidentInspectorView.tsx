@@ -272,11 +272,11 @@ function mapRecordToEvidence(rec: IncidentRecord): IncidentEvidence {
     inferenceWeights,
     notes: `Verified security breach on ${rec.camera_id} (${rec.zone_name || 'Zone Alpha'}). Risk Score: ${rec.risk_score}/100 [${rec.risk_level}]. Status: ${rec.evidence_status}.`,
     status: rec.acknowledged ? 'acknowledged' : 'pending',
-    hasRealVideo: true,
+    hasRealVideo: rec.evidence_status === 'ready' || Boolean(rec.evidence_path),
     evidenceUrl: rec.evidence_status === 'ready' || Boolean(rec.evidence_path)
       ? `/api/incidents/${rec.id}/evidence`
-      : `/evidence/INC-00000${(Math.abs(rec.id.split('').reduce((acc, c) => acc + c.charCodeAt(0), 0)) % 5) + 1}.mp4`,
-    downloadUrl: `/api/incidents/${rec.id}/download`,
+      : undefined,
+    downloadUrl: rec.evidence_status === 'ready' || Boolean(rec.evidence_path) ? `/api/incidents/${rec.id}/download` : undefined,
     sha256: rec.sha256 || meta.sha256 || undefined,
     verificationStatus: rec.verification_status || (rec.evidence_status === 'ready' ? 'VERIFIED' : 'PENDING'),
     evidenceStatus: rec.evidence_status,

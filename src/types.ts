@@ -14,6 +14,7 @@ export type ViewMode =
   | 'notification-history'
   | 'livestream' 
   | 'stitching' 
+  | 'calibration'
   | 'settings' 
   | 'users';
 

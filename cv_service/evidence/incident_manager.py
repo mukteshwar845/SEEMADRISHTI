@@ -49,6 +49,22 @@ class ActiveIncident:
         self.result_summary: Optional[Dict[str, Any]] = None
         self.sha256: Optional[str] = None
         self.verification_status: str = "PENDING"
+        
+        # Structured chronological event timeline
+        self.timeline: List[Dict[str, Any]] = [
+            {"time": self.started_at, "label": f"{self.class_name.upper()} #{self.track_id} DETECTED", "type": "DETECTION", "status": "VERIFIED"},
+            {"time": self.started_at, "label": "BYTE TRACK ESTABLISHED", "type": "TRACKING", "status": "VERIFIED"},
+            {"time": self.started_at, "label": "TRAJECTORY RECORDED", "type": "TRAJECTORY", "status": "VERIFIED"},
+        ]
+        if "INTRUSION" in self.event_type.upper() or "RESTRICTED" in self.event_type.upper() or "ZONE" in self.event_type.upper():
+            self.timeline.append({"time": self.started_at, "label": f"ENTERED {self.zone_name.upper() if self.zone_name else 'RESTRICTED ZONE'}", "type": "RESTRICTED_ZONE", "status": "VERIFIED"})
+        if "TRIPWIRE" in self.event_type.upper() or "CROSSING" in self.event_type.upper():
+            self.timeline.append({"time": self.started_at, "label": f"TRIPWIRE CROSSED ({self.zone_name.upper() if self.zone_name else 'PERIMETER'})", "type": "TRIPWIRE", "status": "VERIFIED"})
+        self.timeline.extend([
+            {"time": self.started_at, "label": f"RISK ESCALATED → {self.risk_level}", "type": "RISK", "status": "VERIFIED"},
+            {"time": self.started_at, "label": f"ALERT DISPATCHED (#{self.id})", "type": "ALERT", "status": "VERIFIED"},
+            {"time": self.started_at, "label": "INCIDENT CREATED & LOGGED", "type": "INCIDENT", "status": "VERIFIED"},
+        ])
 
     @property
     def incident_id(self) -> str:
@@ -288,10 +304,33 @@ class IncidentManager:
             incident.sha256 = write_result.get("sha256")
             incident.verification_status = write_result.get("verification_status", "VERIFIED")
             incident.result_summary = write_result
+            fin_time = datetime.fromtimestamp(now, tz=timezone.utc).isoformat()
+            incident.ended_at = fin_time
+            incident.timeline.append({
+                "time": fin_time,
+                "label": "FORENSIC EVIDENCE FINALIZED",
+                "type": "EVIDENCE",
+                "status": "VERIFIED",
+            })
+            if incident.sha256:
+                incident.timeline.append({
+                    "time": fin_time,
+                    "label": f"SHA-256 VERIFIED ({incident.sha256[:12]}...)",
+                    "type": "VERIFICATION",
+                    "status": "VERIFIED",
+                })
         except Exception as e:
             incident.status = "failed"
             incident.verification_status = "FAILED"
             write_result = {"success": False, "error": str(e)}
+            fin_time = datetime.fromtimestamp(now, tz=timezone.utc).isoformat()
+            incident.ended_at = fin_time
+            incident.timeline.append({
+                "time": fin_time,
+                "label": f"FORENSIC EVIDENCE CAPTURE FAILED: {str(e)}",
+                "type": "EVIDENCE",
+                "status": "FAILED",
+            })
 
         # Update SQLite record in backend
         self._persist_incident_finalized(incident)
@@ -318,9 +357,7 @@ class IncidentManager:
             "status": incident.status,
             "evidence_path": incident.evidence_path,
             "sha256": incident.sha256,
-            "verification_status": incident.verification_status,
-            "total_frames": len(incident.frames),
-            "write_result": write_result,
+            "timeline": incident.timeline,
         }
         self.finalized_incidents.append(summary)
 
@@ -336,8 +373,11 @@ class IncidentManager:
 
         return summary
 
+    # Alias for internal/backwards compatibility
+    _finalize_incident = finalize_incident
+
     def _persist_incident_created(self, incident: ActiveIncident) -> None:
-        """Calls POST /api/incidents to create SQLite record."""
+        """Calls POST /api/incidents to persist the incident record upon trigger."""
         payload = {
             "id": incident.id,
             "camera_id": incident.camera_id,
@@ -353,6 +393,7 @@ class IncidentManager:
             "metadata": {
                 "class_name": incident.class_name,
                 "reasons": incident.reasons,
+                "timeline": incident.timeline,
             },
         }
         try:
@@ -376,6 +417,7 @@ class IncidentManager:
             "verification_status": incident.verification_status,
             "file_size": file_size,
             "duration": duration,
+            "timeline": incident.timeline,
         }
 
         payload = {

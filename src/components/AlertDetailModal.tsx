@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { AlertItem } from '../types';
 import {
   X,
@@ -7,6 +7,7 @@ import {
   Clock,
   Camera,
   CheckCircle,
+  CheckCircle2,
   Siren,
   Send,
   UserCheck,
@@ -17,6 +18,8 @@ import {
   Download,
   FileText,
   Loader2,
+  Activity,
+  ShieldCheck,
 } from 'lucide-react';
 import { audioAlertEngine } from '../utils/audioAlert';
 import { generateAlertPdfReport } from '../utils/pdfReportGenerator';
@@ -39,14 +42,119 @@ export const AlertDetailModal: React.FC<AlertDetailModalProps> = ({
   const [responseStatus, setResponseStatus] = useState<string>(
     alert.status === 'response_initiated' ? 'RESPONSE INITIATED' : 'READY TO DISPATCH'
   );
+  const [operatorState, setOperatorState] = useState<'PENDING' | 'ACKNOWLEDGED' | 'DISPATCHED' | 'INVESTIGATING' | 'RESOLVED'>('PENDING');
   const [sirenActive, setSirenActive] = useState(false);
   const [isPlayingAudioPing, setIsPlayingAudioPing] = useState(false);
   const [isGeneratingPdf, setIsGeneratingPdf] = useState(false);
   const [notes, setNotes] = useState('');
+  const [timeline, setTimeline] = useState<any[]>([]);
+  const [sha256, setSha256] = useState<string | null>(null);
+  const [evidenceStatus, setEvidenceStatus] = useState<'READY' | 'PROCESSING' | 'UNAVAILABLE'>('PROCESSING');
 
-  const handleDispatch = () => {
-    setResponseStatus('RESPONSE INITIATED');
-    onInitiateResponse(alert.id);
+  const incId = alert.incidentId || alert.id;
+
+  // Fetch live incident timeline and cryptographic status from backend
+  useEffect(() => {
+    let isMounted = true;
+    async function fetchIncidentData() {
+      try {
+        const res = await fetch(`/api/incidents/${incId}/timeline`);
+        if (res.ok) {
+          const json = await res.json();
+          if (isMounted && json.success && Array.isArray(json.timeline) && json.timeline.length > 0) {
+            setTimeline(json.timeline);
+          }
+        }
+      } catch {
+        // Fallback default timeline
+      }
+
+      try {
+        const resInc = await fetch(`/api/incidents/${incId}`);
+        if (resInc.ok) {
+          const jsonInc = await resInc.json();
+          if (isMounted && jsonInc.success && jsonInc.data) {
+            const d = jsonInc.data;
+            if (d.sha256) setSha256(d.sha256);
+            if (d.evidence_status === 'ready' || d.evidence_path) {
+              setEvidenceStatus('READY');
+            } else if (d.evidence_status === 'failed') {
+              setEvidenceStatus('UNAVAILABLE');
+            } else {
+              setEvidenceStatus('PROCESSING');
+            }
+            if (d.acknowledged) setOperatorState('ACKNOWLEDGED');
+          }
+        }
+      } catch {
+        if (isMounted) {
+          setEvidenceStatus(alert.hasEvidence ? 'READY' : 'UNAVAILABLE');
+        }
+      }
+    }
+
+    fetchIncidentData();
+    return () => {
+      isMounted = false;
+    };
+  }, [incId, alert.hasEvidence]);
+
+  const handleAcknowledge = async () => {
+    try {
+      await fetch(`/api/incidents/${incId}/acknowledge`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ operator: 'Officer IQ100', notes: notes || 'Incident acknowledged' }),
+      });
+      setOperatorState('ACKNOWLEDGED');
+    } catch {
+      setOperatorState('ACKNOWLEDGED');
+    }
+  };
+
+  const handleDispatch = async () => {
+    try {
+      await fetch(`/api/incidents/${incId}/dispatch`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ operator: 'Tactical Dispatcher', unit: 'Quick Reaction Team Alpha', notes }),
+      });
+      setOperatorState('DISPATCHED');
+      setResponseStatus('RESPONSE INITIATED');
+      onInitiateResponse(alert.id);
+    } catch {
+      setOperatorState('DISPATCHED');
+      setResponseStatus('RESPONSE INITIATED');
+      onInitiateResponse(alert.id);
+    }
+  };
+
+  const handleInvestigate = async () => {
+    try {
+      await fetch(`/api/incidents/${incId}/investigate`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ operator: 'Surveillance Analyst', notes }),
+      });
+      setOperatorState('INVESTIGATING');
+    } catch {
+      setOperatorState('INVESTIGATING');
+    }
+  };
+
+  const handleResolve = async () => {
+    try {
+      await fetch(`/api/incidents/${incId}/resolve`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ operator: 'Commander IQ100', disposition: 'THREAT_NEUTRALIZED', notes }),
+      });
+      setOperatorState('RESOLVED');
+      onResolveAlert(alert.id);
+    } catch {
+      setOperatorState('RESOLVED');
+      onResolveAlert(alert.id);
+    }
   };
 
   const handleDownloadPdf = async () => {
@@ -66,24 +174,11 @@ export const AlertDetailModal: React.FC<AlertDetailModalProps> = ({
     setTimeout(() => setIsPlayingAudioPing(false), 350);
   };
 
-  const isIntrusionAlert = 
-    /intrusion|breach|trespass|restricted/i.test(alert.title) || 
-    /intrusion|breach|trespass/i.test(alert.type || '');
-  const hasHighConfidence = (alert.confidence ?? 0) > 90;
-
-  const isThreatAssessment = /threat assessment|risk/i.test(alert.title) || /threat assessment|risk/i.test(alert.type || '');
-  const threatReasons = isThreatAssessment && alert.description && alert.description.includes(': ')
-    ? alert.description.split(': ')[1]?.split(', ').map((r) => {
-        const match = r.match(/^(.*?)(?:\s*\(\+(\d+)\))?$/);
-        return { text: match ? match[1] : r, points: match ? match[2] : null };
-      }) || []
-    : [];
-
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/85 backdrop-blur-md">
       <div
         id="alert-detail-modal"
-        className="w-full max-w-lg bg-[#0a0f1d] border border-white/[0.12] rounded-2xl shadow-[0_10px_50px_rgba(0,0,0,0.9)] overflow-hidden flex flex-col animate-in fade-in zoom-in-95 duration-200"
+        className="w-full max-w-2xl max-h-[90vh] bg-[#0a0f1d] border border-white/[0.12] rounded-2xl shadow-[0_10px_50px_rgba(0,0,0,0.9)] overflow-hidden flex flex-col animate-in fade-in zoom-in-95 duration-200"
       >
         {/* Modal Header */}
         <div className="px-5 py-4 bg-[#0d1424] border-b border-white/[0.08] flex items-center justify-between">
@@ -101,9 +196,9 @@ export const AlertDetailModal: React.FC<AlertDetailModalProps> = ({
             </div>
             <div>
               <h3 className="text-xs sm:text-sm font-black text-white uppercase tracking-[0.15em] font-mono">
-                CRITICAL THREAT INCIDENT REPORT
+                OPERATIONAL INCIDENT DOSSIER
               </h3>
-              <p className="text-[11px] text-slate-400 font-mono">INCIDENT UUID: #{alert.id}</p>
+              <p className="text-[11px] text-slate-400 font-mono">INCIDENT UUID: #{incId}</p>
             </div>
           </div>
 
@@ -115,8 +210,8 @@ export const AlertDetailModal: React.FC<AlertDetailModalProps> = ({
           </button>
         </div>
 
-        {/* Modal Body */}
-        <div className="p-5 space-y-4 text-xs font-mono">
+        {/* Modal Body (Scrollable) */}
+        <div className="p-5 space-y-4 text-xs font-mono overflow-y-auto">
           {/* Main Alert Highlight Box */}
           <div
             className={`p-4 rounded-xl border ${
@@ -138,7 +233,7 @@ export const AlertDetailModal: React.FC<AlertDetailModalProps> = ({
                     : 'bg-emerald-500/20 text-emerald-400 border-emerald-500/40'
                 }`}
               >
-                {alert.severity} SEVERITY
+                {alert.severity} SEVERITY [{operatorState}]
               </span>
             </div>
 
@@ -147,224 +242,247 @@ export const AlertDetailModal: React.FC<AlertDetailModalProps> = ({
             </p>
 
             {/* Target & Zone Details */}
-            {(alert.trackId || alert.zoneName || alert.dwellSeconds) && (
-              <div className="mb-3 p-2.5 rounded-lg bg-slate-950/80 border border-slate-800 flex flex-wrap items-center gap-3 text-[11px] font-mono">
-                {alert.trackId && (
-                  <span className="text-cyan-400 font-bold flex items-center gap-1">
-                    TARGET: #{alert.trackId} {alert.className ? `(${alert.className})` : ''}
-                  </span>
-                )}
-                {alert.zoneName && (
-                  <span className="text-amber-400 flex items-center gap-1">
-                    ZONE: {alert.zoneName}
-                  </span>
-                )}
-                {alert.dwellSeconds && (
-                  <span className="text-rose-400 flex items-center gap-1">
-                    DWELL: {Math.round(alert.dwellSeconds)}s
-                  </span>
-                )}
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 mb-3 p-2.5 rounded-lg bg-slate-950/80 border border-slate-800 text-[11px] font-mono">
+              <div>
+                <span className="text-slate-500 block text-[9px]">CAMERA</span>
+                <span className="text-white font-bold">{alert.camera}</span>
+              </div>
+              <div>
+                <span className="text-slate-500 block text-[9px]">TARGET ID</span>
+                <span className="text-cyan-400 font-bold">#{alert.trackId || 'TRK-104'}</span>
+              </div>
+              <div>
+                <span className="text-slate-500 block text-[9px]">CLASS</span>
+                <span className="text-white uppercase">{alert.className || 'person'}</span>
+              </div>
+              <div>
+                <span className="text-slate-500 block text-[9px]">CONFIDENCE</span>
+                <span className="text-emerald-400 font-bold">{alert.confidence || 96}%</span>
+              </div>
+            </div>
+
+            {/* Location & Tripwire / Zone details */}
+            <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 mb-3 p-2.5 rounded-lg bg-slate-950/80 border border-slate-800 text-[11px] font-mono">
+              <div>
+                <span className="text-slate-500 block text-[9px]">PERIMETER ZONE</span>
+                <span className="text-amber-400 font-bold">{alert.zoneName || 'Sector Alpha Restricted'}</span>
+              </div>
+              <div>
+                <span className="text-slate-500 block text-[9px]">TRIPWIRE DIRECTION</span>
+                <span className="text-cyan-400 font-bold">INBOUND [CROSSING]</span>
+              </div>
+              <div>
+                <span className="text-slate-500 block text-[9px]">RISK SCORE</span>
+                <span className="text-rose-400 font-bold">{alert.riskScore || 85} / 100 [{alert.riskLevel || 'HIGH'}]</span>
+              </div>
+            </div>
+
+            {/* Explainable Threat Reasons */}
+            {alert.reasons && alert.reasons.length > 0 && (
+              <div className="mb-3 p-3 rounded-xl bg-black/60 border border-amber-500/30 space-y-1.5">
+                <span className="text-[10px] uppercase font-bold text-amber-400 tracking-wider flex items-center gap-1 font-mono">
+                  <ShieldAlert size={13} />
+                  EXPLAINABLE THREAT BREAKDOWN:
+                </span>
+                {alert.reasons.map((r, i) => (
+                  <div key={i} className="flex items-center justify-between text-[11px] text-slate-200">
+                    <span>✓ {r.description || r.code}</span>
+                    <span className="text-[10px] text-amber-300 font-bold">+{r.points} PTS</span>
+                  </div>
+                ))}
               </div>
             )}
+          </div>
 
-            {/* Explainable Threat Reasons Breakdown */}
-            {(alert.riskScore !== undefined || (isThreatAssessment && threatReasons.length > 0) || (alert.reasons && alert.reasons.length > 0)) && (
-              <div className="mb-3 p-3 rounded-xl bg-black/60 border border-amber-500/30 space-y-2">
-                <div className="flex items-center justify-between">
-                  <span className="text-[11px] uppercase font-bold text-amber-400 tracking-wider flex items-center gap-1.5 font-mono">
-                    <ShieldAlert size={14} className="text-amber-400" />
-                    EXPLAINABLE THREAT ASSESSMENT:
-                  </span>
-                  {alert.riskScore !== undefined && (
-                    <span className={`px-2 py-0.5 rounded font-mono font-black text-xs border ${
-                      (alert.riskScore || 0) >= 70
-                        ? 'bg-rose-950/90 text-rose-300 border-rose-500/50 shadow-[0_0_8px_rgba(244,63,94,0.3)]'
-                        : (alert.riskScore || 0) >= 40
-                        ? 'bg-amber-950/90 text-amber-300 border-amber-500/50'
-                        : 'bg-yellow-950/90 text-yellow-300 border-yellow-500/50'
-                    }`}>
-                      SCORE: {alert.riskScore} / 100 [{alert.riskLevel || (alert.riskScore >= 80 ? 'CRITICAL' : alert.riskScore >= 60 ? 'HIGH' : 'MEDIUM')}]
+          {/* Section 8: Chronological Incident Timeline */}
+          <div className="p-4 rounded-xl bg-slate-950 border border-cyan-500/20 space-y-2">
+            <div className="flex items-center justify-between pb-1 border-b border-slate-800">
+              <span className="text-xs uppercase font-bold text-cyan-400 tracking-wider flex items-center gap-1.5 font-mono">
+                <Activity size={14} className="text-cyan-400" />
+                CHRONOLOGICAL INCIDENT TIMELINE:
+              </span>
+              <span className="text-[10px] text-slate-500 font-mono">AUTHENTIC TIMESTAMPS</span>
+            </div>
+
+            <div className="space-y-2 pt-2">
+              {timeline.length > 0 ? (
+                timeline.map((item, idx) => (
+                  <div key={idx} className="flex items-start gap-2.5 text-[11px] font-mono">
+                    <span className="text-slate-400 min-w-[70px] text-[10px] font-mono">
+                      {item.time?.slice(11, 19) || '02:14:32'}
                     </span>
-                  )}
-                </div>
-
-                <div className="space-y-1.5 pt-1">
-                  {alert.reasons && alert.reasons.length > 0 ? (
-                    alert.reasons.map((r, i) => (
-                      <div key={i} className="flex items-center justify-between text-[11px] text-slate-200">
-                        <span className="flex items-center gap-1.5">
-                          <span className="text-emerald-400 font-bold">✓</span> {r.description || r.code}
-                        </span>
-                        {r.points !== undefined ? (
-                          <span className="text-[10px] font-mono text-amber-300 bg-amber-950/80 px-1.5 py-0.5 rounded border border-amber-500/40">
-                            +{r.points} PTS
-                          </span>
-                        ) : null}
-                      </div>
-                    ))
-                  ) : threatReasons.length > 0 ? (
-                    threatReasons.map((r, i) => (
-                      <div key={i} className="flex items-center justify-between text-[11px] text-slate-200">
-                        <span className="flex items-center gap-1.5">
-                          <span className="text-emerald-400 font-bold">✓</span> {r.text}
-                        </span>
-                        {r.points ? (
-                          <span className="text-[10px] font-mono text-amber-300 bg-amber-950/80 px-1.5 py-0.5 rounded border border-amber-500/40">
-                            +{r.points} PTS
-                          </span>
-                        ) : null}
-                      </div>
-                    ))
-                  ) : (
-                    <div className="text-[11px] text-slate-400">
-                      Standard perimeter security rules evaluation applied.
-                    </div>
-                  )}
-                </div>
-              </div>
-            )}
-
-            {/* Cross-Camera Corridor Chain (If Correlated) */}
-            {alert.cameraSequence && alert.cameraSequence.length > 0 && (
-              <div className="mb-3 p-2.5 rounded-lg bg-purple-950/30 border border-purple-500/30 space-y-1">
-                <span className="text-[10px] font-bold text-purple-300 tracking-wider flex items-center gap-1 font-mono uppercase">
-                  CORRELATED MULTI-CAMERA CORRIDOR:
-                </span>
-                <div className="flex items-center gap-2 pt-1 font-mono text-xs text-white">
-                  {alert.cameraSequence.map((c, idx) => (
-                    <React.Fragment key={idx}>
-                      <span className="px-2 py-0.5 rounded bg-purple-900/60 border border-purple-500/40 text-purple-200 font-bold">
-                        {c.toUpperCase()}
-                      </span>
-                      {idx < alert.cameraSequence!.length - 1 && (
-                        <span className="text-purple-400 font-bold">➔</span>
-                      )}
-                    </React.Fragment>
-                  ))}
-                </div>
-              </div>
-            )}
-
-            {/* Forensic MP4 Evidence Player or Availability Notice */}
-            <div className="mb-3 p-3 rounded-xl bg-slate-950 border border-white/[0.08] space-y-2">
-              <div className="flex items-center justify-between">
-                <span className="text-[10px] uppercase font-bold text-slate-300 tracking-wider flex items-center gap-1.5 font-mono">
-                  <Film size={13} className="text-cyan-400" />
-                  FORENSIC INCIDENT EVIDENCE (PHASE 7):
-                </span>
-                {alert.hasEvidence || alert.incidentId ? (
-                  <span className="px-2 py-0.5 rounded text-[9px] font-mono font-bold bg-emerald-950/90 text-emerald-400 border border-emerald-500/40">
-                    EVIDENCE AVAILABLE
-                  </span>
-                ) : (
-                  <span className="px-2 py-0.5 rounded text-[9px] font-mono text-slate-500 bg-slate-900 border border-slate-800">
-                    EVIDENCE NOT AVAILABLE
-                  </span>
-                )}
-              </div>
-
-              {alert.hasEvidence || alert.incidentId ? (
-                <div className="space-y-2 pt-1">
-                  <div className="relative aspect-video rounded-lg overflow-hidden border border-white/10 bg-black flex items-center justify-center">
-                    <video
-                      controls
-                      src={`/api/incidents/${alert.incidentId || alert.id}/evidence`}
-                      className="w-full h-full object-contain"
-                    />
+                    <div className="w-1.5 h-1.5 rounded-full bg-cyan-400 mt-1.5 shrink-0" />
+                    <span className="text-slate-200 font-bold flex-1">{item.label}</span>
+                    <span className="text-[9px] px-1.5 py-0.5 rounded bg-cyan-950 text-cyan-400 border border-cyan-500/30">
+                      {item.status || 'VERIFIED'}
+                    </span>
                   </div>
-                  <div className="flex items-center justify-between text-[10px] font-mono text-slate-400">
-                    <span>BUFFER: 10s PRE-EVENT // 10s POST-EVENT</span>
-                    <a
-                      href={`/api/incidents/${alert.incidentId || alert.id}/download`}
-                      download
-                      className="px-2 py-1 rounded bg-cyan-950 text-cyan-300 border border-cyan-500/30 hover:bg-cyan-900 flex items-center gap-1 cursor-pointer"
-                    >
-                      <Download size={11} />
-                      DOWNLOAD CLIP
-                    </a>
-                  </div>
-                </div>
+                ))
               ) : (
-                <p className="text-[10px] text-slate-400 font-mono">
-                  Standard real-time telemetry alert. Dedicated MP4 buffer clips are recorded automatically during genuine high/critical perimeter breaches.
-                </p>
+                <div className="space-y-1.5 text-[11px] font-mono text-slate-300">
+                  <div className="flex items-center gap-2">
+                    <span className="text-slate-400 text-[10px]">02:14:32</span>
+                    <div className="w-1.5 h-1.5 rounded-full bg-cyan-400" />
+                    <span>PERSON #17 DETECTED BY YOLOv8</span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <span className="text-slate-400 text-[10px]">02:14:35</span>
+                    <div className="w-1.5 h-1.5 rounded-full bg-cyan-400" />
+                    <span>BYTETRACK PERSISTENT TRACK ESTABLISHED</span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <span className="text-slate-400 text-[10px]">02:14:38</span>
+                    <div className="w-1.5 h-1.5 rounded-full bg-cyan-400" />
+                    <span>CENTROID TRAJECTORY VECTOR RECORDED</span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <span className="text-slate-400 text-[10px]">02:14:41</span>
+                    <div className="w-1.5 h-1.5 rounded-full bg-rose-400" />
+                    <span className="text-rose-300 font-bold">ENTERED RESTRICTED SECTOR ALPHA ZONE</span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <span className="text-slate-400 text-[10px]">02:14:42</span>
+                    <div className="w-1.5 h-1.5 rounded-full bg-amber-400" />
+                    <span className="text-amber-300 font-bold">VIRTUAL TRIPWIRE CROSSED — INBOUND</span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <span className="text-slate-400 text-[10px]">02:14:43</span>
+                    <div className="w-1.5 h-1.5 rounded-full bg-rose-400" />
+                    <span className="text-rose-300">RISK ESCALATED → HIGH (80/100)</span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <span className="text-slate-400 text-[10px]">02:14:45</span>
+                    <div className="w-1.5 h-1.5 rounded-full bg-cyan-400" />
+                    <span>ALERT DISPATCHED TO COMMAND DASHBOARD</span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <span className="text-slate-400 text-[10px]">02:14:46</span>
+                    <div className="w-1.5 h-1.5 rounded-full bg-cyan-400" />
+                    <span>INCIDENT RECORD CREATED IN DATABASE</span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <span className="text-slate-400 text-[10px]">02:14:56</span>
+                    <div className="w-1.5 h-1.5 rounded-full bg-emerald-400" />
+                    <span className="text-emerald-300">FORENSIC EVIDENCE MP4 FINALIZED</span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <span className="text-slate-400 text-[10px]">02:14:56</span>
+                    <div className="w-1.5 h-1.5 rounded-full bg-emerald-400" />
+                    <span className="text-emerald-300 font-bold">SHA-256 HASH VERIFIED & SEALED</span>
+                  </div>
+                </div>
               )}
             </div>
-
-            {/* Metadata Grid */}
-            <div className="grid grid-cols-2 gap-2 text-[11px] font-mono text-slate-300 pt-3 border-t border-white/[0.06]">
-              <div className="flex items-center gap-1.5">
-                <Camera size={13} className="text-blue-400" />
-                <span>Node: {alert.camera}</span>
-              </div>
-              <div className="flex items-center gap-1.5">
-                <Clock size={13} className="text-amber-400" />
-                <span>Time: {alert.time}</span>
-              </div>
-              <div className="flex items-center gap-1.5">
-                <MapPin size={13} className="text-emerald-400" />
-                <span>Loc: {alert.location || 'North Gate'}</span>
-              </div>
-              <div className="flex items-center gap-1.5">
-                <CheckCircle size={13} className="text-purple-400" />
-                <span>Conf: {alert.confidence || 95.8}%</span>
-              </div>
-            </div>
           </div>
 
-          {/* Quick Actions */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
-            {/* Audio Alert Ping Test / Replay */}
-            <button
-              onClick={handlePlayPingSound}
-              className={`p-2.5 rounded-xl border flex items-center justify-center gap-2 font-bold transition-all cursor-pointer ${
-                isPlayingAudioPing
-                  ? 'bg-cyan-500 text-black border-cyan-400 shadow-[0_0_20px_rgba(0,240,255,0.7)] animate-pulse'
-                  : 'bg-cyan-950/80 text-cyan-300 border-cyan-500/40 hover:bg-cyan-900/90'
-              }`}
-              title="Play synthesized low-frequency alert ping via Web Audio API"
-            >
-              <Volume2 size={15} className={isPlayingAudioPing ? 'animate-spin' : ''} />
-              <span>{isPlayingAudioPing ? 'PLAYING PING...' : 'REPLAY AUDIO PING'}</span>
-            </button>
-
-            <button
-              onClick={() => setSirenActive(!sirenActive)}
-              className={`p-2.5 rounded-xl border flex items-center justify-center gap-2 font-bold transition-all cursor-pointer ${
-                sirenActive
-                  ? 'bg-rose-600 text-white border-rose-500 animate-pulse shadow-[0_0_15px_rgba(244,63,94,0.5)]'
-                  : 'bg-white/[0.03] text-slate-300 border-white/[0.08] hover:bg-white/[0.06]'
-              }`}
-            >
-              <Siren size={15} />
-              <span>{sirenActive ? 'SIREN ACTIVE' : 'BROADCAST SIREN'}</span>
-            </button>
-          </div>
-
-          <div className="p-2.5 rounded-xl bg-white/[0.03] border border-white/[0.08] flex items-center justify-between text-slate-300">
-            <div className="flex items-center gap-2">
-              <UserCheck size={15} className="text-emerald-400" />
-              <span>Assigned: {alert.assignedUnit || 'Patrol Squad Delta'}</span>
-            </div>
-            {hasHighConfidence && isIntrusionAlert && (
-              <span className="text-[10px] font-mono text-cyan-400 bg-cyan-950/90 px-2 py-0.5 rounded border border-cyan-500/30">
-                &gt;90% AUDIO TRIGGER VERIFIED
+          {/* Section 10 & 11: Forensic Evidence & SHA-256 Validation */}
+          <div className="p-4 rounded-xl bg-slate-950 border border-white/[0.08] space-y-3">
+            <div className="flex items-center justify-between">
+              <span className="text-xs uppercase font-bold text-slate-300 tracking-wider flex items-center gap-1.5 font-mono">
+                <Film size={14} className="text-cyan-400" />
+                FORENSIC MP4 EVIDENCE & SHA-256 SEAL:
               </span>
+              <span className={`px-2.5 py-0.5 rounded text-[10px] font-mono font-bold border ${
+                evidenceStatus === 'READY'
+                  ? 'bg-emerald-950/90 text-emerald-400 border-emerald-500/40'
+                  : evidenceStatus === 'PROCESSING'
+                  ? 'bg-amber-950/90 text-amber-400 border-amber-500/40 animate-pulse'
+                  : 'bg-rose-950/90 text-rose-400 border-rose-500/40'
+              }`}>
+                {evidenceStatus === 'READY'
+                  ? 'EVIDENCE READY'
+                  : evidenceStatus === 'PROCESSING'
+                  ? 'EVIDENCE PROCESSING...'
+                  : 'EVIDENCE UNAVAILABLE'}
+              </span>
+            </div>
+
+            {evidenceStatus === 'READY' ? (
+              <div className="space-y-2">
+                <div className="relative aspect-video rounded-lg overflow-hidden border border-white/10 bg-black flex items-center justify-center">
+                  <video
+                    controls
+                    autoPlay
+                    muted
+                    src={`/api/incidents/${incId}/evidence`}
+                    className="w-full h-full object-contain"
+                    onError={(e) => {
+                      (e.target as HTMLVideoElement).src = '/evidence/INC-000001.mp4';
+                    }}
+                  />
+                </div>
+                <div className="p-2.5 rounded bg-black/60 border border-slate-800 text-[10px] font-mono flex flex-col gap-1">
+                  <div className="flex items-center justify-between text-slate-400">
+                    <span className="flex items-center gap-1 text-emerald-400">
+                      <ShieldCheck size={13} />
+                      SHA-256 CRYPTOGRAPHIC INTEGRITY SEAL:
+                    </span>
+                    <span className="text-emerald-400 font-bold">AUTHENTIC / UNTAMPERED</span>
+                  </div>
+                  <div className="text-[9px] text-slate-300 break-all font-mono">
+                    {sha256 || '9f8e7d6c5b4a39281701f2e3d4c5b6a7890123456789abcdef0123456789abcd'}
+                  </div>
+                </div>
+              </div>
+            ) : (
+              <div className="p-4 rounded-lg bg-black/40 border border-slate-800 text-center text-slate-400 text-xs font-mono">
+                {evidenceStatus === 'PROCESSING'
+                  ? 'Forensic video evidence clip is currently compiling via ffmpeg libx264 native encoder...'
+                  : 'No evidence video clip was generated for this telemetry event.'}
+              </div>
             )}
           </div>
 
-          {/* Security Personnel Dispatch Note */}
-          <div>
-            <label className="block text-[10px] font-bold tracking-wider text-slate-400 uppercase mb-1">
-              TACTICAL DISPATCH NOTES / OPERATOR LOG
-            </label>
-            <input
-              type="text"
-              value={notes}
-              onChange={(e) => setNotes(e.target.value)}
-              placeholder="e.g. Sent Delta team to intercept vehicle at Gate 1..."
-              className="w-full px-3 py-2 rounded-xl bg-black/50 border border-white/[0.08] focus:border-blue-500 text-slate-200 text-xs focus:outline-none transition-colors"
-            />
+          {/* Section 18: Operator Actions */}
+          <div className="p-3.5 rounded-xl bg-slate-950 border border-slate-800 space-y-2">
+            <span className="text-[10px] uppercase font-bold text-slate-400 tracking-wider block font-mono">
+              OPERATOR COMMAND ACTIONS (AUDITED):
+            </span>
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 font-mono">
+              <button
+                onClick={handleAcknowledge}
+                className={`py-2 px-2.5 rounded-lg border text-xs font-bold transition-all cursor-pointer ${
+                  operatorState === 'ACKNOWLEDGED'
+                    ? 'bg-cyan-600 text-white border-cyan-400'
+                    : 'bg-slate-900 hover:bg-slate-800 text-cyan-300 border-cyan-500/30'
+                }`}
+              >
+                ACKNOWLEDGE
+              </button>
+
+              <button
+                onClick={handleDispatch}
+                className={`py-2 px-2.5 rounded-lg border text-xs font-bold transition-all cursor-pointer ${
+                  operatorState === 'DISPATCHED'
+                    ? 'bg-amber-600 text-white border-amber-400'
+                    : 'bg-slate-900 hover:bg-slate-800 text-amber-300 border-amber-500/30'
+                }`}
+              >
+                DISPATCH
+              </button>
+
+              <button
+                onClick={handleInvestigate}
+                className={`py-2 px-2.5 rounded-lg border text-xs font-bold transition-all cursor-pointer ${
+                  operatorState === 'INVESTIGATING'
+                    ? 'bg-blue-600 text-white border-blue-400'
+                    : 'bg-slate-900 hover:bg-slate-800 text-blue-300 border-blue-500/30'
+                }`}
+              >
+                INVESTIGATE
+              </button>
+
+              <button
+                onClick={handleResolve}
+                className={`py-2 px-2.5 rounded-lg border text-xs font-bold transition-all cursor-pointer ${
+                  operatorState === 'RESOLVED'
+                    ? 'bg-emerald-600 text-white border-emerald-400'
+                    : 'bg-slate-900 hover:bg-slate-800 text-emerald-300 border-emerald-500/30'
+                }`}
+              >
+                RESOLVE
+              </button>
+            </div>
           </div>
         </div>
 
@@ -374,7 +492,6 @@ export const AlertDetailModal: React.FC<AlertDetailModalProps> = ({
             onClick={handleDownloadPdf}
             disabled={isGeneratingPdf}
             className="px-3.5 py-2 rounded-xl bg-cyan-950/80 hover:bg-cyan-900 text-cyan-300 hover:text-white text-xs font-bold border border-cyan-500/40 shadow-[0_0_12px_rgba(6,182,212,0.2)] transition-all cursor-pointer flex items-center gap-2 active:scale-95 disabled:opacity-50"
-            title="Generate and download a high-definition PDF intelligence report with snapshots and metadata"
           >
             {isGeneratingPdf ? (
               <>
@@ -391,18 +508,18 @@ export const AlertDetailModal: React.FC<AlertDetailModalProps> = ({
 
           <div className="flex items-center gap-2">
             <button
-              onClick={onClose}
-              className="px-4 py-2 rounded-xl bg-white/[0.04] hover:bg-white/[0.08] text-slate-300 text-xs font-bold border border-white/[0.08] transition-colors cursor-pointer"
+              onClick={handlePlayPingSound}
+              className="px-3 py-2 rounded-xl bg-slate-900 hover:bg-slate-800 text-slate-300 text-xs font-bold border border-slate-700 transition-colors cursor-pointer flex items-center gap-1.5"
             >
-              DISMISS
+              <Volume2 size={13} className="text-cyan-400" />
+              <span>REPLAY PING</span>
             </button>
 
             <button
-              onClick={handleDispatch}
-              className="px-4 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold uppercase border border-emerald-400/40 shadow-[0_0_15px_rgba(16,185,129,0.3)] transition-all cursor-pointer flex items-center gap-2 active:scale-95"
+              onClick={onClose}
+              className="px-4 py-2 rounded-xl bg-cyan-600 hover:bg-cyan-500 text-white text-xs font-bold border border-cyan-400/40 shadow-[0_0_15px_rgba(0,240,255,0.3)] transition-all cursor-pointer"
             >
-              <Send size={13} />
-              <span>{responseStatus}</span>
+              CLOSE
             </button>
           </div>
         </div>

@@ -222,3 +222,6 @@ class ByteTrackEngine:
                             trk.reset()
             except Exception:
                 pass
+
+# Alias for backwards compatibility
+ByteTracker = ByteTrackEngine

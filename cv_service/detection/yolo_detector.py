@@ -124,3 +124,6 @@ class YoloDetector:
         if self._total_inferences == 0:
             return 0.0
         return round(self._total_inference_time_ms / self._total_inferences, 2)
+
+# Alias for backwards compatibility
+YOLODetector = YoloDetector

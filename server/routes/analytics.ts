@@ -519,3 +519,91 @@ analyticsRouter.post('/anomalies', (req: Request, res: Response, next: NextFunct
     next(err);
   }
 });
+
+// ============================================================================
+// GET /api/analytics/history - Historical time-range analytics & most active areas
+// ============================================================================
+analyticsRouter.get('/history', (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const db = getDatabase();
+    const range = (req.query.range as string) || '1h'; // '15m' | '1h' | '6h' | '24h'
+    const cameraId = req.query.camera_id as string | undefined;
+
+    let seconds = 3600;
+    if (range === '15m') seconds = 900;
+    else if (range === '6h') seconds = 21600;
+    else if (range === '24h') seconds = 86400;
+
+    const cutoffEpoch = Date.now() / 1000.0 - seconds;
+    const cutoffIso = new Date(Date.now() - seconds * 1000).toISOString();
+
+    const mveParams: any[] = [cutoffEpoch];
+    let mveWhere = 'WHERE timestamp >= ?';
+    if (cameraId) {
+      mveWhere += ' AND camera_id = ?';
+      mveParams.push(cameraId);
+    }
+
+    const movementEvents = db.prepare(`
+      SELECT * FROM movement_events ${mveWhere} ORDER BY timestamp ASC
+    `).all(...mveParams) as any[];
+
+    const incParams: any[] = [cutoffIso];
+    let incWhere = 'WHERE started_at >= ?';
+    if (cameraId) {
+      incWhere += ' AND camera_id = ?';
+      incParams.push(cameraId);
+    }
+
+    const incidents = db.prepare(`
+      SELECT * FROM incidents ${incWhere} ORDER BY started_at ASC
+    `).all(...incParams) as any[];
+
+    const hasData = movementEvents.length > 0 || incidents.length > 0;
+
+    // Compute Most Active Metrics
+    const camFreq: Record<string, number> = {};
+    const zoneFreq: Record<string, number> = {};
+    const classFreq: Record<string, number> = {};
+    const eventFreq: Record<string, number> = {};
+
+    for (const ev of movementEvents) {
+      if (ev.camera_id) camFreq[ev.camera_id] = (camFreq[ev.camera_id] || 0) + 1;
+      if (ev.zone_name) zoneFreq[ev.zone_name] = (zoneFreq[ev.zone_name] || 0) + 1;
+      if (ev.class_name) classFreq[ev.class_name] = (classFreq[ev.class_name] || 0) + 1;
+      if (ev.event_type) eventFreq[ev.event_type] = (eventFreq[ev.event_type] || 0) + 1;
+    }
+
+    for (const inc of incidents) {
+      if (inc.camera_id) camFreq[inc.camera_id] = (camFreq[inc.camera_id] || 0) + 1;
+      if (inc.zone_name) zoneFreq[inc.zone_name] = (zoneFreq[inc.zone_name] || 0) + 1;
+      if (inc.event_type) eventFreq[inc.event_type] = (eventFreq[inc.event_type] || 0) + 1;
+    }
+
+    const getTop = (record: Record<string, number>) => {
+      const entries = Object.entries(record);
+      if (entries.length === 0) return 'INSUFFICIENT DATA';
+      entries.sort((a, b) => b[1] - a[1]);
+      return entries[0][0];
+    };
+
+    const mostActive = {
+      most_active_camera: getTop(camFreq),
+      most_active_zone: getTop(zoneFreq),
+      most_common_class: getTop(classFreq),
+      most_frequent_event: getTop(eventFreq),
+    };
+
+    res.json({
+      success: true,
+      range,
+      insufficient_data: !hasData,
+      movement_events_count: movementEvents.length,
+      incidents_count: incidents.length,
+      most_active: mostActive,
+      timestamp: new Date().toISOString(),
+    });
+  } catch (err) {
+    next(err);
+  }
+});

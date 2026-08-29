@@ -207,6 +207,9 @@ class MP4Source(VideoSource):
             self.cap = None
         self.connected = False
 
+    def close(self) -> None:
+        self.release()
+
 
 class WebcamSource(VideoSource):
     """Video ingestion from physical or virtual webcam using OpenCV."""

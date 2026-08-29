@@ -121,6 +121,10 @@ class IntrusionDetector:
             self.track_states.clear()
             self.ingress_counts.clear()
 
+    def reset(self, camera_id: Optional[str] = None):
+        """Alias for reset_session."""
+        self.reset_session(camera_id)
+
     def add_zone(self, zone: PolygonZone):
         self.zones[zone.zone_id] = zone
 
@@ -302,6 +306,17 @@ class IntrusionDetector:
                                 risk_score=trk_risk,
                             )
                             events_generated.append(event)
+
+                            # Ingress / Egress Intelligence
+                            if cam_norm not in self.ingress_counts:
+                                self.ingress_counts[cam_norm] = {"entries": 0, "exits": 0, "net_occupancy": 0}
+                            if direction == "IN":
+                                self.ingress_counts[cam_norm]["entries"] += 1
+                            elif direction == "OUT":
+                                self.ingress_counts[cam_norm]["exits"] += 1
+                            self.ingress_counts[cam_norm]["net_occupancy"] = max(
+                                0, self.ingress_counts[cam_norm]["entries"] - self.ingress_counts[cam_norm]["exits"]
+                            )
 
                             # Structured CLI logging
                             print(f"\n[TRIPWIRE CROSSING / BREACH]")

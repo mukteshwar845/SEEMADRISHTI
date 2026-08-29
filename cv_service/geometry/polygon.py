@@ -184,6 +184,11 @@ class PolygonZone:
                 0.0 <= pt[0] <= 1.0 and 0.0 <= pt[1] <= 1.0 for pt in self.raw_polygon
             )
 
+    @property
+    def polygon(self) -> List[Tuple[float, float]]:
+        """Access raw polygon coordinates for compatibility."""
+        return self.raw_polygon
+
     def get_pixel_polygon(
         self, frame_width: int, frame_height: int
     ) -> List[Tuple[float, float]]:

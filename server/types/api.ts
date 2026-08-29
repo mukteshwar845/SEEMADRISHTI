@@ -332,6 +332,8 @@ export type WebSocketMessageType =
   | 'risk_assessment'
   | 'incident_created'
   | 'incident_acknowledged'
+  | 'incident_dispatched'
+  | 'incident_investigating'
   | 'incident_resolved'
   | 'evidence_ready'
   | 'correlation_created'

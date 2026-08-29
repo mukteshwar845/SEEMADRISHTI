@@ -31,6 +31,7 @@ import { MissionControlView } from './components/MissionControlView';
 import { CameraFleetView } from './components/CameraFleetView';
 import { EvidenceQueueView } from './components/EvidenceQueueView';
 import { SystemTimelineView } from './components/SystemTimelineView';
+import { CameraCalibrationView } from './components/CameraCalibrationView';
 import { ReportsModal } from './components/ReportsModal';
 import { audioAlertEngine, triggerIntrusionAudioAlert } from './utils/audioAlert';
 import { ThemeProvider, useTheme } from './context/ThemeContext';
@@ -515,6 +516,8 @@ function SeemadrishtiMainApp() {
           {currentView === 'analytics' && <AnalyticsDashboard cameras={cameras} />}
 
           {currentView === 'stitching' && <MultiCamStitchingView />}
+
+          {currentView === 'calibration' && <CameraCalibrationView />}
 
           {currentView === 'detections' && <DetectionsView />}
 

@@ -1,4 +1,6 @@
 import { Router, Request, Response, NextFunction } from 'express';
+import fs from 'fs';
+import path from 'path';
 import { getDatabase } from '../db/database';
 import { AppError } from '../middleware/errorHandler';
 import { ZoneEntity } from '../types/api';
@@ -18,6 +20,21 @@ function formatZone(z: any) {
     enabled: Boolean(z.enabled),
     polygon: parsedPolygon,
   };
+}
+
+function syncZonesToFile(db: any) {
+  try {
+    const rawZones = db.prepare('SELECT * FROM zones ORDER BY created_at ASC').all();
+    const formatted = rawZones.map(formatZone);
+    const zonesPath = path.resolve(process.cwd(), 'config/camera_zones.json');
+    const dir = path.dirname(zonesPath);
+    if (!fs.existsSync(dir)) {
+      fs.mkdirSync(dir, { recursive: true });
+    }
+    fs.writeFileSync(zonesPath, JSON.stringify(formatted, null, 2), 'utf-8');
+  } catch (err) {
+    console.error('[ZonesRouter] Failed to sync zones to config/camera_zones.json:', err);
+  }
 }
 
 // GET /api/zones - List zones (supports ?camera_id= filter)
@@ -124,6 +141,7 @@ zonesRouter.post('/', (req: Request, res: Response, next: NextFunction) => {
     `);
 
     insert.run(zoneId, camera_id, name.trim(), polygonJson, isEnabled, now, now);
+    syncZonesToFile(db);
 
     const created = db.prepare('SELECT * FROM zones WHERE id = ?').get(zoneId);
 
@@ -183,6 +201,7 @@ zonesRouter.put('/:id', (req: Request, res: Response, next: NextFunction) => {
     `);
 
     update.run(updatedName, updatedPolygonJson, updatedEnabled, now, id);
+    syncZonesToFile(db);
 
     const updated = db.prepare('SELECT * FROM zones WHERE id = ?').get(id);
 
@@ -209,6 +228,7 @@ zonesRouter.delete('/:id', (req: Request, res: Response, next: NextFunction) => 
     }
 
     db.prepare('DELETE FROM zones WHERE id = ?').run(id);
+    syncZonesToFile(db);
 
     res.json({
       success: true,

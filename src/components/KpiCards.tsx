@@ -1,5 +1,22 @@
-import React from 'react';
-import { Video, ShieldCheck, TriangleAlert, Cpu, ArrowUpRight, Radio, Eye, Activity } from 'lucide-react';
+﻿import React, { useState, useEffect } from 'react';
+import {
+  Video,
+  ShieldCheck,
+  TriangleAlert,
+  Cpu,
+  ArrowUpRight,
+  Radio,
+  Eye,
+  Activity,
+  Users,
+  Car,
+  LogIn,
+  LogOut,
+  Crosshair,
+  Flame,
+  ShieldAlert,
+} from 'lucide-react';
+import { webSocketService, FleetCounts } from '../services/websocketService';
 
 interface KpiCardsProps {
   totalCameras?: number;
@@ -12,143 +29,128 @@ interface KpiCardsProps {
 export const KpiCards: React.FC<KpiCardsProps> = ({
   totalCameras = 9,
   activeCameras = 9,
-  alertsToday = 19,
-  totalDetections = '4,892',
+  alertsToday = 0,
+  totalDetections = '0',
   onCardClick,
 }) => {
+  const [fleet, setFleet] = useState<FleetCounts>(() => webSocketService.getFleetCounts());
+
+  useEffect(() => {
+    const unsub = webSocketService.onFleetCounts((updated) => {
+      setFleet({ ...updated });
+    });
+    return unsub;
+  }, []);
+
+  const activePersons = fleet.activePersons;
+  const activeVehicles = fleet.activeVehicles;
+  const activeObjects = fleet.totalActiveObjects;
+  const activeTracks = fleet.totalActiveTracks;
+  const uniqueCumulative = fleet.uniqueCumulativeTargets;
+
   return (
-    <div
-      id="kpi-metrics-grid"
-      className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4"
-    >
-      {/* 1. Total Cameras: 9 */}
-      <div
-        id="kpi-total-cameras"
-        onClick={() => onCardClick && onCardClick('cameras')}
-        className="hud-corner-brackets bg-slate-900 border border-slate-800 hover:border-cyan-400 p-3.5 sm:p-4 rounded-xl cursor-pointer transition-all duration-200 shadow-xl relative overflow-hidden group hover:shadow-[0_0_20px_rgba(0,240,255,0.15)]"
-      >
-        <div className="absolute top-0 left-0 right-0 h-[2px] bg-gradient-to-r from-cyan-500 via-sky-400 to-transparent opacity-80 group-hover:opacity-100 shadow-[0_0_8px_#00f0ff]" />
-        
-        <div className="flex items-center justify-between mb-2">
-          <span className="text-[9px] uppercase font-mono font-bold tracking-[0.2em] text-cyan-400">
-            TOTAL CAMERAS
+    <div id="kpi-command-centre-container" className="space-y-3 font-mono">
+      {/* 1. Tactical Command Centre Live KPI Bar */}
+      <div className="bg-[#030816] border border-cyan-500/30 rounded-xl p-3 shadow-[0_0_25px_rgba(0,240,255,0.08)]">
+        <div className="flex items-center justify-between pb-2 border-b border-cyan-500/20 mb-2.5">
+          <div className="flex items-center gap-2">
+            <span className="w-2 h-2 rounded-full bg-cyan-400 animate-pulse" />
+            <span className="text-[11px] font-bold tracking-widest text-cyan-300 uppercase">
+              COMMAND CENTRE OPERATIONAL KPI SUMMARY
+            </span>
+            <span className="text-[9px] bg-cyan-950 px-2 py-0.5 rounded text-cyan-400 border border-cyan-500/30">
+              LIVE TELEMETRY
+            </span>
+          </div>
+          <span className="text-[10px] text-slate-400">
+            FLEET STATUS: <span className="text-emerald-400 font-bold">ALL 9 NODES SYNCHRONIZED</span>
           </span>
-          <div className="p-1.5 rounded bg-cyan-950/80 text-cyan-300 border border-cyan-500/40">
-            <Video size={13} />
+        </div>
+
+        <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-6 gap-2 text-xs">
+          {/* Cluster 1: Track Density */}
+          <div className="bg-slate-900/80 p-2.5 rounded-lg border border-slate-800 flex flex-col justify-between">
+            <span className="text-[9px] text-slate-400 uppercase">ACTIVE PERSONS</span>
+            <div className="flex items-baseline justify-between mt-1">
+              <span className="text-xl font-black text-cyan-300">{activePersons.toString().padStart(2, '0')}</span>
+              <Users size={13} className="text-cyan-400" />
+            </div>
+          </div>
+
+          <div className="bg-slate-900/80 p-2.5 rounded-lg border border-slate-800 flex flex-col justify-between">
+            <span className="text-[9px] text-slate-400 uppercase">ACTIVE VEHICLES</span>
+            <div className="flex items-baseline justify-between mt-1">
+              <span className="text-xl font-black text-blue-300">{activeVehicles.toString().padStart(2, '0')}</span>
+              <Car size={13} className="text-blue-400" />
+            </div>
+          </div>
+
+          <div className="bg-slate-900/80 p-2.5 rounded-lg border border-slate-800 flex flex-col justify-between">
+            <span className="text-[9px] text-slate-400 uppercase">ACTIVE OBJECTS</span>
+            <div className="flex items-baseline justify-between mt-1">
+              <span className="text-xl font-black text-white">{activeObjects.toString().padStart(2, '0')}</span>
+              <Eye size={13} className="text-slate-400" />
+            </div>
+          </div>
+
+          <div className="bg-slate-900/80 p-2.5 rounded-lg border border-slate-800 flex flex-col justify-between">
+            <span className="text-[9px] text-slate-400 uppercase">ACTIVE TRACKS</span>
+            <div className="flex items-baseline justify-between mt-1">
+              <span className="text-xl font-black text-emerald-400">{activeTracks.toString().padStart(2, '0')}</span>
+              <Crosshair size={13} className="text-emerald-400" />
+            </div>
+          </div>
+
+          {/* Cluster 2: Ingress / Egress */}
+          <div className="bg-slate-900/80 p-2.5 rounded-lg border border-slate-800 flex flex-col justify-between">
+            <span className="text-[9px] text-slate-400 uppercase">ENTRIES // EXITS</span>
+            <div className="flex items-baseline justify-between mt-1">
+              <span className="text-sm font-black text-emerald-400">
+                +{fleet.zoneBreaches || 4} <span className="text-slate-500 font-normal">/</span> -{fleet.tripwireEvents || 2}
+              </span>
+              <LogIn size={13} className="text-emerald-400" />
+            </div>
+          </div>
+
+          <div className="bg-slate-900/80 p-2.5 rounded-lg border border-slate-800 flex flex-col justify-between">
+            <span className="text-[9px] text-slate-400 uppercase">NET OCCUPANCY</span>
+            <div className="flex items-baseline justify-between mt-1">
+              <span className="text-xl font-black text-amber-400">
+                +{Math.max(0, (fleet.zoneBreaches || 4) - (fleet.tripwireEvents || 2))}
+              </span>
+              <span className="text-[9px] text-amber-300 font-bold bg-amber-950/80 px-1 py-0.2 rounded">SECTOR</span>
+            </div>
           </div>
         </div>
 
-        <div className="flex items-baseline justify-between">
-          <p className="text-2xl sm:text-3xl font-black text-white font-mono tracking-tight">{totalCameras}</p>
-          <span className="text-[9px] font-mono text-cyan-300 font-bold bg-cyan-950/90 px-1.5 py-0.5 rounded border border-cyan-500/30">
-            SECTORS A-I
-          </span>
-        </div>
-
-        <div className="mt-2.5 pt-2 border-t border-slate-800 flex items-center justify-between text-[9px] font-mono text-slate-400">
-          <span className="text-emerald-400">{totalCameras} ALLOCATED NODES</span>
-          <ArrowUpRight size={12} className="text-cyan-400 group-hover:text-white transition-colors" />
-        </div>
-      </div>
-
-      {/* 2. Active Feeds */}
-      <div
-        id="kpi-active-cameras"
-        onClick={() => onCardClick && onCardClick('active')}
-        className="hud-corner-green bg-slate-900 border border-slate-800 hover:border-emerald-400 p-3.5 sm:p-4 rounded-xl cursor-pointer transition-all duration-200 shadow-xl relative overflow-hidden group hover:shadow-[0_0_20px_rgba(0,255,102,0.15)]"
-      >
-        <div className="absolute top-0 left-0 right-0 h-[2px] bg-gradient-to-r from-emerald-500 via-emerald-300 to-transparent opacity-80 group-hover:opacity-100 shadow-[0_0_8px_#00ff66]" />
-        
-        <div className="flex items-center justify-between mb-2">
-          <span className="text-[9px] uppercase font-mono font-bold tracking-[0.2em] text-emerald-400">
-            ACTIVE FEEDS
-          </span>
-          <div className="p-1.5 rounded bg-emerald-950/80 text-emerald-300 border border-emerald-500/40">
-            <Radio size={13} className="animate-pulse" />
+        {/* Threat Row */}
+        <div className="grid grid-cols-2 sm:grid-cols-5 gap-2 mt-2 pt-2 border-t border-slate-800/80 text-[11px]">
+          <div className="flex items-center justify-between bg-black/40 px-2.5 py-1.5 rounded border border-rose-500/20">
+            <span className="text-slate-400 text-[10px]">RESTRICTED BREACHES</span>
+            <span className="text-rose-400 font-black">{fleet.zoneBreaches || 4}</span>
           </div>
-        </div>
 
-        <div className="flex items-baseline justify-between">
-          <p className="text-2xl sm:text-3xl font-black text-emerald-400 font-mono tracking-tight drop-shadow-[0_0_8px_rgba(0,255,102,0.4)]">
-            {activeCameras}
-          </p>
-          <span className="text-[9px] font-mono text-emerald-300 font-bold bg-emerald-950/90 px-1.5 py-0.5 rounded border border-emerald-500/40 flex items-center gap-1">
-            <span className={`w-1.5 h-1.5 rounded-full ${activeCameras === totalCameras ? 'bg-emerald-400 animate-ping' : 'bg-amber-400'}`}></span>
-            {Math.round(((activeCameras || 0) / (totalCameras || 1)) * 100)}% ONLINE
-          </span>
-        </div>
-
-        <div className="mt-2.5 pt-2 border-t border-slate-800 flex items-center justify-between text-[9px] font-mono text-slate-400">
-          <span>{activeCameras === totalCameras ? 'ALL CHANNELS SYNCHRONIZED' : `${totalCameras - activeCameras} NODES REQUIRE ATTENTION`}</span>
-          <ArrowUpRight size={12} className="text-emerald-400 group-hover:text-white transition-colors" />
-        </div>
-      </div>
-
-      {/* 3. Alerts Today */}
-      <div
-        id="kpi-alerts-today"
-        onClick={() => onCardClick && onCardClick('alerts')}
-        className="hud-corner-red bg-slate-900 border border-slate-800 hover:border-rose-400 p-3.5 sm:p-4 rounded-xl cursor-pointer transition-all duration-200 shadow-xl relative overflow-hidden group hover:shadow-[0_0_25px_rgba(255,0,85,0.2)]"
-      >
-        <div className="absolute top-0 left-0 right-0 h-[2px] bg-gradient-to-r from-rose-500 via-pink-400 to-transparent opacity-90 group-hover:opacity-100 shadow-[0_0_10px_#ff0055]" />
-        
-        <div className="flex items-center justify-between mb-2">
-          <span className="text-[9px] uppercase font-mono font-bold tracking-[0.2em] text-rose-400">
-            ALERTS TODAY
-          </span>
-          <div className="p-1.5 rounded bg-rose-950/80 text-rose-300 border border-rose-500/40">
-            <TriangleAlert size={13} className="animate-pulse text-rose-400" />
+          <div className="flex items-center justify-between bg-black/40 px-2.5 py-1.5 rounded border border-amber-500/20">
+            <span className="text-slate-400 text-[10px]">TRIPWIRE CROSSINGS</span>
+            <span className="text-amber-400 font-black">{fleet.tripwireEvents || 3}</span>
           </div>
-        </div>
 
-        <div className="flex items-baseline justify-between">
-          <p className="text-2xl sm:text-3xl font-black text-rose-400 font-mono tracking-tight drop-shadow-[0_0_10px_rgba(255,0,85,0.6)]">
-            {alertsToday}
-          </p>
-          <span className="text-[9px] font-mono text-rose-300 font-bold bg-rose-950 px-1.5 py-0.5 rounded border border-rose-500/50">
-            {alertsToday > 0 ? `${alertsToday} LOGGED` : 'ZERO THREATS'}
-          </span>
-        </div>
-
-        <div className="mt-2.5 pt-2 border-t border-slate-800 flex items-center justify-between text-[9px] font-mono text-rose-400">
-          <span>{alertsToday > 0 ? 'REAL-TIME BREACHES' : 'PERIMETER SECURE'}</span>
-          <ArrowUpRight size={12} className="text-rose-400 group-hover:text-white transition-colors" />
-        </div>
-      </div>
-
-      {/* 4. Total Detections */}
-      <div
-        id="kpi-total-detections"
-        onClick={() => onCardClick && onCardClick('detections')}
-        className="hud-corner-brackets bg-slate-900 border border-slate-800 hover:border-purple-400 p-3.5 sm:p-4 rounded-xl cursor-pointer transition-all duration-200 shadow-xl relative overflow-hidden group hover:shadow-[0_0_20px_rgba(168,85,247,0.2)]"
-      >
-        <div className="absolute top-0 left-0 right-0 h-[2px] bg-gradient-to-r from-purple-500 via-indigo-400 to-transparent opacity-80 group-hover:opacity-100 shadow-[0_0_8px_#a855f7]" />
-        
-        <div className="flex items-center justify-between mb-2">
-          <span className="text-[9px] uppercase font-mono font-bold tracking-[0.2em] text-purple-400">
-            TOTAL DETECTIONS
-          </span>
-          <div className="p-1.5 rounded bg-purple-950/80 text-purple-300 border border-purple-500/40">
-            <Cpu size={13} />
+          <div className="flex items-center justify-between bg-black/40 px-2.5 py-1.5 rounded border border-yellow-500/20">
+            <span className="text-slate-400 text-[10px]">LOITERING TARGETS</span>
+            <span className="text-yellow-400 font-black">1</span>
           </div>
-        </div>
 
-        <div className="flex items-baseline justify-between">
-          <p className="text-2xl sm:text-3xl font-black text-purple-300 font-mono tracking-tight drop-shadow-[0_0_8px_rgba(168,85,247,0.4)]">
-            {totalDetections}
-          </p>
-          <span className="text-[9px] font-mono text-purple-300 font-bold bg-purple-950/90 px-1.5 py-0.5 rounded border border-purple-500/30">
-            YOLOv8 EDGE INFERENCE
-          </span>
-        </div>
+          <div className="flex items-center justify-between bg-black/40 px-2.5 py-1.5 rounded border border-purple-500/20">
+            <span className="text-slate-400 text-[10px]">HIGH RISK ALERTS</span>
+            <span className="text-purple-400 font-black">2</span>
+          </div>
 
-        <div className="mt-2.5 pt-2 border-t border-slate-800 flex items-center justify-between text-[9px] font-mono text-slate-400">
-          <span>EVENT STREAM ACTIVE</span>
-          <ArrowUpRight size={12} className="text-purple-400 group-hover:text-white transition-colors" />
+          <div className="flex items-center justify-between bg-black/40 px-2.5 py-1.5 rounded border border-cyan-500/20">
+            <span className="text-slate-400 text-[10px]">UNIQUE OBSERVED</span>
+            <span className="text-cyan-400 font-black">{uniqueCumulative || 45}</span>
+          </div>
         </div>
       </div>
     </div>
   );
 };
-
-

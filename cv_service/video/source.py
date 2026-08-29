@@ -116,6 +116,10 @@ class MP4Source(VideoSource):
     def source_type(self) -> str:
         return "mp4"
 
+    @property
+    def total_frames(self) -> int:
+        return self._total_frames
+
     def open(self) -> bool:
         if not os.path.exists(self.file_path):
             self.connected = False

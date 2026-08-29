@@ -547,17 +547,19 @@ export const IncidentInspectorView: React.FC = () => {
               {currentIncident.hasRealVideo || currentIncident.evidenceUrl ? (
                 <video
                   ref={videoRef}
-                  key={currentIncident.id}
+                  key={`${currentIncident.id}-${visionFilter}`}
                   src={currentIncident.evidenceUrl || `/evidence/INC-00000${(selectedIncidentIndex % 5) + 1}.mp4`}
                   autoPlay
                   playsInline
                   muted
                   loop
+                  preload="auto"
                   onPlay={() => setIsPlaying(true)}
                   onPause={() => setIsPlaying(false)}
                   onLoadedMetadata={(e) => {
                     const d = e.currentTarget.duration;
                     if (!isNaN(d) && d > 0) setRealDuration(d);
+                    e.currentTarget.play().catch(() => {});
                   }}
                   onTimeUpdate={(e) => setCurrentTimeSec(Math.floor(e.currentTarget.currentTime))}
                   onError={(e) => {
@@ -569,7 +571,13 @@ export const IncidentInspectorView: React.FC = () => {
                       target.play().catch(() => {});
                     }
                   }}
-                  className="absolute inset-0 w-full h-full object-contain z-10 bg-black"
+                  className={`absolute inset-0 w-full h-full object-contain z-10 transition-all duration-300 ${
+                    visionFilter === 'thermal'
+                      ? 'filter invert contrast-150 hue-rotate-180 brightness-110'
+                      : visionFilter === 'night'
+                      ? 'filter contrast-125 brightness-105 hue-rotate-30'
+                      : 'filter contrast-105 brightness-100'
+                  }`}
                 />
               ) : (
                 <div className="absolute inset-0 bg-[#070d1f] flex flex-col items-center justify-center gap-3 p-6 text-center z-10">

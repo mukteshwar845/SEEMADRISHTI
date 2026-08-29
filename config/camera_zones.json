@@ -5,7 +5,7 @@
       "camera_id": "cam-01",
       "name": "Sector Alpha Main Gate Restricted Zone",
       "zone_type": "RESTRICTED_ZONE",
-      "polygon": [[0.35, 0.40], [0.88, 0.40], [0.88, 0.92], [0.35, 0.92]],
+      "polygon": [[0.20, 0.55], [0.85, 0.55], [0.85, 0.95], [0.20, 0.95]],
       "enabled": true,
       "is_normalized": true
     },
@@ -14,7 +14,7 @@
       "camera_id": "cam-01",
       "name": "Alpha Entry Tripwire",
       "zone_type": "TRIPWIRE",
-      "polygon": [[0.20, 0.65], [0.92, 0.65]],
+      "polygon": [[0.20, 0.72], [0.85, 0.72]],
       "enabled": true,
       "is_normalized": true
     }

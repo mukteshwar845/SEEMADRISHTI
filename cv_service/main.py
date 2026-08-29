@@ -753,6 +753,18 @@ def main():
                     publisher.publish(output, message_type="tracking")
 
                     # Phase 14 & 17: Unified frame_state packet with counts and stream synchronization
+                    person_cnt = counts_payload["visible"].get("person", 0)
+                    vehicle_cnt = (
+                        counts_payload["visible"].get("car", 0)
+                        + counts_payload["visible"].get("truck", 0)
+                        + counts_payload["visible"].get("bus", 0)
+                        + counts_payload["visible"].get("motorcycle", 0)
+                        + counts_payload["visible"].get("bicycle", 0)
+                    )
+                    obj_cnt = counts_payload["visible"].get("total", len(output.get("tracks", [])))
+                    tw_evs = [ev.to_dict() for ev in events if ev.event_type == "TRIPWIRE_CROSSING" or ev.direction in ("IN", "OUT")] if events else []
+                    zn_evs = [ev.to_dict() for ev in events if ev.event_type in ("RESTRICTED_ZONE_ENTRY", "RESTRICTED_ZONE_EXIT")] if events else []
+
                     frame_state = {
                         "type": "frame_state",
                         "camera_id": config.camera_id,
@@ -765,6 +777,14 @@ def main():
                         "detections": output.get("detections", []),
                         "tracks": output.get("tracks", []),
                         "counts": counts_payload,
+                        "active_counts": counts_payload["visible"],
+                        "unique_counts": counts_payload["unique_session"],
+                        "person_count": person_cnt,
+                        "vehicle_count": vehicle_cnt,
+                        "object_count": obj_cnt,
+                        "tripwire_events": tw_evs,
+                        "zone_events": zn_evs,
+                        "alerts": [ev.to_dict() for ev in events] if events else [],
                         "environment": env_metrics.to_dict() if env_metrics else {},
                         "risk": {
                             "max_score": max((t.get("risk_score", 0) for t in output.get("tracks", [])), default=0),

@@ -56,6 +56,7 @@ class IntrusionEvent:
     def to_dict(self) -> Dict[str, Any]:
         d = asdict(self)
         d["position"] = {"x": round(self.position[0], 1), "y": round(self.position[1], 1)}
+        d["centroid"] = d["position"]
         if self.prev_position:
             d["prev_position"] = {"x": round(self.prev_position[0], 1), "y": round(self.prev_position[1], 1)}
         else:

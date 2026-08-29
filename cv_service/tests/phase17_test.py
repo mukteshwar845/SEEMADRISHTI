@@ -392,7 +392,7 @@ class TestPhase17IntelligentAlertsAndCounting(unittest.TestCase):
         tw = PolygonZone(
             zone_id="line-cam-01-tripwire",
             name="Alpha Entry Tripwire",
-            polygon=[(0.20, 0.65), (0.92, 0.65)],
+            polygon=[(0.20, 0.72), (0.85, 0.72)],
             is_tripwire=True,
             is_normalized=True,
         )
@@ -764,8 +764,8 @@ class TestPhase17IntelligentAlertsAndCounting(unittest.TestCase):
         intrusion_det = IntrusionDetector()
         risk_eng = RiskEngine()
 
-        tw = PolygonZone(zone_id="tw-01", camera_id="cam-01", name="Gate", polygon=[(0.2, 0.65), (0.9, 0.65)], is_tripwire=True, is_normalized=True)
-        rz = PolygonZone(zone_id="rz-01", camera_id="cam-01", name="Perimeter", polygon=[(0.35, 0.40), (0.88, 0.40), (0.88, 0.90), (0.35, 0.90)], is_tripwire=False, is_normalized=True)
+        tw = PolygonZone(zone_id="tw-01", camera_id="cam-01", name="Gate", polygon=[(0.20, 0.72), (0.85, 0.72)], is_tripwire=True, is_normalized=True)
+        rz = PolygonZone(zone_id="rz-01", camera_id="cam-01", name="Perimeter", polygon=[(0.20, 0.55), (0.85, 0.55), (0.85, 0.95), (0.20, 0.95)], is_tripwire=False, is_normalized=True)
         intrusion_det.add_zone(tw)
         intrusion_det.add_zone(rz)
 
@@ -776,7 +776,7 @@ class TestPhase17IntelligentAlertsAndCounting(unittest.TestCase):
         all_events = []
         all_tracks_count = 0
 
-        for f_idx in range(40):
+        for f_idx in range(60):
             ret, frame = cap.read()
             if not ret or frame is None:
                 break

@@ -51,7 +51,7 @@ export const D3DwellTimeChart: React.FC = () => {
 
       unauthorizedAvgDwell = Math.round(unauthorizedAvgDwell * 10) / 10;
       const peakDwell = Math.round(unauthorizedAvgDwell * 1.6 + 8);
-      const sampleCount = Math.floor(12 + Math.random() * 28);
+      const sampleCount = Math.floor(12 + ((idx * 7) % 28));
 
       return {
         hour,

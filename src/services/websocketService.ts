@@ -222,6 +222,15 @@ export interface GroupMovementPayload {
 }
 export type GroupMovementListener = (data: GroupMovementPayload) => void;
 
+export interface FleetCounts {
+  visibleTotal: number;
+  personTotal: number;
+  vehicleTotal: number;
+  uniqueSessionTotal: number;
+  perCamera: Record<string, ObjectCountsPayload>;
+}
+export type FleetCountsListener = (data: FleetCounts) => void;
+
 export interface FrameStatePayload {
   type: string;
   camera_id: string;
@@ -234,6 +243,14 @@ export interface FrameStatePayload {
   detections: RealYoloDetection[];
   tracks: TrackItem[];
   counts?: ObjectCountsPayload;
+  active_counts?: Record<string, any>;
+  unique_counts?: Record<string, any>;
+  person_count?: number;
+  vehicle_count?: number;
+  object_count?: number;
+  tripwire_events?: any[];
+  zone_events?: any[];
+  alerts?: any[];
   environment?: any;
   risk?: { max_score: number; level: string };
 }
@@ -282,6 +299,7 @@ class WebSocketService {
   private anomalyListeners: Set<AnomalyListener> = new Set();
   private groupMovementListeners: Set<GroupMovementListener> = new Set();
   private frameStateListeners: Set<FrameStateListener> = new Set();
+  private fleetCountsListeners: Set<FleetCountsListener> = new Set();
   private latestFrameStates: Map<string, FrameStatePayload> = new Map();
   private latestEnvironmentStates: Map<string, EnvironmentUpdatePayload> = new Map();
   private latestOccupancyStates: Map<string, OccupancyUpdatePayload> = new Map();
@@ -457,6 +475,28 @@ class WebSocketService {
     };
   }
 
+  public onFleetCounts(listener: FleetCountsListener): () => void {
+    this.fleetCountsListeners.add(listener);
+    try {
+      listener(this.getFleetCounts());
+    } catch (e) {
+      console.warn('[WS] Error in initial onFleetCounts callback:', e);
+    }
+    return () => this.fleetCountsListeners.delete(listener);
+  }
+
+  private notifyFleetCounts() {
+    if (this.fleetCountsListeners.size === 0) return;
+    const counts = this.getFleetCounts();
+    this.fleetCountsListeners.forEach((listener) => {
+      try {
+        listener(counts);
+      } catch (e) {
+        console.warn('[WS] Error in fleetCountsListener:', e);
+      }
+    });
+  }
+
   private pushAlert(uiAlert: AlertItem) {
     if (this.recentAlertIds.has(uiAlert.id)) return;
     this.recentAlertIds.add(uiAlert.id);
@@ -614,6 +654,7 @@ class WebSocketService {
           this.recordCameraFrame(payload.camera_id, payload.measured_fps);
           this.latestFrameStates.set(payload.camera_id.toLowerCase(), payload);
           this.frameStateListeners.forEach((listener) => listener(payload));
+          this.notifyFleetCounts();
         }
         break;
       }
@@ -636,6 +677,7 @@ class WebSocketService {
             this.recordCameraFrame(payload.camera_id);
           }
           this.trackingListeners.forEach((listener) => listener(payload));
+          this.notifyFleetCounts();
         }
         break;
       }
@@ -658,18 +700,23 @@ class WebSocketService {
             payload.severity?.toLowerCase() === 'high' || payload.severity?.toLowerCase() === 'critical'
               ? 'High'
               : 'Medium';
+          const isTripwire = payload.event_type === 'TRIPWIRE_CROSSING' || payload.title?.toLowerCase().includes('tripwire');
+          const isRestrictedZone = payload.event_type === 'RESTRICTED_ZONE_ENTRY' || payload.title?.toLowerCase().includes('restricted');
+          const alertTitle = payload.title || (isTripwire ? 'VIRTUAL TRIPWIRE BREACH' : isRestrictedZone ? 'RESTRICTED ZONE ENTRY' : 'UNAUTHORIZED ZONE ENTRY');
+          const alertType = payload.event_type || (isTripwire ? 'TRIPWIRE_CROSSING' : isRestrictedZone ? 'RESTRICTED_ZONE_ENTRY' : 'UNAUTHORIZED ZONE ENTRY');
+
           const uiAlert: AlertItem = {
             id: payload.id || `alt-${Date.now()}`,
-            title: payload.title || 'UNAUTHORIZED ZONE ENTRY',
+            title: alertTitle,
             camera: payload.camera_id ? payload.camera_id.toUpperCase() : 'CAM-01',
             severity: alertSeverity,
             time: payload.timestamp
               ? new Date(payload.timestamp).toLocaleTimeString()
               : new Date().toLocaleTimeString(),
-            type: payload.title || 'UNAUTHORIZED ZONE ENTRY',
+            type: alertType,
             timestamp: payload.timestamp ? new Date(payload.timestamp).getTime() : Date.now(),
             status: payload.acknowledged ? 'acknowledged' : 'active',
-            description: payload.reason || 'Intrusion alert detected',
+            description: payload.reason || (isTripwire ? 'Tripwire line crossing detected' : 'Restricted perimeter intrusion detected'),
             location: payload.camera_id ? `Sector ${payload.camera_id.toUpperCase()}` : 'Sector Alpha',
             confidence: payload.confidence || 0.95,
             audioTriggered: true,

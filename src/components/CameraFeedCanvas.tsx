@@ -176,6 +176,7 @@ export const CameraFeedCanvas: React.FC<CameraFeedCanvasProps> = ({
   const liveDetectionsRef = useRef<RealYoloDetection[]>([]);
   const liveTracksRef = useRef<TrackItem[]>([]);
   const lastWsUpdateTimeRef = useRef<number>(0);
+  const frameDimensionsRef = useRef<{ w: number; h: number }>({ w: 1920, h: 1080 });
 
   // Fallback synthetic animation tracks for smooth visualization
   const simState = useRef({
@@ -236,11 +237,10 @@ export const CameraFeedCanvas: React.FC<CameraFeedCanvasProps> = ({
     const unsubDetection = webSocketService.onDetection((payload) => {
       const pCam = (payload.camera_id || '').toLowerCase();
       if (pCam === camIdNorm || pCam === camCodeNorm || pCam.includes(camIdNorm) || camIdNorm.includes(pCam)) {
-        liveDetectionsRef.current = (payload.detections || []).map((det) => ({
-          ...det,
-          // Overwrite any erroneous vehicle labels on court/perimeter
-          class_name: det.class_name?.toLowerCase() === 'vehicle' ? 'person' : det.class_name,
-        }));
+        if (payload.frame_width && payload.frame_height) {
+          frameDimensionsRef.current = { w: payload.frame_width, h: payload.frame_height };
+        }
+        liveDetectionsRef.current = payload.detections || [];
         lastWsUpdateTimeRef.current = Date.now();
       }
     });
@@ -248,10 +248,10 @@ export const CameraFeedCanvas: React.FC<CameraFeedCanvasProps> = ({
     const unsubTracking = webSocketService.onTracking((payload) => {
       const pCam = (payload.camera_id || '').toLowerCase();
       if (pCam === camIdNorm || pCam === camCodeNorm || pCam.includes(camIdNorm) || camIdNorm.includes(pCam)) {
-        liveTracksRef.current = (payload.tracks || []).map((tr) => ({
-          ...tr,
-          class_name: tr.class_name?.toLowerCase() === 'vehicle' ? 'person' : tr.class_name,
-        }));
+        if (payload.frame_width && payload.frame_height) {
+          frameDimensionsRef.current = { w: payload.frame_width, h: payload.frame_height };
+        }
+        liveTracksRef.current = payload.tracks || [];
         lastWsUpdateTimeRef.current = Date.now();
       }
     });
@@ -260,16 +260,10 @@ export const CameraFeedCanvas: React.FC<CameraFeedCanvasProps> = ({
       const pCam = (payload.camera_id || '').toLowerCase();
       if (pCam === camIdNorm || pCam === camCodeNorm || pCam.includes(camIdNorm) || camIdNorm.includes(pCam)) {
         if (payload.detections) {
-          liveDetectionsRef.current = payload.detections.map((det) => ({
-            ...det,
-            class_name: det.class_name?.toLowerCase() === 'vehicle' ? 'person' : det.class_name,
-          }));
+          liveDetectionsRef.current = payload.detections;
         }
         if (payload.tracks) {
-          liveTracksRef.current = payload.tracks.map((tr) => ({
-            ...tr,
-            class_name: tr.class_name?.toLowerCase() === 'vehicle' ? 'person' : tr.class_name,
-          }));
+          liveTracksRef.current = payload.tracks;
         }
         lastWsUpdateTimeRef.current = Date.now();
       }
@@ -338,12 +332,19 @@ export const CameraFeedCanvas: React.FC<CameraFeedCanvasProps> = ({
         if (hasLiveWs && (tracks.length > 0 || detections.length > 0)) {
           // Render Live Tracks from Real YOLO/ByteTrack
           tracks.forEach((track) => {
-            const bx1 = (track.bbox.x1 / 1000) * w;
-            const by1 = (track.bbox.y1 / 600) * h;
-            const bw = ((track.bbox.x2 - track.bbox.x1) / 1000) * w;
-            const bh = ((track.bbox.y2 - track.bbox.y1) / 600) * h;
+            const fw = frameDimensionsRef.current?.w || 1920;
+            const fh = frameDimensionsRef.current?.h || 1080;
+            const isNorm = track.bbox.x2 <= 1.0 && track.bbox.y2 <= 1.0;
+            const bx1 = isNorm ? track.bbox.x1 * w : (track.bbox.x1 / fw) * w;
+            const by1 = isNorm ? track.bbox.y1 * h : (track.bbox.y1 / fh) * h;
+            const bw = isNorm ? (track.bbox.x2 - track.bbox.x1) * w : ((track.bbox.x2 - track.bbox.x1) / fw) * w;
+            const bh = isNorm ? (track.bbox.y2 - track.bbox.y1) * h : ((track.bbox.y2 - track.bbox.y1) / fh) * h;
 
-            const isThreat = track.track_id === 17 || track.confidence > 0.90;
+            const isThreat = Boolean(
+              (track as any).risk_level === 'CRITICAL' ||
+              (track as any).risk_score >= 70 ||
+              (track as any).is_loitering
+            );
             const style = getDetectionClassStyle(track.class_name, {
               isThreat,
               confidence: track.confidence,

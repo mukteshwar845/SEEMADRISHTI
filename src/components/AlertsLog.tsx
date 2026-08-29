@@ -213,6 +213,16 @@ export const AlertsLog: React.FC<AlertsLogProps> = ({
                         EVIDENCE
                       </span>
                     )}
+                    {alert.zoneName && (
+                      <span className="px-1 py-0.2 rounded bg-indigo-950 text-indigo-300 border border-indigo-500/30 font-bold">
+                        {alert.zoneName}
+                      </span>
+                    )}
+                    {alert.type === 'TRIPWIRE_CROSSING' && (
+                      <span className="px-1 py-0.2 rounded bg-sky-950 text-sky-300 border border-sky-500/30 font-bold">
+                        TRIPWIRE
+                      </span>
+                    )}
                     {alert.cameraSequence && alert.cameraSequence.length > 0 && (
                       <span className="px-1 py-0.2 rounded bg-purple-950 text-purple-300 border border-purple-500/30 font-bold">
                         CORRIDOR

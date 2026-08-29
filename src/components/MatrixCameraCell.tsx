@@ -324,8 +324,8 @@ export const MatrixCameraCell: React.FC<MatrixCameraCellProps> = ({
   // Active virtual zones and intrusion state for this camera
   const DEFAULT_CAMERA_ZONES: Record<string, Array<{ id: string; name: string; polygon: [number, number][]; zone_type?: string }>> = {
     'cam-01': [
-      { id: 'zone-cam-01-main', name: 'Sector Alpha Main Gate Restricted Zone', polygon: [[0.35, 0.40], [0.88, 0.40], [0.88, 0.92], [0.35, 0.92]], zone_type: 'RESTRICTED_ZONE' },
-      { id: 'line-cam-01-tripwire', name: 'Alpha Entry Tripwire', polygon: [[0.20, 0.65], [0.92, 0.65]], zone_type: 'TRIPWIRE' },
+      { id: 'zone-cam-01-main', name: 'Sector Alpha Main Gate Restricted Zone', polygon: [[0.20, 0.55], [0.85, 0.55], [0.85, 0.95], [0.20, 0.95]], zone_type: 'RESTRICTED_ZONE' },
+      { id: 'line-cam-01-tripwire', name: 'Alpha Entry Tripwire', polygon: [[0.20, 0.72], [0.85, 0.72]], zone_type: 'TRIPWIRE' },
     ],
     'cam-02': [
       { id: 'zone-cam-02-main', name: 'Sector Alpha East Perimeter Zone', polygon: [[0.15, 0.20], [0.85, 0.20], [0.85, 0.80], [0.15, 0.80]], zone_type: 'RESTRICTED_ZONE' },

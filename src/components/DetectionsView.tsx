@@ -72,7 +72,7 @@ export const DetectionsView: React.FC = () => {
               ? 'INTRUSION'
               : 'PERSON';
           return {
-            id: `ws-det-${Date.now()}-${idx}-${Math.floor(Math.random() * 1000)}`,
+            id: `ws-det-${payload.camera_id || 'cam01'}-${idx}-${det.class_name || 'obj'}-${Date.now()}`,
             camera: (payload.camera_id || 'CAM-01').toUpperCase(),
             location: 'Border Sector Line',
             label,

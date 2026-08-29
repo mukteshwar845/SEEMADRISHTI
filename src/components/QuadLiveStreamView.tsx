@@ -67,6 +67,24 @@ export const QuadLiveStreamView: React.FC<QuadLiveStreamViewProps> = ({
   const [liveTimestamp, setLiveTimestamp] = useState('10:45:22 AM');
   const [activeRecordings, setActiveRecordings] = useState<Map<string, ActiveRecording>>(new Map());
   const [freshnessMap, setFreshnessMap] = useState<Record<string, { status: string; measuredFps: number }>>({});
+  const [fleetCounts, setFleetCounts] = useState<{
+    visibleTotal: number;
+    personTotal: number;
+    vehicleTotal: number;
+    uniqueSessionTotal: number;
+  }>({ visibleTotal: 0, personTotal: 0, vehicleTotal: 0, uniqueSessionTotal: 0 });
+
+  useEffect(() => {
+    const unsub = webSocketService.onFleetCounts((counts) => {
+      setFleetCounts({
+        visibleTotal: counts.visibleTotal,
+        personTotal: counts.personTotal,
+        vehicleTotal: counts.vehicleTotal,
+        uniqueSessionTotal: counts.uniqueSessionTotal,
+      });
+    });
+    return unsub;
+  }, []);
 
   useEffect(() => {
     const updateFreshness = () => {
@@ -375,6 +393,37 @@ export const QuadLiveStreamView: React.FC<QuadLiveStreamViewProps> = ({
           >
             {isFullscreen ? <Minimize2 size={15} /> : <Maximize size={15} />}
           </button>
+        </div>
+      </div>
+
+      {/* Phase 17: Real-Time Fleet Object & Target Count Strip */}
+      <div className="p-3 bg-[#060913] border border-cyan-500/20 rounded-xl flex flex-wrap items-center justify-between gap-3 shadow-[0_2px_15px_rgba(0,0,0,0.6)] font-mono text-xs select-none">
+        <div className="flex flex-wrap items-center gap-3">
+          <div className="flex items-center gap-2">
+            <span className="w-2 h-2 rounded-full bg-cyan-400 animate-ping"></span>
+            <span className="text-cyan-300 font-black tracking-widest uppercase">FLEET INTELLIGENCE</span>
+          </div>
+          <div className="flex items-center gap-1.5 px-2.5 py-1 rounded bg-slate-900/80 border border-slate-800">
+            <span className="text-slate-400 text-[11px]">ACTIVE PERSONS:</span>
+            <span className="text-emerald-400 font-bold text-sm">{fleetCounts.personTotal}</span>
+          </div>
+          <div className="flex items-center gap-1.5 px-2.5 py-1 rounded bg-slate-900/80 border border-slate-800">
+            <span className="text-slate-400 text-[11px]">ACTIVE VEHICLES:</span>
+            <span className="text-sky-400 font-bold text-sm">{fleetCounts.vehicleTotal}</span>
+          </div>
+          <div className="flex items-center gap-1.5 px-2.5 py-1 rounded bg-slate-900/80 border border-slate-800">
+            <span className="text-slate-400 text-[11px]">VISIBLE TRACKS:</span>
+            <span className="text-cyan-400 font-bold text-sm">{fleetCounts.visibleTotal}</span>
+          </div>
+        </div>
+
+        <div className="flex items-center gap-3 text-[11px]">
+          <span className="text-slate-400">
+            CUMULATIVE UNIQUE TARGETS: <strong className="text-purple-300 font-bold text-sm ml-1">{fleetCounts.uniqueSessionTotal}</strong>
+          </span>
+          <span className="px-2 py-0.5 rounded bg-blue-500/10 text-blue-400 border border-blue-500/20 text-[10px] uppercase font-bold tracking-wider">
+            YOLOv8 + BYTETRACK
+          </span>
         </div>
       </div>
 

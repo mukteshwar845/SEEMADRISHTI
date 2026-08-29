@@ -102,6 +102,24 @@ class IntrusionDetector:
         self.zones: Dict[str, PolygonZone] = {}  # zone_id -> PolygonZone
         # State key: (camera_id, track_id, zone_id)
         self.track_states: Dict[Tuple[str, int, str], TrackZoneState] = {}
+        # Camera ingress/egress metrics: camera_id -> {"entries": int, "exits": int, "net_occupancy": int}
+        self.ingress_counts: Dict[str, Dict[str, int]] = {}
+
+    def get_ingress_counts(self, camera_id: str) -> Dict[str, int]:
+        cam_norm = str(camera_id).lower().strip()
+        if cam_norm not in self.ingress_counts:
+            self.ingress_counts[cam_norm] = {"entries": 0, "exits": 0, "net_occupancy": 0}
+        return dict(self.ingress_counts[cam_norm])
+
+    def reset_session(self, camera_id: Optional[str] = None):
+        """Resets active track states, crossing cooldowns, and ingress metrics for clean replay."""
+        if camera_id:
+            cam_norm = str(camera_id).lower().strip()
+            self.track_states = {k: v for k, v in self.track_states.items() if k[0] != cam_norm}
+            self.ingress_counts[cam_norm] = {"entries": 0, "exits": 0, "net_occupancy": 0}
+        else:
+            self.track_states.clear()
+            self.ingress_counts.clear()
 
     def add_zone(self, zone: PolygonZone):
         self.zones[zone.zone_id] = zone

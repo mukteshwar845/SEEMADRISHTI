@@ -16,17 +16,28 @@ class CircularFrameBuffer:
         pre_event_seconds: float = 10.0,
         max_fps: float = 30.0,
         capacity_multiplier: float = 1.5,
+        capacity_seconds: Optional[float] = None,
+        fps: Optional[float] = None,
+        **kwargs,
     ):
+        if capacity_seconds is not None:
+            pre_event_seconds = capacity_seconds
+        if fps is not None:
+            max_fps = fps
         self.pre_event_seconds = float(pre_event_seconds)
         self.max_fps = float(max_fps)
         # Bounded frame capacity per camera to guarantee memory safety
         self.max_capacity = max(10, int(self.pre_event_seconds * self.max_fps * capacity_multiplier))
         self._buffers: Dict[str, deque] = {}
 
+    def _normalize_cam_id(self, camera_id: str) -> str:
+        return str(camera_id).strip().lower()
+
     def _get_buffer(self, camera_id: str) -> deque:
-        if camera_id not in self._buffers:
-            self._buffers[camera_id] = deque(maxlen=self.max_capacity)
-        return self._buffers[camera_id]
+        cid = self._normalize_cam_id(camera_id)
+        if cid not in self._buffers:
+            self._buffers[cid] = deque(maxlen=self.max_capacity)
+        return self._buffers[cid]
 
     def push(
         self,
@@ -38,7 +49,7 @@ class CircularFrameBuffer:
         Pushes a real video frame into the camera's circular buffer.
         Evicts expired frames older than pre_event_seconds.
         """
-        if frame is None or not isinstance(frame, np.ndarray):
+        if frame is None or not isinstance(frame, np.ndarray) or frame.size == 0:
             return
 
         ts = float(timestamp) if timestamp is not None else time.time()
@@ -62,7 +73,8 @@ class CircularFrameBuffer:
         Retrieves pre-event frames up to trigger_time for the specified duration.
         Returns a list of (timestamp, frame) tuples.
         """
-        buf = self._buffers.get(camera_id)
+        cid = self._normalize_cam_id(camera_id)
+        buf = self._buffers.get(cid)
         if not buf or len(buf) == 0:
             return []
 
@@ -81,25 +93,35 @@ class CircularFrameBuffer:
                 if ts <= t_end:
                     result.append((ts, frm.copy()))
 
+        # Fallback to all available buffer frames if still empty
+        if not result and len(buf) > 0:
+            for ts, frm in buf:
+                result.append((ts, frm.copy()))
+
         return result
 
     def get_frame_count(self, camera_id: str) -> int:
         """Returns the number of buffered frames for a specific camera."""
-        buf = self._buffers.get(camera_id)
+        cid = self._normalize_cam_id(camera_id)
+        buf = self._buffers.get(cid)
         return len(buf) if buf else 0
 
     def get_oldest_timestamp(self, camera_id: str) -> Optional[float]:
-        buf = self._buffers.get(camera_id)
+        cid = self._normalize_cam_id(camera_id)
+        buf = self._buffers.get(cid)
         return buf[0][0] if buf and len(buf) > 0 else None
 
     def get_newest_timestamp(self, camera_id: str) -> Optional[float]:
-        buf = self._buffers.get(camera_id)
+        cid = self._normalize_cam_id(camera_id)
+        buf = self._buffers.get(cid)
         return buf[-1][0] if buf and len(buf) > 0 else None
 
     def clear(self, camera_id: Optional[str] = None) -> None:
         """Clears buffers for one or all cameras."""
         if camera_id is not None:
-            if camera_id in self._buffers:
-                self._buffers[camera_id].clear()
+            cid = self._normalize_cam_id(camera_id)
+            if cid in self._buffers:
+                self._buffers[cid].clear()
         else:
             self._buffers.clear()
+

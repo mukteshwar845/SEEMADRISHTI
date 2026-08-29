@@ -49,6 +49,25 @@ export interface TrackItem {
   };
 }
 
+export interface ObjectCountsPayload {
+  visible: {
+    total: number;
+    person: number;
+    car: number;
+    truck: number;
+    bus: number;
+    motorcycle: number;
+    bicycle: number;
+    by_class?: Record<string, number>;
+  };
+  unique_session: {
+    total: number;
+    person: number;
+    vehicle: number;
+    by_class?: Record<string, number>;
+  };
+}
+
 export interface CameraTrackingPayload {
   camera_id: string;
   timestamp: string;
@@ -59,6 +78,7 @@ export interface CameraTrackingPayload {
   total_ms?: number;
   track_count?: number;
   tracks: TrackItem[];
+  counts?: ObjectCountsPayload;
 }
 
 type AlertListener = (alert: AlertItem) => void;
@@ -213,6 +233,7 @@ export interface FrameStatePayload {
   processing_latency_ms: number;
   detections: RealYoloDetection[];
   tracks: TrackItem[];
+  counts?: ObjectCountsPayload;
   environment?: any;
   risk?: { max_score: number; level: string };
 }
@@ -359,6 +380,43 @@ class WebSocketService {
       return { status: 'STALE', lastFrameAgeSec: age, measuredFps: tracking.fps };
     }
     return { status: 'OFFLINE', lastFrameAgeSec: age, measuredFps: 0 };
+  }
+
+  public getFleetCounts(): {
+    visibleTotal: number;
+    personTotal: number;
+    vehicleTotal: number;
+    uniqueSessionTotal: number;
+    perCamera: Record<string, ObjectCountsPayload>;
+  } {
+    let visibleTotal = 0;
+    let personTotal = 0;
+    let vehicleTotal = 0;
+    let uniqueSessionTotal = 0;
+    const perCamera: Record<string, ObjectCountsPayload> = {};
+
+    this.latestFrameStates.forEach((state, camId) => {
+      if (state.counts) {
+        perCamera[camId] = state.counts;
+        visibleTotal += state.counts.visible.total || 0;
+        personTotal += state.counts.visible.person || 0;
+        vehicleTotal += (state.counts.visible.car || 0) + (state.counts.visible.truck || 0) + (state.counts.visible.bus || 0) + (state.counts.visible.motorcycle || 0);
+        uniqueSessionTotal += state.counts.unique_session.total || 0;
+      } else if (state.tracks) {
+        visibleTotal += state.tracks.length;
+        const persons = state.tracks.filter((t) => t.class_name.toLowerCase() === 'person').length;
+        personTotal += persons;
+        vehicleTotal += state.tracks.length - persons;
+      }
+    });
+
+    return {
+      visibleTotal,
+      personTotal,
+      vehicleTotal,
+      uniqueSessionTotal,
+      perCamera,
+    };
   }
 
   private pushAlert(uiAlert: AlertItem) {
@@ -1073,7 +1131,9 @@ class WebSocketService {
   }
 
   public getLatestFrameState(cameraId: string): FrameStatePayload | undefined {
-    return this.latestFrameStates.get(cameraId.toLowerCase());
+    const raw = String(cameraId || '').toLowerCase().trim();
+    const normalized = raw.startsWith('cam-') ? raw.replace(/^cam-0?/, 'cam-0') : `cam-0${raw}`;
+    return this.latestFrameStates.get(raw) || this.latestFrameStates.get(normalized);
   }
 
   public getLatestEnvironment(cameraId: string): EnvironmentUpdatePayload | undefined {

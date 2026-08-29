@@ -377,7 +377,6 @@ def main():
             poly_pts = zone.get_pixel_polygon(frame_w, frame_h) if hasattr(zone, "get_pixel_polygon") else getattr(zone, "raw_polygon", [])
             analytics_engine.register_zone(zid, zone.name, poly_pts)
         print(f"[CV-Service] Initialized Phase 10 Movement & Flow Analytics Engine for {config.camera_id}")
-
     # 9. Initialize WebSocket Publisher
     publisher = None
     if not args.no_ws:
@@ -389,8 +388,12 @@ def main():
     processed_counter = 0
     total_objects_count = 0
     total_intrusions_count = 0
+    total_tripwire_crossings_count = 0
     class_frequency: Dict[str, int] = {}
     unique_track_ids: Set[int] = set()
+    unique_person_track_ids: Set[int] = set()
+    unique_vehicle_track_ids: Set[int] = set()
+    unique_class_track_ids: Dict[str, Set[int]] = {}
 
     total_inference_time_ms = 0.0
     total_tracking_time_ms = 0.0
@@ -428,6 +431,7 @@ def main():
 
             # Handle MP4 loop event: reset trackers and memory to prevent ghost tracks across loops
             if getattr(source, "did_loop", False):
+                print(f"[CV-Service] Source loop detected on {config.camera_id}. Resetting trackers.")
                 if tracker:
                     tracker.reset()
                 if intrusion_detector:
@@ -507,11 +511,42 @@ def main():
                 total_inference_time_ms += output.get("inference_ms", 0.0)
                 total_tracking_time_ms += output.get("tracking_ms", 0.0)
 
+                current_class_counts: Dict[str, int] = {}
                 for trk in output["tracks"]:
-                    cls = trk["class_name"]
-                    tid = trk["track_id"]
+                    cls = str(trk["class_name"]).lower().strip()
+                    tid = int(trk["track_id"])
                     unique_track_ids.add(tid)
+                    if cls == "person":
+                        unique_person_track_ids.add(tid)
+                    elif cls in ("car", "truck", "bus", "motorcycle", "bicycle"):
+                        unique_vehicle_track_ids.add(tid)
+                    if cls not in unique_class_track_ids:
+                        unique_class_track_ids[cls] = set()
+                    unique_class_track_ids[cls].add(tid)
+
                     class_frequency[cls] = class_frequency.get(cls, 0) + 1
+                    current_class_counts[cls] = current_class_counts.get(cls, 0) + 1
+
+                # Package Phase 17 live & cumulative counting telemetry
+                counts_payload = {
+                    "visible": {
+                        "total": len(output["tracks"]),
+                        "person": current_class_counts.get("person", 0),
+                        "car": current_class_counts.get("car", 0),
+                        "truck": current_class_counts.get("truck", 0),
+                        "bus": current_class_counts.get("bus", 0),
+                        "motorcycle": current_class_counts.get("motorcycle", 0) + current_class_counts.get("motor", 0),
+                        "bicycle": current_class_counts.get("bicycle", 0) + current_class_counts.get("bike", 0),
+                        "by_class": current_class_counts,
+                    },
+                    "unique_session": {
+                        "total": len(unique_track_ids),
+                        "person": len(unique_person_track_ids),
+                        "vehicle": len(unique_vehicle_track_ids),
+                        "by_class": {k: len(v) for k, v in unique_class_track_ids.items()},
+                    }
+                }
+                output["counts"] = counts_payload
 
                 # Step B: Intrusion Geometry & State Transition
                 events, geom_ms = intrusion_detector.process_tracks(
@@ -520,11 +555,14 @@ def main():
                     frame_width=w,
                     frame_height=h,
                     publisher=publisher,
+                    frame_id=frame_counter,
                 )
                 total_geometry_time_ms += geom_ms
                 if events:
                     for ev in events:
-                        if ev.direction == "ENTERING":
+                        if ev.event_type == "TRIPWIRE_CROSSING" or ev.direction in ("IN", "OUT", "CROSSING"):
+                            total_tripwire_crossings_count += 1
+                        elif ev.direction == "ENTERING" or ev.event_type == "RESTRICTED_ZONE_ENTRY":
                             total_intrusions_count += 1
 
                 # Step C: Loitering Detection & Dwell Accumulation
@@ -714,7 +752,7 @@ def main():
                 if publisher:
                     publisher.publish(output, message_type="tracking")
 
-                    # Phase 14: Unified frame_state packet for camera stream synchronization
+                    # Phase 14 & 17: Unified frame_state packet with counts and stream synchronization
                     frame_state = {
                         "type": "frame_state",
                         "camera_id": config.camera_id,
@@ -726,6 +764,7 @@ def main():
                         "processing_latency_ms": frame_latency_ms,
                         "detections": output.get("detections", []),
                         "tracks": output.get("tracks", []),
+                        "counts": counts_payload,
                         "environment": env_metrics.to_dict() if env_metrics else {},
                         "risk": {
                             "max_score": max((t.get("risk_score", 0) for t in output.get("tracks", [])), default=0),

@@ -18,7 +18,11 @@ class EvidenceWriter:
         self,
         evidence_dir: str = "evidence",
         fps: float = 15.0,
+        output_dir: Optional[str] = None,
+        **kwargs,
     ):
+        if output_dir:
+            evidence_dir = output_dir
         self.evidence_dir = evidence_dir
         self.fps = float(fps)
         self._ensure_dir()
@@ -51,16 +55,25 @@ class EvidenceWriter:
         if not frames or len(frames) == 0:
             raise ValueError(f"Cannot write evidence clip for incident '{incident_id}': empty frame list provided.")
 
+        # Filter and validate valid numpy frames
+        valid_frames: List[Tuple[float, np.ndarray]] = []
+        for ts, frm in frames:
+            if frm is not None and isinstance(frm, np.ndarray) and frm.size > 0:
+                valid_frames.append((float(ts), frm))
+
+        if not valid_frames:
+            raise ValueError(f"Cannot write evidence clip for incident '{incident_id}': no valid non-empty frames found.")
+
         self._ensure_dir()
 
         filename = output_filename or f"{incident_id}.mp4"
         file_path = os.path.join(self.evidence_dir, filename)
 
-        first_frame = frames[0][1]
-        if first_frame is None or not isinstance(first_frame, np.ndarray):
-            raise ValueError(f"Invalid frame format in evidence frames for incident '{incident_id}'.")
-
-        h, w = first_frame.shape[:2]
+        first_frame = valid_frames[0][1]
+        raw_h, raw_w = first_frame.shape[:2]
+        # Align width and height to even numbers for strict H.264 / codec compliance
+        w = max(2, (raw_w // 2) * 2)
+        h = max(2, (raw_h // 2) * 2)
 
         # Extract metadata fields
         cam_id = str(metadata.get("camera_id", "CAM-01")).upper()
@@ -85,133 +98,183 @@ class EvidenceWriter:
         reasons_line = " ".join(reason_strs[:3]) if reason_strs else "[EVIDENCE CAPTURE TRIGGERED]"
 
         # Color coding for Risk Level (BGR)
-        # CRITICAL = Crimson Red (0, 0, 230), HIGH = Deep Amber (0, 165, 255)
         badge_color = (0, 0, 220) if risk_level == "CRITICAL" else (0, 140, 255)
-
-        # Codec negotiation with fallback: mp4v -> avc1 -> H264 -> XVID
-        codecs_to_try = [
-            ("mp4v", ".mp4"),
-            ("avc1", ".mp4"),
-            ("H264", ".mp4"),
-            ("XVID", ".avi"),
-        ]
-
-        writer = None
-        chosen_path = file_path
-
-        for fourcc_str, ext in codecs_to_try:
-            test_path = file_path if file_path.endswith(ext) else os.path.splitext(file_path)[0] + ext
-            try:
-                fourcc = cv2.VideoWriter_fourcc(*fourcc_str)
-                test_writer = cv2.VideoWriter(test_path, fourcc, self.fps, (w, h))
-                if test_writer.isOpened():
-                    writer = test_writer
-                    chosen_path = test_path
-                    break
-            except Exception:
-                continue
-
-        if writer is None or not writer.isOpened():
-            raise RuntimeError(f"OpenCV failed to initialize VideoWriter for '{file_path}' across all fallback codecs.")
-
-        start_time = frames[0][0]
-        end_time = frames[-1][0]
-        total_duration = max(0.1, end_time - start_time)
 
         t_write0 = time.perf_counter()
 
+        # Check for imageio_ffmpeg or system ffmpeg for browser-compliant H.264
+        ffmpeg_exe = None
         try:
-            for idx, (frame_ts, raw_frame) in enumerate(frames):
-                # Ensure frame size matches
-                if raw_frame.shape[:2] != (h, w):
-                    raw_frame = cv2.resize(raw_frame, (w, h))
+            import imageio_ffmpeg
+            exe = imageio_ffmpeg.get_ffmpeg_exe()
+            if exe and os.path.exists(exe):
+                ffmpeg_exe = exe
+        except Exception:
+            ffmpeg_exe = None
 
-                overlaid = raw_frame.copy()
+        encoded_via_ffmpeg = False
+        chosen_path = file_path
 
-                # 1. Top Forensic Header Bar
-                cv2.rectangle(overlaid, (0, 0), (w, 54), (12, 16, 24), -1)
-                cv2.line(overlaid, (0, 54), (w, 54), (56, 189, 248), 2)  # Cyan accent border
+        def render_hud_frame(idx: int, frame_ts: float, raw_frame: np.ndarray) -> np.ndarray:
+            # Diagnostic conversions: ensure 3-channel uint8
+            if raw_frame.ndim == 2:
+                raw_frame = cv2.cvtColor(raw_frame, cv2.COLOR_GRAY2BGR)
+            elif raw_frame.ndim == 3 and raw_frame.shape[2] == 4:
+                raw_frame = cv2.cvtColor(raw_frame, cv2.COLOR_BGRA2BGR)
+            elif raw_frame.ndim != 3:
+                raw_frame = np.zeros((h, w, 3), dtype=np.uint8)
 
-                cv2.putText(
-                    overlaid,
-                    "SEEMADRISHTI AI  //  FORENSIC EVIDENCE RECONSTRUCTION",
-                    (14, 20),
-                    cv2.FONT_HERSHEY_SIMPLEX,
-                    0.52,
-                    (56, 189, 248),  # Cyan
-                    1,
-                    cv2.LINE_AA,
-                )
+            if raw_frame.dtype != np.uint8:
+                raw_frame = np.clip(raw_frame, 0, 255).astype(np.uint8)
 
-                utc_dt = datetime.fromtimestamp(frame_ts, tz=timezone.utc)
-                utc_str = utc_dt.strftime("%Y-%m-%d %H:%M:%S UTC")
+            if raw_frame.shape[1] != w or raw_frame.shape[0] != h:
+                raw_frame = cv2.resize(raw_frame, (w, h), interpolation=cv2.INTER_AREA)
 
-                # Header Right: Timestamp & Frame counter
-                cv2.putText(
-                    overlaid,
-                    f"{utc_str}  [FRM {idx + 1:04d}/{len(frames):04d}]",
-                    (w - 320, 20),
-                    cv2.FONT_HERSHEY_SIMPLEX,
-                    0.42,
-                    (200, 200, 200),
-                    1,
-                    cv2.LINE_AA,
-                )
+            overlaid = raw_frame.copy()
 
-                # Header Sub-bar: Camera, Track, Event Type & Zone
-                sub_meta = f"CAM: {cam_id}  |  TRACK: #{track_id} ({cls_name})  |  EVENT: {evt_type}  |  ZONE: {zone_name}"
-                cv2.putText(
-                    overlaid,
-                    sub_meta,
-                    (14, 42),
-                    cv2.FONT_HERSHEY_SIMPLEX,
-                    0.42,
-                    (255, 255, 255),
-                    1,
-                    cv2.LINE_AA,
-                )
+            # 1. Top Forensic Header Bar
+            cv2.rectangle(overlaid, (0, 0), (w, 54), (12, 16, 24), -1)
+            cv2.line(overlaid, (0, 54), (w, 54), (56, 189, 248), 2)  # Cyan accent border
 
-                # 2. Top-Right Threat Badge Overlay
-                badge_w = 170
-                badge_h = 24
-                bx = w - badge_w - 14
-                by = 28
-                cv2.rectangle(overlaid, (bx, by), (bx + badge_w, by + badge_h), badge_color, -1)
-                cv2.putText(
-                    overlaid,
-                    f"RISK: {risk_score}/100 [{risk_level}]",
-                    (bx + 8, by + 16),
-                    cv2.FONT_HERSHEY_SIMPLEX,
-                    0.44,
-                    (255, 255, 255),
-                    1,
-                    cv2.LINE_AA,
-                )
+            cv2.putText(
+                overlaid,
+                "SEEMADRISHTI AI  //  FORENSIC EVIDENCE RECONSTRUCTION",
+                (14, 20),
+                cv2.FONT_HERSHEY_SIMPLEX,
+                0.52,
+                (56, 189, 248),  # Cyan
+                1,
+                cv2.LINE_AA,
+            )
 
-                # 3. Bottom Reason Codes & Incident Demarcation
-                cv2.rectangle(overlaid, (0, h - 34), (w, h), (12, 16, 24), -1)
-                cv2.line(overlaid, (0, h - 34), (w, h - 34), badge_color, 1)
+            utc_dt = datetime.fromtimestamp(frame_ts, tz=timezone.utc)
+            utc_str = utc_dt.strftime("%Y-%m-%d %H:%M:%S UTC")
 
-                cv2.putText(
-                    overlaid,
-                    f"INCIDENT: {incident_id}  |  INDICATORS: {reasons_line}",
-                    (14, h - 12),
-                    cv2.FONT_HERSHEY_SIMPLEX,
-                    0.42,
-                    (220, 220, 220),
-                    1,
-                    cv2.LINE_AA,
-                )
+            # Header Right: Timestamp & Frame counter
+            cv2.putText(
+                overlaid,
+                f"{utc_str}  [FRM {idx + 1:04d}/{len(valid_frames):04d}]",
+                (max(14, w - 340), 20),
+                cv2.FONT_HERSHEY_SIMPLEX,
+                0.42,
+                (200, 200, 200),
+                1,
+                cv2.LINE_AA,
+            )
 
-                # Progress indicator bar along the very bottom
-                progress = (idx + 1) / len(frames)
-                bar_len = int(w * progress)
-                cv2.line(overlaid, (0, h - 2), (bar_len, h - 2), (56, 189, 248), 2)
+            # Header Sub-bar: Camera, Track, Event Type & Zone
+            sub_meta = f"CAM: {cam_id}  |  TRACK: #{track_id} ({cls_name})  |  EVENT: {evt_type}  |  ZONE: {zone_name}"
+            cv2.putText(
+                overlaid,
+                sub_meta,
+                (14, 42),
+                cv2.FONT_HERSHEY_SIMPLEX,
+                0.42,
+                (255, 255, 255),
+                1,
+                cv2.LINE_AA,
+            )
 
-                writer.write(overlaid)
+            # 2. Top-Right Threat Badge Overlay
+            badge_w = 170
+            badge_h = 24
+            bx = max(0, w - badge_w - 14)
+            by = 28
+            cv2.rectangle(overlaid, (bx, by), (bx + badge_w, by + badge_h), badge_color, -1)
+            cv2.putText(
+                overlaid,
+                f"RISK: {risk_score}/100 [{risk_level}]",
+                (bx + 8, by + 16),
+                cv2.FONT_HERSHEY_SIMPLEX,
+                0.44,
+                (255, 255, 255),
+                1,
+                cv2.LINE_AA,
+            )
 
-        finally:
-            writer.release()
+            # 3. Bottom Reason Codes & Incident Demarcation
+            cv2.rectangle(overlaid, (0, h - 34), (w, h), (12, 16, 24), -1)
+            cv2.line(overlaid, (0, h - 34), (w, h - 34), badge_color, 1)
+
+            cv2.putText(
+                overlaid,
+                f"INCIDENT: {incident_id}  |  INDICATORS: {reasons_line}",
+                (14, h - 12),
+                cv2.FONT_HERSHEY_SIMPLEX,
+                0.42,
+                (220, 220, 220),
+                1,
+                cv2.LINE_AA,
+            )
+
+            # Progress indicator bar along the very bottom
+            progress = (idx + 1) / len(valid_frames)
+            bar_len = int(w * progress)
+            cv2.line(overlaid, (0, h - 2), (bar_len, h - 2), (56, 189, 248), 2)
+
+            return overlaid
+
+        # Primary encoding attempt via FFmpeg rawvideo pipe
+        if ffmpeg_exe and file_path.endswith(".mp4"):
+            import subprocess
+            cmd = [
+                ffmpeg_exe,
+                "-y",
+                "-f", "rawvideo",
+                "-vcodec", "rawvideo",
+                "-s", f"{w}x{h}",
+                "-pix_fmt", "bgr24",
+                "-r", str(self.fps),
+                "-i", "-",
+                "-c:v", "libx264",
+                "-preset", "ultrafast",
+                "-pix_fmt", "yuv420p",
+                "-movflags", "+faststart",
+                file_path,
+            ]
+            try:
+                proc = subprocess.Popen(cmd, stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+                for idx, (frame_ts, raw_frame) in enumerate(valid_frames):
+                    hud_frame = render_hud_frame(idx, frame_ts, raw_frame)
+                    proc.stdin.write(hud_frame.tobytes())
+                proc.stdin.close()
+                proc.communicate(timeout=30)
+                if proc.returncode == 0 and os.path.exists(file_path) and os.path.getsize(file_path) > 0:
+                    encoded_via_ffmpeg = True
+                    chosen_path = file_path
+            except Exception:
+                encoded_via_ffmpeg = False
+
+        # Fallback to OpenCV VideoWriter if FFmpeg was not used or failed
+        if not encoded_via_ffmpeg:
+            codecs_to_try = [
+                ("avc1", ".mp4"),
+                ("mp4v", ".mp4"),
+                ("H264", ".mp4"),
+                ("XVID", ".avi"),
+            ]
+            writer = None
+            for fourcc_str, ext in codecs_to_try:
+                test_path = file_path if file_path.endswith(ext) else os.path.splitext(file_path)[0] + ext
+                try:
+                    fourcc = cv2.VideoWriter_fourcc(*fourcc_str)
+                    test_writer = cv2.VideoWriter(test_path, fourcc, self.fps, (w, h))
+                    if test_writer.isOpened():
+                        writer = test_writer
+                        chosen_path = test_path
+                        break
+                except Exception:
+                    continue
+
+            if writer is None or not writer.isOpened():
+                raise RuntimeError(f"OpenCV failed to initialize VideoWriter for '{file_path}' across all fallback codecs.")
+
+            try:
+                for idx, (frame_ts, raw_frame) in enumerate(valid_frames):
+                    hud_frame = render_hud_frame(idx, frame_ts, raw_frame)
+                    writer.write(hud_frame)
+            finally:
+                writer.release()
 
         write_duration_ms = (time.perf_counter() - t_write0) * 1000.0
 
@@ -229,15 +292,19 @@ class EvidenceWriter:
                 hasher.update(chunk)
         sha256_digest = hasher.hexdigest()
 
-        # Step 5: Recording Validation
+        # Step 5: Recording Validation & Pixel Variance Check
         verification_status = "FAILED"
         reopen_frames = 0
         reopen_fps = self.fps
+        first_frame_var = 0.0
         try:
             check_cap = cv2.VideoCapture(chosen_path)
             if check_cap.isOpened():
                 reopen_frames = int(check_cap.get(cv2.CAP_PROP_FRAME_COUNT))
                 reopen_fps = check_cap.get(cv2.CAP_PROP_FPS) or self.fps
+                ret_chk, frame_chk = check_cap.read()
+                if ret_chk and frame_chk is not None:
+                    first_frame_var = float(np.var(frame_chk))
                 check_cap.release()
                 if reopen_frames > 0 and file_size > 0:
                     verification_status = "VERIFIED"
@@ -252,14 +319,15 @@ class EvidenceWriter:
             "incident_id": incident_id,
             "file_path": rel_path,
             "absolute_path": os.path.abspath(chosen_path),
-            "frame_count": len(frames),
+            "frame_count": len(valid_frames),
             "file_size_bytes": file_size,
-            "video_duration_seconds": round(len(frames) / self.fps, 2),
+            "video_duration_seconds": round(len(valid_frames) / self.fps, 2),
             "write_duration_ms": round(write_duration_ms, 2),
             "fps": self.fps,
             "resolution": f"{w}x{h}",
             "sha256": sha256_digest,
             "verification_status": verification_status,
+            "first_frame_variance": round(first_frame_var, 2),
         }
 
     @staticmethod

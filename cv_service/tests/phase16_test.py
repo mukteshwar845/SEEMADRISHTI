@@ -481,6 +481,117 @@ class TestPhase16IntelligentEventPipeline(unittest.TestCase):
                         content = f.read()
                     self.assertNotIn("Math.random()", content, f"Math.random() found in {path}")
 
+    # 21. Evidence MP4 contains non-black real source imagery
+    def test_21_evidence_mp4_contains_non_black_real_source_imagery(self):
+        writer = EvidenceWriter(evidence_dir="temp_evidence_test", fps=25.0)
+        cap = cv2.VideoCapture(self.cam01_path)
+        self.assertTrue(cap.isOpened(), "Failed to open CAM-01.mp4 fixture")
+        
+        frames = []
+        t0 = time.time()
+        for idx in range(15):
+            ret, frame = cap.read()
+            self.assertTrue(ret, f"Failed to read frame {idx} from CAM-01")
+            self.assertIsNotNone(frame)
+            self.assertGreater(float(np.var(frame)), 100.0, "Source frame has insufficient variance (black/empty)")
+            frames.append((t0 + idx * 0.04, frame))
+        cap.release()
+
+        meta = {
+            "camera_id": "CAM-01",
+            "track_id": "1",
+            "class_name": "car",
+            "event_type": "PERIMETER_BREACH",
+            "risk_score": 95,
+            "risk_level": "CRITICAL",
+            "zone_name": "Sector Alpha Main Gate",
+            "reasons": [{"code": "INTRUSION", "points": 50}],
+        }
+        inc_id = f"INC-REAL-P16-{int(time.time() * 1000)}"
+        res = writer.write_evidence_clip(inc_id, frames, meta)
+
+        self.assertTrue(res["success"])
+        self.assertTrue(os.path.exists(res["file_path"]))
+        self.assertGreater(res["file_size_bytes"], 0)
+        self.assertEqual(res["verification_status"], "VERIFIED")
+
+        # Decode output MP4 and verify real non-black source imagery
+        out_cap = cv2.VideoCapture(res["file_path"])
+        self.assertTrue(out_cap.isOpened())
+        total_out = int(out_cap.get(cv2.CAP_PROP_FRAME_COUNT))
+        self.assertGreaterEqual(total_out, 15)
+
+        for check_idx in [0, 7, 14]:
+            out_cap.set(cv2.CAP_PROP_POS_FRAMES, check_idx)
+            ret_dec, dec_frame = out_cap.read()
+            self.assertTrue(ret_dec)
+            self.assertIsNotNone(dec_frame)
+            
+            h, w = dec_frame.shape[:2]
+            self.assertGreater(w, 0)
+            self.assertGreater(h, 0)
+            
+            # Middle content area (excluding HUD bars)
+            content_area = dec_frame[60:h-40, :]
+            c_mean = float(np.mean(content_area))
+            c_var = float(np.var(content_area))
+            
+            # Real VisDrone footage has substantial pixel variance and non-zero mean
+            self.assertGreater(c_mean, 20.0, f"Frame {check_idx} content area is too dark (mean={c_mean})")
+            self.assertGreater(c_var, 500.0, f"Frame {check_idx} content area is flat/black (var={c_var})")
+            
+            # Header area has HUD
+            header_area = dec_frame[0:54, :]
+            self.assertGreater(float(np.var(header_area)), 100.0)
+
+        out_cap.release()
+
+    # 22. Real CAM-01 pipeline trace into IncidentManager preserves real frames
+    def test_22_real_cam01_pipeline_preserves_frames_and_variance(self):
+        buf = CircularFrameBuffer(pre_event_seconds=2.0, max_fps=25.0)
+        writer = EvidenceWriter(evidence_dir="temp_evidence_test", fps=25.0)
+        manager = IncidentManager(
+            circular_buffer=buf,
+            evidence_writer=writer,
+            min_risk_level="HIGH",
+            cooldown_seconds=1.0,
+        )
+
+        cap = cv2.VideoCapture(self.cam01_path)
+        t0 = time.time()
+        for idx in range(10):
+            ret, frame = cap.read()
+            if not ret:
+                break
+            manager.record_frame(camera_id="cam-01", frame=frame, timestamp=t0 + idx * 0.04)
+        cap.release()
+
+        inc = manager.check_and_trigger(
+            camera_id="cam-01",
+            track_id=42,
+            class_name="truck",
+            risk_score=92,
+            risk_level="CRITICAL",
+            reasons=[{"code": "INTRUSION", "points": 50}],
+            zone_name="Perimeter Zone",
+            current_time=t0 + 10 * 0.04,
+        )
+        self.assertIsNotNone(inc)
+        self.assertGreater(len(inc.frames), 0)
+
+        # Finalize
+        summary = manager.finalize_incident(inc, current_time=t0 + 10 * 0.04)
+        self.assertEqual(summary["status"], "ready")
+        self.assertTrue(os.path.exists(summary["evidence_path"]))
+        self.assertEqual(summary["verification_status"], "VERIFIED")
+
+        # Verify decoded frame
+        check_cap = cv2.VideoCapture(summary["evidence_path"])
+        ret_f, frm = check_cap.read()
+        check_cap.release()
+        self.assertTrue(ret_f)
+        self.assertGreater(float(np.var(frm[60:-40, :])), 500.0)
+
 
 if __name__ == "__main__":
     unittest.main()

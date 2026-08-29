@@ -35,7 +35,7 @@ import {
   BatteryWarning,
 } from 'lucide-react';
 import { recordingEngine } from '../utils/recordingManager';
-import { webSocketService, RealYoloDetection, TrackItem } from '../services/websocketService';
+import { webSocketService, RealYoloDetection, TrackItem, ObjectCountsPayload } from '../services/websocketService';
 import { fetchZones } from '../services/api';
 
 interface MatrixCameraCellProps {
@@ -186,6 +186,7 @@ export const MatrixCameraCell: React.FC<MatrixCameraCellProps> = ({
   } | null>(null);
 
   const [groupCount, setGroupCount] = useState<number>(0);
+  const [liveCounts, setLiveCounts] = useState<ObjectCountsPayload | null>(null);
 
   useEffect(() => {
     const unsubDet = webSocketService.onDetection((payload) => {
@@ -217,6 +218,9 @@ export const MatrixCameraCell: React.FC<MatrixCameraCellProps> = ({
           frameWidth: payload.frame_width || 1920,
           frameHeight: payload.frame_height || 1080,
         };
+        if (payload.counts) {
+          setLiveCounts(payload.counts);
+        }
       }
     });
 
@@ -242,6 +246,9 @@ export const MatrixCameraCell: React.FC<MatrixCameraCellProps> = ({
             frameWidth: 1920,
             frameHeight: 1080,
           };
+        }
+        if (payload.counts) {
+          setLiveCounts(payload.counts);
         }
       }
     });
@@ -317,41 +324,42 @@ export const MatrixCameraCell: React.FC<MatrixCameraCellProps> = ({
   }, [camera.id, camera.tag]);
 
   // Active virtual zones and intrusion state for this camera
-  const DEFAULT_CAMERA_ZONES: Record<string, Array<{ id: string; name: string; polygon: [number, number][] }>> = {
+  const DEFAULT_CAMERA_ZONES: Record<string, Array<{ id: string; name: string; polygon: [number, number][]; zone_type?: string }>> = {
     'cam-01': [
-      { id: 'zone-cam-01-main', name: 'Sector Alpha Main Gate', polygon: [[0.35, 0.40], [0.88, 0.40], [0.88, 0.92], [0.35, 0.92]] },
-      { id: 'line-cam-01-tripwire', name: 'Alpha Entry Tripwire', polygon: [[0.20, 0.65], [0.92, 0.65]] },
+      { id: 'zone-cam-01-main', name: 'Sector Alpha Main Gate Restricted Zone', polygon: [[0.35, 0.40], [0.88, 0.40], [0.88, 0.92], [0.35, 0.92]], zone_type: 'RESTRICTED_ZONE' },
+      { id: 'line-cam-01-tripwire', name: 'Alpha Entry Tripwire', polygon: [[0.20, 0.65], [0.92, 0.65]], zone_type: 'TRIPWIRE' },
     ],
     'cam-02': [
-      { id: 'zone-cam-02-main', name: 'Sector Alpha East Perimeter', polygon: [[0.15, 0.20], [0.85, 0.20], [0.85, 0.80], [0.15, 0.80]] },
-      { id: 'line-cam-02-tripwire', name: 'East Perimeter Line', polygon: [[0.10, 0.50], [0.90, 0.50]] },
+      { id: 'zone-cam-02-main', name: 'Sector Alpha East Perimeter Zone', polygon: [[0.15, 0.20], [0.85, 0.20], [0.85, 0.80], [0.15, 0.80]], zone_type: 'RESTRICTED_ZONE' },
+      { id: 'line-cam-02-tripwire', name: 'East Perimeter Crossing Line', polygon: [[0.10, 0.50], [0.90, 0.50]], zone_type: 'TRIPWIRE' },
     ],
     'cam-03': [
-      { id: 'zone-cam-03-main', name: 'Sector Bravo Access Road', polygon: [[0.20, 0.25], [0.80, 0.25], [0.80, 0.75], [0.20, 0.75]] },
+      { id: 'zone-cam-03-main', name: 'Sector Bravo Access Road Monitored Zone', polygon: [[0.20, 0.25], [0.80, 0.25], [0.80, 0.75], [0.20, 0.75]], zone_type: 'RESTRICTED_ZONE' },
+      { id: 'line-cam-03-tripwire', name: 'Bravo Access Ingress Line', polygon: [[0.15, 0.45], [0.85, 0.45]], zone_type: 'TRIPWIRE' },
     ],
     'cam-04': [
-      { id: 'zone-cam-04-main', name: 'Sector Bravo Outer Fence', polygon: [[0.10, 0.20], [0.90, 0.20], [0.90, 0.85], [0.10, 0.85]] },
+      { id: 'zone-cam-04-main', name: 'Sector Bravo Outer Fence Exclusion Area', polygon: [[0.10, 0.20], [0.90, 0.20], [0.90, 0.85], [0.10, 0.85]], zone_type: 'RESTRICTED_ZONE' },
     ],
     'cam-05': [
-      { id: 'zone-cam-05-main', name: 'Sector Charlie Checkpoint', polygon: [[0.15, 0.25], [0.85, 0.25], [0.85, 0.80], [0.15, 0.80]] },
-      { id: 'line-cam-05-tripwire', name: 'Charlie Barrier Line', polygon: [[0.20, 0.55], [0.80, 0.55]] },
+      { id: 'zone-cam-05-main', name: 'Sector Charlie Checkpoint Transit Zone', polygon: [[0.15, 0.25], [0.85, 0.25], [0.85, 0.80], [0.15, 0.80]], zone_type: 'RESTRICTED_ZONE' },
+      { id: 'line-cam-05-tripwire', name: 'Charlie Gate Barrier Line', polygon: [[0.20, 0.55], [0.80, 0.55]], zone_type: 'TRIPWIRE' },
     ],
     'cam-06': [
-      { id: 'zone-cam-06-main', name: 'Sector Charlie Transit Zone', polygon: [[0.20, 0.30], [0.80, 0.30], [0.80, 0.85], [0.20, 0.85]] },
+      { id: 'zone-cam-06-main', name: 'Sector Charlie Transit Corridor', polygon: [[0.20, 0.30], [0.80, 0.30], [0.80, 0.85], [0.20, 0.85]], zone_type: 'RESTRICTED_ZONE' },
     ],
     'cam-07': [
-      { id: 'zone-cam-07-main', name: 'Sector Delta Approach', polygon: [[0.20, 0.30], [0.80, 0.30], [0.80, 0.85], [0.20, 0.85]] },
+      { id: 'zone-cam-07-main', name: 'Sector Delta Approach Monitored Sector', polygon: [[0.20, 0.30], [0.80, 0.30], [0.80, 0.85], [0.20, 0.85]], zone_type: 'RESTRICTED_ZONE' },
     ],
     'cam-08': [
-      { id: 'zone-cam-08-main', name: 'Sector Delta Observation', polygon: [[0.15, 0.25], [0.85, 0.25], [0.85, 0.85], [0.15, 0.85]] },
+      { id: 'zone-cam-08-main', name: 'Sector Delta Observation Zone', polygon: [[0.15, 0.25], [0.85, 0.25], [0.85, 0.85], [0.15, 0.85]], zone_type: 'RESTRICTED_ZONE' },
     ],
     'cam-09': [
-      { id: 'zone-cam-09-main', name: 'Sector Echo Border Corridor', polygon: [[0.15, 0.20], [0.85, 0.20], [0.85, 0.80], [0.15, 0.80]] },
+      { id: 'zone-cam-09-main', name: 'Sector Echo Border Patrol Corridor', polygon: [[0.15, 0.20], [0.85, 0.20], [0.85, 0.80], [0.15, 0.80]], zone_type: 'RESTRICTED_ZONE' },
     ],
   };
 
-  const [activeZones, setActiveZones] = useState<Array<{ id: string; name: string; polygon: [number, number][] }>>([]);
-  const activeIntrusionRef = useRef<{ timestamp: number; zoneName?: string } | null>(null);
+  const [activeZones, setActiveZones] = useState<Array<{ id: string; name: string; polygon: [number, number][]; zone_type?: string }>>([]);
+  const activeIntrusionRef = useRef<{ timestamp: number; zoneName?: string; trackId?: number; eventType?: string; direction?: string } | null>(null);
 
   useEffect(() => {
     const myId = String(camera.id);
@@ -361,12 +369,12 @@ export const MatrixCameraCell: React.FC<MatrixCameraCellProps> = ({
     fetchZones(myId)
       .then((res) => {
         if (res.success && res.data && res.data.length > 0) {
-          setActiveZones(res.data.map((z) => ({ id: z.id, name: z.name, polygon: z.polygon })));
+          setActiveZones(res.data.map((z) => ({ id: z.id, name: z.name, polygon: z.polygon, zone_type: (z as any).zone_type })));
         } else {
           fetchZones(myTag)
             .then((res2) => {
               if (res2.success && res2.data && res2.data.length > 0) {
-                setActiveZones(res2.data.map((z) => ({ id: z.id, name: z.name, polygon: z.polygon })));
+                setActiveZones(res2.data.map((z) => ({ id: z.id, name: z.name, polygon: z.polygon, zone_type: (z as any).zone_type })));
               } else if (DEFAULT_CAMERA_ZONES[fallbackKey]) {
                 setActiveZones(DEFAULT_CAMERA_ZONES[fallbackKey]);
               }
@@ -384,19 +392,15 @@ export const MatrixCameraCell: React.FC<MatrixCameraCellProps> = ({
         }
       });
 
-    if (camera.id === 1) {
-      activeIntrusionRef.current = {
-        timestamp: Date.now(),
-        zoneName: 'SECTOR ALPHA RESTRICTED PERIMETER',
-      };
-    }
-
     const unsubAlert = webSocketService.onAlert((alert) => {
-      const alertCam = (alert.camera || (alert as any).sector || '').toLowerCase();
-      if (alertCam.includes(myId) || alertCam.includes(myTag)) {
+      const alertCam = (alert.camera || (alert as any).camera_id || (alert as any).cameraId || (alert as any).sector || '').toLowerCase();
+      if (alertCam.includes(myId) || alertCam.includes(myTag) || alertCam.includes(fallbackKey)) {
         activeIntrusionRef.current = {
           timestamp: Date.now(),
-          zoneName: alert.type || 'RESTRICTED PERIMETER',
+          zoneName: (alert as any).zone_name || (alert as any).metadata?.zone_name || alert.type || 'RESTRICTED PERIMETER',
+          trackId: (alert as any).track_id || (alert as any).metadata?.track_id || 1,
+          eventType: (alert as any).event_type || (alert as any).metadata?.event_type || ((alert.title || '').includes('Tripwire') ? 'TRIPWIRE_CROSSING' : 'RESTRICTED_ZONE_ENTRY'),
+          direction: (alert as any).direction || (alert as any).metadata?.direction || 'IN',
         };
       }
     });
@@ -913,7 +917,7 @@ export const MatrixCameraCell: React.FC<MatrixCameraCellProps> = ({
             const fw = realTracksRef.current?.frameWidth || 1920;
             const fh = realTracksRef.current?.frameHeight || 1080;
 
-            if (z.polygon.length === 2) {
+            if (z.polygon.length === 2 || (z as any).zone_type === 'TRIPWIRE') {
               // VIRTUAL TRIPWIRE LINE
               const p1 = z.polygon[0];
               const p2 = z.polygon[1];
@@ -922,26 +926,32 @@ export const MatrixCameraCell: React.FC<MatrixCameraCellProps> = ({
               const x2 = isNorm ? p2[0] * width : (p2[0] / fw) * width;
               const y2 = isNorm ? p2[1] * height : (p2[1] / fh) * height;
 
+              const isTripwireBreach = isIntrusion && activeIntrusionRef.current?.eventType === 'TRIPWIRE_CROSSING';
+
               ctx.beginPath();
               ctx.moveTo(x1, y1);
               ctx.lineTo(x2, y2);
-              ctx.strokeStyle = isIntrusion ? `rgba(239, 68, 68, ${0.8 + pulse * 0.2})` : 'rgba(56, 189, 248, 0.85)';
-              ctx.lineWidth = isIntrusion ? 3 : 2;
+              ctx.strokeStyle = isTripwireBreach ? `rgba(239, 68, 68, ${0.85 + pulse * 0.15})` : 'rgba(56, 189, 248, 0.85)';
+              ctx.lineWidth = isTripwireBreach ? 3.5 : 2;
               ctx.setLineDash([8, 4]);
               ctx.stroke();
               ctx.setLineDash([]);
 
               // End points
-              ctx.fillStyle = isIntrusion ? '#ef4444' : '#38bdf8';
+              ctx.fillStyle = isTripwireBreach ? '#ef4444' : '#38bdf8';
               ctx.beginPath();
-              ctx.arc(x1, y1, 4, 0, Math.PI * 2);
-              ctx.arc(x2, y2, 4, 0, Math.PI * 2);
+              ctx.arc(x1, y1, isTripwireBreach ? 5 : 4, 0, Math.PI * 2);
+              ctx.arc(x2, y2, isTripwireBreach ? 5 : 4, 0, Math.PI * 2);
               ctx.fill();
 
               // Tactical Label
-              ctx.fillStyle = isIntrusion ? '#ef4444' : 'rgba(56, 189, 248, 0.95)';
+              ctx.fillStyle = isTripwireBreach ? '#ef4444' : 'rgba(56, 189, 248, 0.95)';
               ctx.font = 'bold 9px monospace';
-              const lineTag = isIntrusion ? `[BREACH: ${z.name.toUpperCase()}]` : `[TRIPWIRE: ${z.name.toUpperCase()}]`;
+              const dirText = activeIntrusionRef.current?.direction ? ` [DIR: ${activeIntrusionRef.current.direction}]` : '';
+              const trkText = activeIntrusionRef.current?.trackId ? ` #${activeIntrusionRef.current.trackId}` : '';
+              const lineTag = isTripwireBreach 
+                ? `[TRIPWIRE BREACH: ${z.name.toUpperCase()}${trkText}${dirText}]` 
+                : `[VIRTUAL TRIPWIRE: ${z.name.toUpperCase()}]`;
               ctx.fillText(lineTag, Math.min(x1, x2) + 6, Math.min(y1, y2) - 4);
               return;
             }
@@ -956,9 +966,11 @@ export const MatrixCameraCell: React.FC<MatrixCameraCellProps> = ({
             });
             ctx.closePath();
 
-            if (isIntrusion) {
-              ctx.fillStyle = `rgba(239, 68, 68, ${0.15 + pulse * 0.15})`;
-              ctx.strokeStyle = `rgba(239, 68, 68, ${0.75 + pulse * 0.25})`;
+            const isZoneBreach = isIntrusion && activeIntrusionRef.current?.eventType !== 'TRIPWIRE_CROSSING';
+
+            if (isZoneBreach) {
+              ctx.fillStyle = `rgba(239, 68, 68, ${0.18 + pulse * 0.15})`;
+              ctx.strokeStyle = `rgba(239, 68, 68, ${0.8 + pulse * 0.2})`;
               ctx.lineWidth = 2.5;
               ctx.setLineDash([6, 3]);
             } else {
@@ -976,11 +988,12 @@ export const MatrixCameraCell: React.FC<MatrixCameraCellProps> = ({
             const bx = isNorm ? firstPt[0] * width : (firstPt[0] / fw) * width;
             const by = isNorm ? firstPt[1] * height : (firstPt[1] / fh) * height;
 
-            ctx.fillStyle = isIntrusion ? '#ef4444' : 'rgba(245, 158, 11, 0.9)';
+            ctx.fillStyle = isZoneBreach ? '#ef4444' : 'rgba(245, 158, 11, 0.9)';
             ctx.font = 'bold 9px monospace';
-            const zoneTag = isIntrusion
-              ? `[INTRUSION ACTIVE: ${z.name.toUpperCase()}]`
-              : `[ZONE: ${z.name.toUpperCase()}]`;
+            const trkText = activeIntrusionRef.current?.trackId ? ` #${activeIntrusionRef.current.trackId}` : '';
+            const zoneTag = isZoneBreach
+              ? `[RESTRICTED ZONE BREACH: ${z.name.toUpperCase()}${trkText}]`
+              : `[RESTRICTED ZONE: ${z.name.toUpperCase()}]`;
             ctx.fillText(zoneTag, Math.max(bx + 4, 10), Math.max(by + 12, 16));
           });
           ctx.restore();
@@ -1347,6 +1360,45 @@ export const MatrixCameraCell: React.FC<MatrixCameraCellProps> = ({
             >
               <Maximize2 size={12} />
             </button>
+          )}
+        </div>
+      </div>
+
+      {/* Phase 17: Compact Intelligence & Real-Time Counting Strip */}
+      <div className="px-2.5 py-1 bg-slate-950 border-b border-slate-800/80 flex items-center justify-between text-[8.5px] font-mono select-none">
+        <div className="flex items-center gap-2.5">
+          <span className="text-cyan-400 font-bold tracking-wider">OBJECTS</span>
+          <span className="text-slate-400">
+            P:<span className="text-emerald-400 font-bold ml-0.5">
+              {String(liveCounts?.visible?.person ?? realTracksRef.current?.tracks?.filter((t) => t.class_name.toLowerCase() === 'person').length ?? 0).padStart(2, '0')}
+            </span>
+          </span>
+          <span className="text-slate-400">
+            C:<span className="text-sky-400 font-bold ml-0.5">
+              {String(liveCounts?.visible?.car ?? realTracksRef.current?.tracks?.filter((t) => t.class_name.toLowerCase() === 'car').length ?? 0).padStart(2, '0')}
+            </span>
+          </span>
+          <span className="text-slate-400">
+            T:<span className="text-amber-400 font-bold ml-0.5">
+              {String(liveCounts?.visible?.truck ?? realTracksRef.current?.tracks?.filter((t) => t.class_name.toLowerCase() === 'truck').length ?? 0).padStart(2, '0')}
+            </span>
+          </span>
+          <span className="text-slate-400">
+            B:<span className="text-purple-400 font-bold ml-0.5">
+              {String(liveCounts?.visible?.bus ?? realTracksRef.current?.tracks?.filter((t) => t.class_name.toLowerCase() === 'bus').length ?? 0).padStart(2, '0')}
+            </span>
+          </span>
+        </div>
+
+        <div className="flex items-center gap-2">
+          <span className="text-slate-500 font-bold">TRACKS</span>
+          <span className="text-cyan-300 font-bold">
+            {(realTracksRef.current?.tracks?.length ?? liveCounts?.visible?.total ?? 0)} ACTIVE
+          </span>
+          {liveCounts?.unique_session?.total !== undefined && liveCounts.unique_session.total > 0 && (
+            <span className="text-slate-500 text-[7.5px]">
+              ({liveCounts.unique_session.total} TOT)
+            </span>
           )}
         </div>
       </div>

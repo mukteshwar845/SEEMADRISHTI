@@ -67,6 +67,23 @@ class ByteTrackEngine:
         print(f"[ByteTrackEngine] Initialized ByteTrack (buffer: {self.config.track_buffer} frames, match_thresh: {self.config.match_threshold})")
         return True
 
+    def update(
+        self,
+        detections: Optional[List[Dict[str, Any]]] = None,
+        frame: Optional[np.ndarray] = None,
+        frame_id: Optional[int] = None,
+        camera_id: Optional[str] = None,
+    ) -> List[Dict[str, Any]]:
+        """
+        Convenience wrapper around track() returning only the active tracks list.
+        """
+        if frame is None:
+            return []
+        if not self._is_initialized:
+            self.initialize()
+        result = self.track(frame, camera_id=camera_id, frame_id=frame_id)
+        return result.get("tracks", [])
+
     def track(
         self,
         frame: np.ndarray,
@@ -80,8 +97,8 @@ class ByteTrackEngine:
         Returns structured tracking payload containing persistent track IDs,
         bounding boxes, class labels, frame ID, and latency breakdowns.
         """
-        if not self._is_initialized or self.detector is None or self.detector.model is None:
-            raise RuntimeError("[ByteTrackEngine] Tracker is not initialized. Call initialize() first.")
+        if not self._is_initialized:
+            self.initialize()
 
         if frame is None or not isinstance(frame, np.ndarray) or frame.size == 0:
             raise ValueError("[ByteTrackEngine] Invalid or empty frame provided for tracking.")

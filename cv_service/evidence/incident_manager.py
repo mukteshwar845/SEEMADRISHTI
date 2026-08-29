@@ -59,7 +59,8 @@ class ActiveIncident:
         return self.risk_level
 
     def add_frame(self, timestamp: float, frame: np.ndarray) -> None:
-        self.frames.append((timestamp, frame.copy()))
+        if frame is not None and isinstance(frame, np.ndarray) and frame.size > 0:
+            self.frames.append((float(timestamp), frame.copy()))
 
     def is_complete(self, current_time: float) -> bool:
         return current_time >= self.target_end_time
@@ -86,9 +87,20 @@ class IncidentManager:
         post_event_seconds: float = 10.0,
         min_risk_level: str = "HIGH",
         cooldown_seconds: float = 15.0,
+        output_dir: Optional[str] = None,
+        fps: Optional[float] = None,
+        **kwargs,
     ):
         self.circular_buffer = circular_buffer or CircularFrameBuffer(pre_event_seconds=pre_event_seconds)
-        self.evidence_writer = evidence_writer or EvidenceWriter(fps=15.0)
+        if evidence_writer is None:
+            writer_kwargs = {}
+            if output_dir:
+                writer_kwargs["output_dir"] = output_dir
+            if fps:
+                writer_kwargs["fps"] = fps
+            self.evidence_writer = EvidenceWriter(**writer_kwargs)
+        else:
+            self.evidence_writer = evidence_writer
         self.backend_http_url = backend_http_url.rstrip("/")
         self.pre_event_seconds = float(pre_event_seconds)
         self.post_event_seconds = float(post_event_seconds)
@@ -213,8 +225,9 @@ class IncidentManager:
 
         # Step 2: Feed to active incidents for this camera
         completed_ids = []
+        cam_key = str(camera_id).strip().lower()
         for inc_id, inc in list(self.active_incidents.items()):
-            if inc.camera_id == camera_id:
+            if str(inc.camera_id).strip().lower() == cam_key:
                 inc.add_frame(now, frame)
                 if inc.is_complete(now):
                     completed_ids.append(inc_id)
@@ -242,6 +255,16 @@ class IncidentManager:
         """
         now = float(current_time) if current_time is not None else time.time()
         incident.ended_at = datetime.fromtimestamp(now, tz=timezone.utc).isoformat()
+
+        # Guarantee non-empty frames: if incident.frames is empty, grab available circular buffer frames
+        if not incident.frames or len(incident.frames) == 0:
+            pre_f = self.circular_buffer.get_pre_event_frames(
+                camera_id=incident.camera_id,
+                trigger_time=now,
+                duration_seconds=self.pre_event_seconds,
+            )
+            if pre_f:
+                incident.frames = pre_f
 
         metadata = {
             "camera_id": incident.camera_id,

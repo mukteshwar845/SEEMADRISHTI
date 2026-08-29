@@ -57,30 +57,63 @@ export const DetectionsView: React.FC = () => {
       })
       .catch(() => {});
 
-    const unsubDet = webSocketService.onDetection((item: any) => {
-      const labelStr = (item.label || 'PERSON').toUpperCase();
-      const label: DetectionItem['label'] =
-        labelStr === 'VEHICLE'
-          ? 'VEHICLE'
-          : labelStr === 'NO_HELMET'
-          ? 'NO_HELMET'
-          : labelStr === 'LOITERING'
-          ? 'LOITERING'
-          : labelStr === 'INTRUSION'
-          ? 'INTRUSION'
-          : 'PERSON';
-      const newItem: DetectionItem = {
-        id: item.id || `det-${Date.now()}`,
-        camera: item.camera?.toUpperCase() || 'CAM-01',
-        location: item.location || 'Border Sector Alpha',
-        label,
-        confidence: item.confidence || 0.95,
-        riskScore: item.riskScore || 50,
-        time: item.time || new Date().toLocaleTimeString(),
-        bbox: item.bbox || { x: 100, y: 100, width: 60, height: 120 },
-        color: item.color || '#10b981',
-      };
-      setDetections((prev) => [newItem, ...prev.slice(0, 49)]);
+    const unsubDet = webSocketService.onDetection((payload: any) => {
+      if (payload && payload.detections && Array.isArray(payload.detections)) {
+        const mappedList: DetectionItem[] = payload.detections.map((det: any, idx: number) => {
+          const labelStr = (det.class_name || det.label || 'PERSON').toUpperCase();
+          const label: DetectionItem['label'] =
+            labelStr === 'VEHICLE' || labelStr === 'CAR' || labelStr === 'TRUCK'
+              ? 'VEHICLE'
+              : labelStr === 'NO_HELMET'
+              ? 'NO_HELMET'
+              : labelStr === 'LOITERING'
+              ? 'LOITERING'
+              : labelStr === 'INTRUSION'
+              ? 'INTRUSION'
+              : 'PERSON';
+          return {
+            id: `ws-det-${Date.now()}-${idx}-${Math.floor(Math.random() * 1000)}`,
+            camera: (payload.camera_id || 'CAM-01').toUpperCase(),
+            location: 'Border Sector Line',
+            label,
+            confidence: det.confidence || 0.95,
+            riskScore: label === 'INTRUSION' ? 92 : label === 'LOITERING' ? 74 : 18,
+            time: new Date().toLocaleTimeString(),
+            bbox: det.bbox ? {
+              x: det.bbox.x1 || 100,
+              y: det.bbox.y1 || 100,
+              width: (det.bbox.x2 - det.bbox.x1) || 60,
+              height: (det.bbox.y2 - det.bbox.y1) || 120,
+            } : { x: 100, y: 100, width: 60, height: 120 },
+            color: label === 'INTRUSION' ? '#ef4444' : label === 'VEHICLE' ? '#38bdf8' : '#10b981',
+          };
+        });
+        setDetections((prev) => [...mappedList, ...prev].slice(0, 80));
+      } else if (payload) {
+        const labelStr = (payload.label || 'PERSON').toUpperCase();
+        const label: DetectionItem['label'] =
+          labelStr === 'VEHICLE'
+            ? 'VEHICLE'
+            : labelStr === 'NO_HELMET'
+            ? 'NO_HELMET'
+            : labelStr === 'LOITERING'
+            ? 'LOITERING'
+            : labelStr === 'INTRUSION'
+            ? 'INTRUSION'
+            : 'PERSON';
+        const newItem: DetectionItem = {
+          id: payload.id || `det-${Date.now()}`,
+          camera: payload.camera?.toUpperCase() || 'CAM-01',
+          location: payload.location || 'Border Sector Alpha',
+          label,
+          confidence: payload.confidence || 0.95,
+          riskScore: payload.riskScore || 50,
+          time: payload.time || new Date().toLocaleTimeString(),
+          bbox: payload.bbox || { x: 100, y: 100, width: 60, height: 120 },
+          color: payload.color || '#10b981',
+        };
+        setDetections((prev) => [newItem, ...prev.slice(0, 79)]);
+      }
     });
 
     return () => {

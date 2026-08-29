@@ -1,10 +1,15 @@
 import os
 import time
 import hashlib
+import shutil
+import subprocess
+import logging
 from datetime import datetime, timezone
 from typing import Any, Dict, List, Optional, Tuple
 import cv2
 import numpy as np
+
+logger = logging.getLogger("EvidenceWriter")
 
 
 class EvidenceWriter:
@@ -222,7 +227,31 @@ class EvidenceWriter:
         if file_size == 0:
             raise RuntimeError(f"Evidence file was written with 0 bytes: '{chosen_path}'")
 
-        # Compute SHA-256 cryptographic digest of recorded MP4
+        # HTML5 Browser Playback Compatibility Fix (H.264 / yuv420p):
+        # Native web browsers cannot decode MPEG-4 'mp4v' in HTML5 <video> elements.
+        # Transcode to standard H.264 baseline/high profile with yuv420p and faststart flags.
+        ffmpeg_bin = shutil.which("ffmpeg") or ("/usr/bin/ffmpeg" if os.path.isfile("/usr/bin/ffmpeg") else None)
+        if ffmpeg_bin and os.path.exists(chosen_path):
+            try:
+                web_mp4_path = os.path.splitext(chosen_path)[0] + "_h264.mp4"
+                cmd = [
+                    ffmpeg_bin,
+                    "-y",
+                    "-i", chosen_path,
+                    "-c:v", "libx264",
+                    "-pix_fmt", "yuv420p",
+                    "-preset", "ultrafast",
+                    "-movflags", "+faststart",
+                    web_mp4_path,
+                ]
+                proc = subprocess.run(cmd, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, timeout=20)
+                if proc.returncode == 0 and os.path.exists(web_mp4_path) and os.path.getsize(web_mp4_path) > 0:
+                    os.replace(web_mp4_path, chosen_path)
+                    file_size = os.path.getsize(chosen_path)
+            except Exception as e:
+                logger.debug(f"ffmpeg H.264 transcode fallback notice: {e}")
+
+        # Compute SHA-256 cryptographic digest of finalized MP4
         hasher = hashlib.sha256()
         with open(chosen_path, "rb") as f:
             while chunk := f.read(65536):

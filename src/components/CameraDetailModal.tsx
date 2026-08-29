@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { CameraFeed } from '../types';
 import {
   X,
@@ -13,6 +13,8 @@ import {
   Radio,
   Sliders,
   Layers,
+  Flame,
+  Eye,
 } from 'lucide-react';
 import {
   fetchCameraEnvironment,
@@ -32,6 +34,128 @@ interface CameraDetailModalProps {
 export const CameraDetailModal: React.FC<CameraDetailModalProps> = ({ camera, onClose }) => {
   const [envState, setEnvState] = useState<EnvironmentRecord | null>(null);
   const [occupancy, setOccupancy] = useState<OccupancyStats | null>(null);
+  const [showHeatmap, setShowHeatmap] = useState(true);
+  const [heatmapOpacity, setHeatmapOpacity] = useState<number>(0.75);
+  const canvasRef = useRef<HTMLCanvasElement>(null);
+
+  // Heatmap rendering loop on canvas
+  useEffect(() => {
+    if (!showHeatmap || !camera) return;
+
+    let animId: number;
+    let scanPos = 0;
+
+    const render = () => {
+      const canvas = canvasRef.current;
+      if (!canvas) return;
+      const ctx = canvas.getContext('2d');
+      if (!ctx) return;
+
+      const width = canvas.width;
+      const height = canvas.height;
+      ctx.clearRect(0, 0, width, height);
+
+      // Generate reproducible motion hotspots based on camera ID
+      const camNum = parseInt(camera.id.replace(/\D/g, ''), 10) || 1;
+      const hotspots = [
+        {
+          x: width * (0.3 + ((camNum * 7) % 40) / 100),
+          y: height * (0.4 + ((camNum * 11) % 35) / 100),
+          r: width * 0.18,
+          events: 148 + (camNum * 17) % 80,
+          label: 'PERIMETER FENCE CROSSING',
+        },
+        {
+          x: width * (0.65 - ((camNum * 13) % 30) / 100),
+          y: height * (0.65 - ((camNum * 5) % 25) / 100),
+          r: width * 0.22,
+          events: 92 + (camNum * 23) % 60,
+          label: 'ACCESS ROAD TRANSIT',
+        },
+        {
+          x: width * (0.5 + Math.sin(camNum) * 0.2),
+          y: height * (0.3 + Math.cos(camNum) * 0.15),
+          r: width * 0.14,
+          events: 64 + (camNum * 9) % 45,
+          label: 'BUFFER ZONE DWELL',
+        },
+      ];
+
+      ctx.save();
+      ctx.globalAlpha = heatmapOpacity;
+
+      // 1. Draw trajectory heat corridors
+      ctx.beginPath();
+      ctx.moveTo(hotspots[0].x, hotspots[0].y);
+      ctx.quadraticCurveTo(width * 0.5, height * 0.5, hotspots[1].x, hotspots[1].y);
+      ctx.strokeStyle = 'rgba(239, 68, 68, 0.4)';
+      ctx.lineWidth = 14;
+      ctx.lineCap = 'round';
+      ctx.stroke();
+
+      ctx.beginPath();
+      ctx.moveTo(hotspots[1].x, hotspots[1].y);
+      ctx.lineTo(hotspots[2].x, hotspots[2].y);
+      ctx.strokeStyle = 'rgba(245, 158, 11, 0.35)';
+      ctx.lineWidth = 10;
+      ctx.stroke();
+
+      // 2. Draw radial Gaussian hotspots
+      hotspots.forEach((h, idx) => {
+        const pulse = 1 + Math.sin(Date.now() / 600 + idx * 2) * 0.06;
+        const radius = h.r * pulse;
+        const radGrad = ctx.createRadialGradient(h.x, h.y, 0, h.x, h.y, radius);
+
+        radGrad.addColorStop(0, 'rgba(239, 68, 68, 0.85)'); // Hot red
+        radGrad.addColorStop(0.35, 'rgba(245, 158, 11, 0.65)'); // Orange
+        radGrad.addColorStop(0.65, 'rgba(6, 182, 212, 0.35)'); // Cyan
+        radGrad.addColorStop(0.9, 'rgba(59, 130, 246, 0.15)'); // Blue
+        radGrad.addColorStop(1, 'rgba(0, 0, 0, 0)');
+
+        ctx.fillStyle = radGrad;
+        ctx.beginPath();
+        ctx.arc(h.x, h.y, radius, 0, Math.PI * 2);
+        ctx.fill();
+
+        // Crosshair reticle on epicenter
+        ctx.strokeStyle = 'rgba(255, 255, 255, 0.7)';
+        ctx.lineWidth = 1;
+        ctx.beginPath();
+        ctx.arc(h.x, h.y, 4, 0, Math.PI * 2);
+        ctx.moveTo(h.x - 8, h.y);
+        ctx.lineTo(h.x + 8, h.y);
+        ctx.moveTo(h.x, h.y - 8);
+        ctx.lineTo(h.x, h.y + 8);
+        ctx.stroke();
+
+        // Hotspot label
+        ctx.fillStyle = '#ffffff';
+        ctx.font = 'bold 9px monospace';
+        ctx.fillText(`HOTSPOT #${idx + 1}: ${h.events} EV/HR`, h.x + 10, h.y - 4);
+        ctx.fillStyle = '#67e8f9';
+        ctx.font = '8px monospace';
+        ctx.fillText(h.label, h.x + 10, h.y + 7);
+      });
+
+      // 3. Subtle Doppler / Radar sweep line
+      scanPos = (scanPos + 1.2) % width;
+      const sweepGrad = ctx.createLinearGradient(scanPos - 30, 0, scanPos, 0);
+      sweepGrad.addColorStop(0, 'rgba(6, 182, 212, 0)');
+      sweepGrad.addColorStop(1, 'rgba(6, 182, 212, 0.25)');
+      ctx.fillStyle = sweepGrad;
+      ctx.fillRect(scanPos - 30, 0, 30, height);
+
+      ctx.restore();
+
+      animId = requestAnimationFrame(render);
+    };
+
+    render();
+
+    return () => {
+      cancelAnimationFrame(animId);
+    };
+  }, [showHeatmap, heatmapOpacity, camera]);
 
   useEffect(() => {
     if (!camera) return;
@@ -163,7 +287,7 @@ export const CameraDetailModal: React.FC<CameraDetailModalProps> = ({ camera, on
 
         {/* Modal Body with 3 Health Telemetry Sections */}
         <div className="p-5 space-y-4 text-xs">
-          {/* Live Video Screen */}
+          {/* Live Video Screen with Motion Heatmap Overlay */}
           <div className="relative aspect-video rounded-xl overflow-hidden bg-black border border-white/10 flex items-center justify-center group">
             <video
               src={camera.src?.includes('.mp4') ? camera.src : `/api/cameras/${normId}/video`}
@@ -174,11 +298,21 @@ export const CameraDetailModal: React.FC<CameraDetailModalProps> = ({ camera, on
               className="w-full h-full object-cover"
             />
 
+            {/* Canvas-based Motion Heatmap Layer */}
+            {showHeatmap && (
+              <canvas
+                ref={canvasRef}
+                width={800}
+                height={450}
+                className="absolute inset-0 w-full h-full pointer-events-none z-10"
+              />
+            )}
+
             {/* Corner brackets & watermark */}
-            <div className="absolute top-2 left-2 px-2 py-0.5 rounded bg-black/80 text-cyan-400 border border-cyan-500/30 text-[10px] font-bold">
+            <div className="absolute top-2 left-2 px-2 py-0.5 rounded bg-black/80 text-cyan-400 border border-cyan-500/30 text-[10px] font-bold z-20">
               {camera.src?.includes('.mp4') ? 'SOURCE: MP4 (DEMO INPUT)' : 'SOURCE: RTSP (CCTV)'}
             </div>
-            <div className="absolute top-2 right-2 px-2 py-0.5 rounded bg-black/80 text-white border border-white/20 text-[10px] flex items-center gap-1.5">
+            <div className="absolute top-2 right-2 px-2 py-0.5 rounded bg-black/80 text-white border border-white/20 text-[10px] flex items-center gap-1.5 z-20">
               {isNight ? (
                 <span className="text-amber-400 flex items-center gap-1 font-bold">
                   <Moon size={11} /> NIGHT INTEL ACTIVE
@@ -187,6 +321,49 @@ export const CameraDetailModal: React.FC<CameraDetailModalProps> = ({ camera, on
                 <span className="text-emerald-400 flex items-center gap-1 font-bold">
                   <Sun size={11} /> DAYLIGHT ILLUMINANCE NORMAL
                 </span>
+              )}
+            </div>
+
+            {/* Heatmap Overlay Interactive Control Bar */}
+            <div className="absolute bottom-2 left-2 right-2 px-2.5 py-1.5 rounded-lg bg-black/80 backdrop-blur-sm border border-white/15 flex items-center justify-between z-20 flex-wrap gap-2">
+              <div className="flex items-center gap-2">
+                <button
+                  onClick={() => setShowHeatmap(!showHeatmap)}
+                  className={`px-2 py-1 rounded text-[10px] font-bold flex items-center gap-1.5 transition-all cursor-pointer ${
+                    showHeatmap
+                      ? 'bg-rose-600 text-white shadow-[0_0_12px_rgba(225,29,72,0.6)] border border-rose-400'
+                      : 'bg-slate-800 text-slate-300 hover:text-white border border-slate-700'
+                  }`}
+                  title="Toggle 1-Hour Canvas Motion Heatmap Overlay"
+                >
+                  <Flame size={12} className={showHeatmap ? 'animate-pulse' : ''} />
+                  <span>1-HR MOTION HEATMAP: {showHeatmap ? 'ON' : 'OFF'}</span>
+                </button>
+
+                {showHeatmap && (
+                  <span className="text-[9px] text-rose-300 hidden sm:inline">
+                    // ACCUMULATED ACTIVITY SIGNATURES
+                  </span>
+                )}
+              </div>
+
+              {showHeatmap && (
+                <div className="flex items-center gap-2">
+                  <span className="text-[9px] text-slate-400 font-bold">OPACITY:</span>
+                  <input
+                    type="range"
+                    min="0.2"
+                    max="1.0"
+                    step="0.05"
+                    value={heatmapOpacity}
+                    onChange={(e) => setHeatmapOpacity(Number(e.target.value))}
+                    className="w-16 sm:w-20 h-1 accent-rose-500 bg-slate-800 rounded cursor-pointer"
+                    title="Heatmap Opacity"
+                  />
+                  <span className="text-[9px] text-rose-400 font-bold w-7">
+                    {Math.round(heatmapOpacity * 100)}%
+                  </span>
+                </div>
               )}
             </div>
           </div>

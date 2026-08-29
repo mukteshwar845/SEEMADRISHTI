@@ -14,8 +14,10 @@
     "@google/genai": "^2.4.0",
     "@tailwindcss/vite": "^4.1.14",
     "@vitejs/plugin-react": "^5.0.4",
+    "d3": "^7.9.0",
     "dotenv": "^17.2.3",
     "express": "^4.21.2",
+    "jspdf": "^4.2.1",
     "lucide-react": "^0.546.0",
     "motion": "^12.23.24",
     "pdfkit": "^0.20.1",
@@ -26,6 +28,7 @@
     "ws": "^8.21.3"
   },
   "devDependencies": {
+    "@types/d3": "^7.4.3",
     "@types/express": "^4.17.21",
     "@types/node": "^22.14.0",
     "@types/ws": "^8.18.1",

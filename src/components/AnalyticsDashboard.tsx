@@ -56,6 +56,8 @@ import {
   CorridorStats,
 } from '../services/api';
 import { webSocketService } from '../services/websocketService';
+import { D3DwellTimeChart } from './D3DwellTimeChart';
+import { RechartsDwellDistributionChart } from './RechartsDwellDistributionChart';
 
 interface AnalyticsDashboardProps {
   cameras?: CameraFeed[];
@@ -977,6 +979,19 @@ export const AnalyticsDashboard: React.FC<AnalyticsDashboardProps> = ({ cameras 
             </div>
             <span className="text-emerald-400 font-bold">Patrol Drone Recon Activated</span>
           </div>
+        </div>
+      </div>
+
+      {/* 4.5 LOITERING & DWELL TIME ADVANCED ANALYTICS (D3.JS & RECHARTS ENGINES) */}
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
+        {/* Left: D3.js 24-Hour Unauthorized Dwell Time Profile (6 cols) */}
+        <div className="lg:col-span-6 p-5 bg-[#0a0f1d] border border-white/[0.08] rounded-2xl shadow-[0_4px_30px_rgba(0,0,0,0.8)]">
+          <D3DwellTimeChart />
+        </div>
+
+        {/* Right: Recharts Dwell Time Distribution Histogram (6 cols) */}
+        <div className="lg:col-span-6 p-5 bg-[#0a0f1d] border border-white/[0.08] rounded-2xl shadow-[0_4px_30px_rgba(0,0,0,0.8)]">
+          <RechartsDwellDistributionChart />
         </div>
       </div>
 

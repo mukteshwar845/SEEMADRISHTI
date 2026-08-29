@@ -33,6 +33,7 @@ import {
   BatteryMedium, 
   BatteryLow, 
   BatteryWarning,
+  Sliders,
 } from 'lucide-react';
 import { recordingEngine } from '../utils/recordingManager';
 import { webSocketService, RealYoloDetection, TrackItem } from '../services/websocketService';
@@ -71,6 +72,7 @@ export const MatrixCameraCell: React.FC<MatrixCameraCellProps> = ({
   // Video & View Controls
   const [nightVision, setNightVision] = useState(camera.id === 1 || camera.id === 7);
   const [thermalMode, setThermalMode] = useState(camera.id === 9);
+  const [confidenceThreshold, setConfidenceThreshold] = useState<number>(60);
   const [zoomLevel, setZoomLevel] = useState(1);
   const [showAiHud, setShowAiHud] = useState(true);
   const [videoLoaded, setVideoLoaded] = useState(false);
@@ -1016,6 +1018,7 @@ export const MatrixCameraCell: React.FC<MatrixCameraCellProps> = ({
           const scaleY = height / fh;
 
           realTrackData.tracks.forEach((trk) => {
+            if (trk.confidence < (confidenceThreshold / 100)) return;
             const bx = trk.bbox.x1 * scaleX;
             const by = trk.bbox.y1 * scaleY;
             const bw = (trk.bbox.x2 - trk.bbox.x1) * scaleX;
@@ -1113,6 +1116,7 @@ export const MatrixCameraCell: React.FC<MatrixCameraCellProps> = ({
           const scaleY = height / fh;
 
           realData.detections.forEach((det) => {
+            if (det.confidence < (confidenceThreshold / 100)) return;
             const bx = det.bbox.x1 * scaleX;
             const by = det.bbox.y1 * scaleY;
             const bw = (det.bbox.x2 - det.bbox.x1) * scaleX;
@@ -1596,6 +1600,26 @@ export const MatrixCameraCell: React.FC<MatrixCameraCellProps> = ({
             >
               HUD: {showAiHud ? 'ON' : 'OFF'}
             </button>
+
+            {/* Individual Camera Confidence Threshold Slider */}
+            <div
+              className="flex items-center gap-1 bg-slate-900 border border-slate-700/80 px-1.5 py-0.5 rounded"
+              title={`Camera Zone Confidence Sensitivity: ${confidenceThreshold}% (Filters out detections below this threshold)`}
+            >
+              <Sliders size={9} className="text-cyan-400" />
+              <span className="text-[8px] font-mono text-cyan-300 font-bold whitespace-nowrap">
+                CONF:{confidenceThreshold}%
+              </span>
+              <input
+                type="range"
+                min="30"
+                max="95"
+                step="5"
+                value={confidenceThreshold}
+                onChange={(e) => setConfidenceThreshold(Number(e.target.value))}
+                className="w-10 sm:w-12 h-1 accent-cyan-400 bg-slate-800 rounded cursor-pointer"
+              />
+            </div>
           </div>
 
           <div className="flex items-center gap-1">

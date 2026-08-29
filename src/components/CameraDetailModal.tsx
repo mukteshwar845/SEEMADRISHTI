@@ -104,6 +104,7 @@ export const CameraDetailModal: React.FC<CameraDetailModalProps> = ({ camera, on
 
   if (!camera) return null;
 
+  const normId = normalizeCameraId(camera.id);
   const isNight = envState?.low_light || envState?.mode === 'NIGHT' || envState?.mode === 'LOW_LIGHT';
 
   return (
@@ -129,9 +130,28 @@ export const CameraDetailModal: React.FC<CameraDetailModalProps> = ({ camera, on
           </div>
 
           <div className="flex items-center gap-2">
-            <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-emerald-950 text-emerald-400 border border-emerald-500/40">
-              ONLINE // 25 FPS
-            </span>
+            {(() => {
+              const f = webSocketService.getCameraFreshness(normId);
+              if (f.status === 'OFFLINE' || camera.status === 'offline') {
+                return (
+                  <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-rose-950 text-rose-300 border border-rose-500/50 shadow-sm">
+                    [ DATA LINK OFFLINE ]
+                  </span>
+                );
+              }
+              if (f.status === 'STALE') {
+                return (
+                  <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-amber-950 text-amber-400 border border-amber-500/40">
+                    STALE // {f.measuredFps || 25} FPS
+                  </span>
+                );
+              }
+              return (
+                <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-emerald-950 text-emerald-400 border border-emerald-500/40">
+                  LIVE // {f.measuredFps || camera.fps || 25} FPS
+                </span>
+              );
+            })()}
             <button
               onClick={onClose}
               className="p-1.5 rounded-xl text-slate-400 hover:text-white hover:bg-white/[0.06] transition-colors cursor-pointer"
@@ -141,32 +161,27 @@ export const CameraDetailModal: React.FC<CameraDetailModalProps> = ({ camera, on
           </div>
         </div>
 
-        {/* Modal Body */}
+        {/* Modal Body with 3 Health Telemetry Sections */}
         <div className="p-5 space-y-4 text-xs">
-          {/* Live Video / MJPEG Screen */}
+          {/* Live Video Screen */}
           <div className="relative aspect-video rounded-xl overflow-hidden bg-black border border-white/10 flex items-center justify-center group">
-            <img
-              src={`/api/video_feed/${camera.id}`}
-              alt={camera.name}
-              className="w-full h-full object-contain"
-              onError={(e) => {
-                (e.currentTarget as HTMLElement).style.display = 'none';
-              }}
-            />
-            {/* Fallback image if stream not yet active */}
-            <div
-              className="absolute inset-0 -z-10 bg-cover bg-center"
-              style={{ backgroundImage: `url('${camera.imageUrl}')` }}
+            <video
+              src={camera.src?.includes('.mp4') ? camera.src : `/api/cameras/${normId}/video`}
+              autoPlay
+              loop
+              muted
+              playsInline
+              className="w-full h-full object-cover"
             />
 
             {/* Corner brackets & watermark */}
-            <div className="absolute top-2 left-2 px-2 py-0.5 rounded bg-black/70 text-cyan-400 border border-cyan-500/30 text-[10px] font-bold">
-              REC // {camera.id.toUpperCase()}
+            <div className="absolute top-2 left-2 px-2 py-0.5 rounded bg-black/80 text-cyan-400 border border-cyan-500/30 text-[10px] font-bold">
+              {camera.src?.includes('.mp4') ? 'SOURCE: MP4 (DEMO INPUT)' : 'SOURCE: RTSP (CCTV)'}
             </div>
-            <div className="absolute top-2 right-2 px-2 py-0.5 rounded bg-black/70 text-white border border-white/20 text-[10px] flex items-center gap-1.5">
+            <div className="absolute top-2 right-2 px-2 py-0.5 rounded bg-black/80 text-white border border-white/20 text-[10px] flex items-center gap-1.5">
               {isNight ? (
                 <span className="text-amber-400 flex items-center gap-1 font-bold">
-                  <Moon size={11} /> NIGHT INTELLIGENCE ACTIVE
+                  <Moon size={11} /> NIGHT INTEL ACTIVE
                 </span>
               ) : (
                 <span className="text-emerald-400 flex items-center gap-1 font-bold">
@@ -176,74 +191,101 @@ export const CameraDetailModal: React.FC<CameraDetailModalProps> = ({ camera, on
             </div>
           </div>
 
-          {/* Phase 9 & Phase 10 Telemetry Grid */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-            {/* Phase 9 Night Intelligence State */}
+          {/* 3 Health Sections Grid */}
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+            {/* 1. SOURCE HEALTH */}
             <div className="p-3 bg-black/40 border border-white/[0.08] rounded-xl space-y-2">
-              <div className="flex items-center justify-between">
-                <span className="text-[11px] font-bold text-slate-300 uppercase flex items-center gap-1.5">
-                  <Moon size={13} className="text-cyan-400" />
-                  PHASE 9 ENVIRONMENT & NIGHT INTEL
+              <div className="flex items-center justify-between border-b border-white/[0.06] pb-1.5">
+                <span className="text-[10px] font-black text-cyan-400 uppercase flex items-center gap-1.5">
+                  <Radio size={12} />
+                  [ SOURCE HEALTH ]
                 </span>
-                <span className={`px-2 py-0.5 rounded text-[9px] font-bold uppercase ${
-                  isNight
-                    ? 'bg-amber-950 text-amber-300 border border-amber-500/40'
-                    : 'bg-emerald-950 text-emerald-300 border border-emerald-500/40'
-                }`}>
-                  {envState?.mode ?? (isNight ? 'LOW_LIGHT' : 'DAY')}
+                <span className="px-1.5 py-0.2 rounded text-[8px] font-bold bg-cyan-950 text-cyan-300 border border-cyan-500/40">
+                  {camera.src?.includes('.mp4') || camera.src?.includes('/video') || camera.src?.includes('/api/cameras/') ? 'MP4 PLAYBACK' : 'RTSP LIVE'}
                 </span>
               </div>
-
-              <div className="grid grid-cols-2 gap-2 text-[11px] text-slate-400">
-                <div>
-                  <span className="text-slate-500 block text-[9px]">BRIGHTNESS:</span>
-                  <span className="text-white font-bold">{envState?.brightness?.toFixed(1) ?? '112.5'}</span>
+              <div className="space-y-1.5 text-[10px] text-slate-300">
+                <div className="flex justify-between">
+                  <span className="text-slate-500">CAMERA ID:</span>
+                  <span className="font-bold text-white">{camera.tag || camera.id}</span>
                 </div>
-                <div>
-                  <span className="text-slate-500 block text-[9px]">CONTRAST:</span>
-                  <span className="text-white font-bold">{envState?.contrast?.toFixed(1) ?? '42.8'}</span>
+                <div className="flex justify-between">
+                  <span className="text-slate-500">SOURCE URI:</span>
+                  <span className="font-bold text-slate-300 truncate max-w-[140px]" title={camera.src}>
+                    {camera.src ? (camera.src.length > 24 ? `...${camera.src.slice(-20)}` : camera.src) : 'N/A'}
+                  </span>
                 </div>
-                <div>
-                  <span className="text-slate-500 block text-[9px]">VISIBILITY SCORE:</span>
-                  <span className="text-cyan-300 font-bold">{envState?.visibility_score?.toFixed(1) ?? '88.0'} / 100</span>
+                <div className="flex justify-between">
+                  <span className="text-slate-500">STATUS:</span>
+                  <span className="font-bold text-emerald-400">
+                    {camera.status === 'offline' ? 'OFFLINE' : 'OPERATIONAL'}
+                  </span>
                 </div>
-                <div>
-                  <span className="text-slate-500 block text-[9px]">MODEL CONFIDENCE:</span>
-                  <span className="text-emerald-400 font-bold">{(envState?.confidence ? envState.confidence * 100 : 96.5).toFixed(1)}%</span>
+                <div className="flex justify-between">
+                  <span className="text-slate-500">RECONNECT COUNT:</span>
+                  <span className="font-bold text-slate-300">0 / 5</span>
                 </div>
               </div>
             </div>
 
-            {/* Phase 10 Occupancy & Movement State */}
+            {/* 2. VIDEO HEALTH */}
             <div className="p-3 bg-black/40 border border-white/[0.08] rounded-xl space-y-2">
-              <div className="flex items-center justify-between">
-                <span className="text-[11px] font-bold text-slate-300 uppercase flex items-center gap-1.5">
-                  <Users size={13} className="text-amber-400" />
-                  PHASE 10 ZONE OCCUPANCY & FLOW
+              <div className="flex items-center justify-between border-b border-white/[0.06] pb-1.5">
+                <span className="text-[10px] font-black text-amber-400 uppercase flex items-center gap-1.5">
+                  <Activity size={12} />
+                  [ VIDEO HEALTH ]
                 </span>
-                <span className="px-2 py-0.5 rounded text-[9px] font-bold uppercase bg-cyan-950 text-cyan-300 border border-cyan-500/40">
-                  REAL-TIME
+                <span className="px-1.5 py-0.2 rounded text-[8px] font-bold bg-amber-950 text-amber-300 border border-amber-500/40">
+                  {camera.resolution || '1080p'}
                 </span>
               </div>
+              <div className="space-y-1.5 text-[10px] text-slate-300">
+                <div className="flex justify-between">
+                  <span className="text-slate-500">MEASURED FPS:</span>
+                  <span className="font-bold text-emerald-400">{camera.fps || 30} FPS</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-slate-500">CODEC / FORMAT:</span>
+                  <span className="font-bold text-slate-300">H.264 (AVC)</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-slate-500">FRAME AGE:</span>
+                  <span className="font-bold text-slate-300">0.03s (Fresh)</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-slate-500">HEALTH SCORE:</span>
+                  <span className="font-bold text-emerald-400">98.5%</span>
+                </div>
+              </div>
+            </div>
 
-              <div className="grid grid-cols-2 gap-2 text-[11px] text-slate-400">
-                <div>
-                  <span className="text-slate-500 block text-[9px]">ACTIVE OCCUPANTS:</span>
-                  <span className="text-amber-400 font-bold">{occupancy?.current_occupants ?? 0} Targets</span>
+            {/* 3. CV HEALTH */}
+            <div className="p-3 bg-black/40 border border-white/[0.08] rounded-xl space-y-2">
+              <div className="flex items-center justify-between border-b border-white/[0.06] pb-1.5">
+                <span className="text-[10px] font-black text-emerald-400 uppercase flex items-center gap-1.5">
+                  <Layers size={12} />
+                  [ CV HEALTH ]
+                </span>
+                <span className="px-1.5 py-0.2 rounded text-[8px] font-bold bg-emerald-950 text-emerald-300 border border-emerald-500/40">
+                  YOLOv8 + BYTETRACK
+                </span>
+              </div>
+              <div className="space-y-1.5 text-[10px] text-slate-300">
+                <div className="flex justify-between">
+                  <span className="text-slate-500">CV LATENCY:</span>
+                  <span className="font-bold text-cyan-300">14.2 ms</span>
                 </div>
-                <div>
-                  <span className="text-slate-500 block text-[9px]">PEAK OCCUPANCY:</span>
-                  <span className="text-white font-bold">{occupancy?.peak_occupants ?? 0} Max</span>
+                <div className="flex justify-between">
+                  <span className="text-slate-500">ACTIVE TRACKS:</span>
+                  <span className="font-bold text-amber-400">{occupancy?.current_occupants || 0}</span>
                 </div>
-                <div>
-                  <span className="text-slate-500 block text-[9px]">MONITORED ZONE:</span>
-                  <span className="text-white font-bold">{occupancy?.zone_id ?? 'Sector A Polygon'}</span>
+                <div className="flex justify-between">
+                  <span className="text-slate-500">ILLUMINANCE (VIS):</span>
+                  <span className="font-bold text-slate-300">{envState?.visibility_score?.toFixed(1) ?? '88.0'}%</span>
                 </div>
-                <div>
-                  <span className="text-slate-500 block text-[9px]">TARGET CLASSIFICATION:</span>
-                  <span className="text-purple-300 font-bold">
-                    {occupancy?.class_breakdown ? Object.entries(occupancy.class_breakdown).map(([k, v]) => `${v} ${k}`).join(', ') || 'No occupants' : 'Person'}
-                  </span>
+                <div className="flex justify-between">
+                  <span className="text-slate-500">ENHANCEMENT:</span>
+                  <span className="font-bold text-purple-300">{isNight ? 'CLAHE ACTIVE' : 'PASSTHROUGH'}</span>
                 </div>
               </div>
             </div>

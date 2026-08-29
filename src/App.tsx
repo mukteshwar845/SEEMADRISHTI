@@ -27,6 +27,11 @@ import { IncidentInspectorView } from './components/IncidentInspectorView';
 import { HistoricalLogsView } from './components/HistoricalLogsView';
 import { NotificationHistory } from './components/NotificationHistory';
 import { CameraHealthDiagnosticsView } from './components/CameraHealthDiagnosticsView';
+import { MissionControlView } from './components/MissionControlView';
+import { CameraFleetView } from './components/CameraFleetView';
+import { EvidenceQueueView } from './components/EvidenceQueueView';
+import { SystemTimelineView } from './components/SystemTimelineView';
+import { ReportsModal } from './components/ReportsModal';
 import { audioAlertEngine, triggerIntrusionAudioAlert } from './utils/audioAlert';
 import { ThemeProvider, useTheme } from './context/ThemeContext';
 import { webSocketService } from './services/websocketService';
@@ -42,6 +47,7 @@ function SeemadrishtiMainApp() {
   const [isAudioPingActive, setIsAudioPingActive] = useState(false);
   const [audioVolume, setAudioVolume] = useState(85);
   const [isDemoGuideOpen, setIsDemoGuideOpen] = useState(false);
+  const [isReportsModalOpen, setIsReportsModalOpen] = useState(false);
 
   // App Data States
   const [cameras, setCameras] = useState<CameraFeed[]>(initialCameras);
@@ -246,23 +252,23 @@ function SeemadrishtiMainApp() {
     const camTag = cam ? cam.tag : 'CAM-01';
     const camName = cam ? cam.name : 'Sector A - Perimeter Fence Line';
 
-    const randomConfidence = Math.round((50 + Math.random() * 49.9) * 10) / 10;
-    const isHighSeverity = randomConfidence >= 90;
+    const testConfidence = 0.95;
+    const isHighSeverity = true;
 
     const newAlert: AlertItem = {
       id: `alt-${Date.now()}`,
-      title: isHighSeverity ? 'CRITICAL PERIMETER BREACH' : 'Perimeter Intrusion Alert',
+      title: 'CRITICAL PERIMETER BREACH',
       camera: camTag,
-      severity: isHighSeverity ? 'High' : randomConfidence >= 75 ? 'Medium' : 'Low',
+      severity: 'High',
       time: timeStr,
       type: 'Perimeter Breach',
       timestamp: Date.now(),
       status: 'active',
       description: `Tactical barrier crossing detected on ${camName}. AI anomaly detection flagged trajectory crossing border perimeter.`,
       location: camName,
-      confidence: randomConfidence,
+      confidence: testConfidence,
       assignedUnit: 'Border Patrol Squad Alpha',
-      audioTriggered: randomConfidence >= confidenceThreshold,
+      audioTriggered: testConfidence >= confidenceThreshold,
       thresholdAtTime: confidenceThreshold,
     };
 
@@ -271,12 +277,12 @@ function SeemadrishtiMainApp() {
       triggerGlobalFlash();
     }
 
-    if (randomConfidence >= confidenceThreshold) {
+    if (testConfidence >= confidenceThreshold) {
       triggerIntrusionAudioAlert(newAlert);
       setAlerts((prev) => [newAlert, ...prev]);
       setSelectedAlertForModal(newAlert);
     } else {
-      console.log(`[AI FILTER] Alert suppressed. Confidence (${randomConfidence}%) below threshold (${confidenceThreshold}%).`);
+      console.log(`[AI FILTER] Alert suppressed. Confidence (${testConfidence}%) below threshold (${confidenceThreshold}%).`);
       setAlerts((prev) => [newAlert, ...prev]);
     }
   };
@@ -447,6 +453,27 @@ function SeemadrishtiMainApp() {
             </>
           )}
 
+          {currentView === 'mission-control' && (
+            <MissionControlView
+              onNavigate={(view) => setCurrentView(view)}
+              onOpenReports={() => setIsReportsModalOpen(true)}
+              onOpenDemo={() => setIsDemoGuideOpen(true)}
+            />
+          )}
+
+          {currentView === 'camera-fleet' && (
+            <CameraFleetView
+              onSelectCamera={(cid) => {
+                setSelectedCameraId(cid);
+                setCurrentView('dashboard');
+              }}
+            />
+          )}
+
+          {currentView === 'evidence-queue' && <EvidenceQueueView />}
+
+          {currentView === 'system-timeline' && <SystemTimelineView />}
+
           {currentView === 'diagnostics' && <CameraHealthDiagnosticsView />}
 
           {currentView === 'cameras' && (
@@ -546,11 +573,17 @@ function SeemadrishtiMainApp() {
         />
       )}
 
-      {/* SIH 23-Point Judge Presentation Guide Modal */}
+      {/* Reports Export Modal */}
+      <ReportsModal
+        isOpen={isReportsModalOpen}
+        onClose={() => setIsReportsModalOpen(false)}
+      />
+
+      {/* SIH Judge Presentation Guide Modal */}
       <SihDemoGuideModal
         isOpen={isDemoGuideOpen}
         onClose={() => setIsDemoGuideOpen(false)}
-        onNavigateView={(view) => setCurrentView(view as ViewMode)}
+        onNavigate={(v) => setCurrentView(v)}
       />
     </div>
   );

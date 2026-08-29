@@ -94,8 +94,8 @@ zonesRouter.post('/', (req: Request, res: Response, next: NextFunction) => {
       throw new AppError('Zone name is required', 400);
     }
 
-    if (!Array.isArray(polygon) || polygon.length < 3) {
-      throw new AppError('Zone polygon must be an array of at least 3 coordinate points [x, y]', 400);
+    if (!Array.isArray(polygon) || polygon.length < 2) {
+      throw new AppError('Zone polygon must be an array of at least 2 coordinate points [x, y] for a tripwire or 3+ for a zone', 400);
     }
 
     // Validate that each point is a 2-element array of finite numbers
@@ -152,8 +152,8 @@ zonesRouter.put('/:id', (req: Request, res: Response, next: NextFunction) => {
 
     let updatedPolygonJson = existing.polygon;
     if (polygon !== undefined) {
-      if (!Array.isArray(polygon) || polygon.length < 3) {
-        throw new AppError('Zone polygon must be an array of at least 3 coordinate points [x, y]', 400);
+      if (!Array.isArray(polygon) || polygon.length < 2) {
+        throw new AppError('Zone polygon must be an array of at least 2 coordinate points [x, y] for a tripwire or 3+ for a zone', 400);
       }
 
       for (let i = 0; i < polygon.length; i++) {

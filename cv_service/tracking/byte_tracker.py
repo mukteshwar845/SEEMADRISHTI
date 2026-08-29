@@ -67,12 +67,18 @@ class ByteTrackEngine:
         print(f"[ByteTrackEngine] Initialized ByteTrack (buffer: {self.config.track_buffer} frames, match_thresh: {self.config.match_threshold})")
         return True
 
-    def track(self, frame: np.ndarray, camera_id: Optional[str] = None) -> Dict[str, Any]:
+    def track(
+        self,
+        frame: np.ndarray,
+        camera_id: Optional[str] = None,
+        frame_id: Optional[int] = None,
+        timestamp: Optional[float] = None,
+    ) -> Dict[str, Any]:
         """
         Execute YOLO detection followed by ByteTrack multi-object association.
 
         Returns structured tracking payload containing persistent track IDs,
-        bounding boxes, class labels, and latency breakdowns.
+        bounding boxes, class labels, frame ID, and latency breakdowns.
         """
         if not self._is_initialized or self.detector is None or self.detector.model is None:
             raise RuntimeError("[ByteTrackEngine] Tracker is not initialized. Call initialize() first.")
@@ -131,10 +137,7 @@ class ByteTrackEngine:
                     # Class-Aware Consistency check
                     if track_id in self.active_tracks:
                         record = self.active_tracks[track_id]
-                        # Enforce class consistency: if a track was registered as vehicle,
-                        # preserve its class identity
                         if record.class_id != cls_id:
-                            # Log and resolve to dominant registered class
                             class_name = record.class_name
                             cls_id = record.class_id
                         record.mark_detected(bbox_dict)
@@ -153,6 +156,8 @@ class ByteTrackEngine:
                         "confidence": conf_val,
                         "state": record.state,
                         "bbox": bbox_dict,
+                        "frame_id": frame_id,
+                        "trajectory": [{"x": p["cx"], "y": p["cy"]} for p in record.history],
                     })
 
         # Step 3: Handle lost and removed tracks
@@ -171,7 +176,9 @@ class ByteTrackEngine:
 
         return {
             "camera_id": cam_id,
+            "frame_id": frame_id,
             "timestamp": timestamp_str,
+            "source_timestamp": timestamp,
             "frame_width": w,
             "frame_height": h,
             "inference_ms": inference_time_ms,
@@ -187,5 +194,14 @@ class ByteTrackEngine:
         return round(self._total_tracking_time_ms / self._total_track_calls, 2)
 
     def reset(self):
-        """Reset active track states."""
+        """Reset active track states and internal tracker memory upon video loop."""
         self.active_tracks.clear()
+        if self.detector and self.detector.model:
+            try:
+                predictor = getattr(self.detector.model, "predictor", None)
+                if predictor and hasattr(predictor, "trackers"):
+                    for trk in predictor.trackers:
+                        if hasattr(trk, "reset"):
+                            trk.reset()
+            except Exception:
+                pass

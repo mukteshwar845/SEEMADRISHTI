@@ -1,8 +1,9 @@
 """
-SEEMADRISHTI AI - Geometric Polygon & Ray-Casting Module (Phase 4)
+SEEMADRISHTI AI - Geometric Polygon & Ray-Casting Module (Phase 4 & Phase 16)
 
-Handles virtual restricted zones, point-in-polygon tests using the ray-casting algorithm,
-target centroid calculations, and coordinate transformations.
+Handles virtual restricted zones, virtual tripwires, point-in-polygon tests using
+the ray-casting algorithm, line-segment crossing tests, target centroid calculations,
+and coordinate transformations.
 """
 
 from typing import List, Tuple, Union, Dict, Any, Optional
@@ -15,7 +16,7 @@ def calculate_centroid(bbox: Dict[str, Union[int, float]]) -> Tuple[float, float
     Why Centroid:
     - Invariant to bounding box aspect ratio fluctuations and scale changes.
     - Represents the physical ground projection center of mass of pedestrians and vehicles.
-    - Much more stable than the top-left corner which swings wildly as legs/arms swing.
+    - Much more stable than top-left corner which swings wildly as limbs swing.
     
     Returns:
         (cx, cy) in pixels.
@@ -44,6 +45,24 @@ def is_point_on_segment(
     return True
 
 
+def _ccw(A: Tuple[float, float], B: Tuple[float, float], C: Tuple[float, float]) -> bool:
+    """Determine counter-clockwise orientation for 3 points."""
+    return (C[1] - A[1]) * (B[0] - A[0]) > (B[1] - A[1]) * (C[0] - A[0])
+
+
+def segments_intersect(
+    p1: Tuple[float, float],
+    p2: Tuple[float, float],
+    q1: Tuple[float, float],
+    q2: Tuple[float, float],
+) -> bool:
+    """
+    Determines if line segment p1->p2 intersects segment q1->q2.
+    Used for virtual tripwire line crossing detection.
+    """
+    return (_ccw(p1, q1, q2) != _ccw(p2, q1, q2)) and (_ccw(p1, p2, q1) != _ccw(p1, p2, q2))
+
+
 def is_point_in_polygon(
     point: Tuple[float, float],
     polygon: List[Tuple[float, float]],
@@ -52,14 +71,6 @@ def is_point_in_polygon(
     """
     Determines if a 2D point (px, py) lies strictly inside or on the boundary of a polygon
     using the standard Ray-Casting algorithm (Jordan Curve Theorem).
-    
-    Args:
-        point: (px, py) query coordinate.
-        polygon: List of (x, y) vertices defining the closed polygon.
-        include_boundary: If True, points directly on polygon edges are considered inside.
-        
-    Returns:
-        bool: True if the point is inside (or on boundary if enabled), False otherwise.
     """
     if len(polygon) < 3:
         return False
@@ -78,7 +89,7 @@ def is_point_in_polygon(
 
         # Ray-casting along horizontal ray towards +X
         if ((y1 > py) != (y2 > py)):
-            # Compute x-coordinate of intersection with the horizontal line at py
+            # Compute x-coordinate of intersection with horizontal line at py
             intersect_x = x1 + (py - y1) * (x2 - x1) / (y2 - y1)
             if px < intersect_x:
                 inside = not inside
@@ -88,7 +99,8 @@ def is_point_in_polygon(
 
 class PolygonZone:
     """
-    Virtual Restricted Perimeter / Geofence Zone representation.
+    Virtual Restricted Perimeter / Geofence Zone & Tripwire Line representation.
+    Supports both closed polygons (>=3 vertices) and tripwires (2 vertices).
     """
 
     def __init__(
@@ -98,12 +110,14 @@ class PolygonZone:
         name: str = "Zone",
         polygon: Optional[List[Union[List[float], Tuple[float, float]]]] = None,
         enabled: bool = True,
+        zone_type: str = "RESTRICTED_ZONE",
         **kwargs,
     ):
         self.zone_id = str(zone_id)
         self.camera_id = str(camera_id)
         self.name = str(name)
         self.enabled = bool(enabled)
+        self.zone_type = str(zone_type or kwargs.get("type", "RESTRICTED_ZONE")).upper()
         
         pts = polygon if polygon is not None else kwargs.get("raw_polygon", [])
         # Parse polygon points as floats
@@ -111,8 +125,10 @@ class PolygonZone:
             (float(p[0]), float(p[1])) for p in pts
         ]
         
-        if len(self.raw_polygon) < 3:
-            raise ValueError(f"Zone '{self.zone_id}' must have at least 3 polygon points")
+        if len(self.raw_polygon) < 2:
+            raise ValueError(f"Zone '{self.zone_id}' must have at least 2 points (tripwire) or 3 points (polygon)")
+
+        self.is_tripwire = len(self.raw_polygon) == 2 or self.zone_type == "TRIPWIRE"
 
         # Determine if coordinates are normalized [0.0 - 1.0] or absolute pixels
         self.is_normalized = all(
@@ -141,12 +157,37 @@ class PolygonZone:
     ) -> bool:
         """
         Tests if point (cx, cy in frame pixel coordinates) is inside this zone.
+        For tripwires, tests proximity to line segment (within 15px threshold).
         """
         if not self.enabled:
             return False
 
         poly = self.get_pixel_polygon(frame_width, frame_height)
+        if self.is_tripwire or len(poly) < 3:
+            # Proximity check for tripwire
+            x1, y1 = poly[0]
+            x2, y2 = poly[1]
+            return is_point_on_segment(point[0], point[1], x1, y1, x2, y2, eps=15.0)
+
         return is_point_in_polygon(point, poly, include_boundary=True)
+
+    def test_crossing(
+        self,
+        prev_pos: Tuple[float, float],
+        curr_pos: Tuple[float, float],
+        frame_width: int = 1920,
+        frame_height: int = 1080,
+    ) -> bool:
+        """
+        Tests if movement from prev_pos -> curr_pos crosses a tripwire line segment.
+        """
+        if not self.enabled:
+            return False
+
+        poly = self.get_pixel_polygon(frame_width, frame_height)
+        if len(poly) >= 2:
+            return segments_intersect(prev_pos, curr_pos, poly[0], poly[1])
+        return False
 
     def to_dict(self) -> Dict[str, Any]:
         return {
@@ -155,5 +196,7 @@ class PolygonZone:
             "name": self.name,
             "polygon": self.raw_polygon,
             "enabled": self.enabled,
+            "zone_type": self.zone_type,
+            "is_tripwire": self.is_tripwire,
             "is_normalized": self.is_normalized,
         }

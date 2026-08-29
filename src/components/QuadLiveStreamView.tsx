@@ -66,6 +66,22 @@ export const QuadLiveStreamView: React.FC<QuadLiveStreamViewProps> = ({
   const [snapshotFlash, setSnapshotFlash] = useState<string | null>(null);
   const [liveTimestamp, setLiveTimestamp] = useState('10:45:22 AM');
   const [activeRecordings, setActiveRecordings] = useState<Map<string, ActiveRecording>>(new Map());
+  const [freshnessMap, setFreshnessMap] = useState<Record<string, { status: string; measuredFps: number }>>({});
+
+  useEffect(() => {
+    const updateFreshness = () => {
+      const map: Record<string, { status: string; measuredFps: number }> = {};
+      cameras.forEach((c) => {
+        const key = (c.code || c.id).toLowerCase();
+        const f = webSocketService.getCameraFreshness(key);
+        map[c.id] = { status: f.status, measuredFps: f.measuredFps };
+      });
+      setFreshnessMap(map);
+    };
+    updateFreshness();
+    const interval = setInterval(updateFreshness, 1500);
+    return () => clearInterval(interval);
+  }, [cameras]);
 
   // Ingest real environment states for night vision
   useEffect(() => {
@@ -358,6 +374,8 @@ export const QuadLiveStreamView: React.FC<QuadLiveStreamViewProps> = ({
             const isNight = nightVisionMap[cam.id] || false;
             const zoom = zoomLevels[cam.id] || 1;
             const pan = panOffsets[cam.id] || { x: 0, y: 0 };
+            const camFreshness = freshnessMap[cam.id] || { status: 'LIVE', measuredFps: cam.fps || 25 };
+            const isOffline = camFreshness.status === 'OFFLINE' || cam.status === 'offline';
 
             return (
               <div
@@ -385,24 +403,34 @@ export const QuadLiveStreamView: React.FC<QuadLiveStreamViewProps> = ({
                   <div className="flex items-center gap-2">
                     {/* Resolution & Bitrate */}
                     <span className="hidden sm:inline font-mono text-[10px] text-slate-400">
-                      {cam.resolution.split(' ')[0]} • {cam.fps}fps
+                      {cam.resolution.split(' ')[0]} • {isOffline ? 0 : (camFreshness.measuredFps || cam.fps)}fps
                     </span>
 
                     {/* Online status indicator */}
                     <div className="flex items-center gap-1 text-[10px] font-mono font-bold uppercase">
                       <span
                         className={`w-1.5 h-1.5 rounded-full ${
-                          cam.status === 'online'
-                            ? 'bg-emerald-400 animate-ping'
-                            : 'bg-rose-500'
+                          isOffline
+                            ? 'bg-rose-500'
+                            : camFreshness.status === 'STALE'
+                            ? 'bg-amber-400'
+                            : 'bg-emerald-400 animate-ping'
                         }`}
                       />
                       <span
                         className={
-                          cam.status === 'online' ? 'text-emerald-400' : 'text-rose-400'
+                          isOffline
+                            ? 'text-rose-400 font-bold'
+                            : camFreshness.status === 'STALE'
+                            ? 'text-amber-400 font-bold'
+                            : 'text-emerald-400'
                         }
                       >
-                        {cam.status === 'online' ? 'ONLINE' : 'STANDBY'}
+                        {isOffline
+                          ? '[ DATA LINK OFFLINE ]'
+                          : camFreshness.status === 'STALE'
+                          ? 'STALE'
+                          : 'LIVE'}
                       </span>
                     </div>
                   </div>
@@ -425,6 +453,19 @@ export const QuadLiveStreamView: React.FC<QuadLiveStreamViewProps> = ({
                     />
                   </div>
 
+                  {/* Disconnected / Offline Overlay */}
+                  {isOffline && (
+                    <div className="absolute inset-0 z-15 bg-slate-950/90 flex flex-col items-center justify-center p-4 pointer-events-none backdrop-blur-sm">
+                      <AlertTriangle size={28} className="text-rose-500 mb-1 animate-pulse" />
+                      <span className="text-rose-400 font-mono font-bold tracking-widest text-[11px] uppercase">
+                        [ DATA LINK OFFLINE ]
+                      </span>
+                      <span className="text-slate-500 font-mono text-[9px] tracking-wider text-center">
+                        NO ACTIVE FRAMES // RECONNECTING
+                      </span>
+                    </div>
+                  )}
+
                   {/* Tactical Corner Brackets */}
                   <div className="absolute top-2 left-2 w-3.5 h-3.5 border-t-2 border-l-2 border-cyan-400/50 pointer-events-none z-10" />
                   <div className="absolute top-2 right-2 w-3.5 h-3.5 border-t-2 border-r-2 border-cyan-400/50 pointer-events-none z-10" />
@@ -433,7 +474,12 @@ export const QuadLiveStreamView: React.FC<QuadLiveStreamViewProps> = ({
 
                   {/* Top-Left Live HUD Badge */}
                   <div className="absolute top-2.5 left-2.5 flex items-center gap-1.5 z-20 pointer-events-none">
-                    {activeRecordings.has(cam.id) ? (
+                    {isOffline ? (
+                      <div className="px-2 py-0.5 bg-rose-950 text-rose-300 text-[9px] font-mono font-bold rounded-md flex items-center gap-1 border border-rose-600/50 shadow-sm">
+                        <AlertTriangle size={9} className="text-rose-400" />
+                        <span>OFFLINE</span>
+                      </div>
+                    ) : activeRecordings.has(cam.id) ? (
                       <div className="px-2 py-0.5 bg-rose-600 text-white text-[9px] font-mono font-bold rounded-md flex items-center gap-1 shadow-[0_0_10px_rgba(244,63,94,0.8)] border border-rose-400 animate-pulse">
                         <Disc size={9} className="animate-spin text-white" />
                         <span>REC [{String(Math.floor(recordingEngine.getRecordingDuration(cam.id) / 60)).padStart(2, '0')}:{String(recordingEngine.getRecordingDuration(cam.id) % 60).padStart(2, '0')}]</span>

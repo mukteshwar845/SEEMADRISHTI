@@ -58,6 +58,9 @@ class LowLightEnhancer:
         else:
             return self.apply_clahe(frame)
 
+    # Backward-compatible alias
+    enhance_frame = enhance
+
     def apply_clahe(self, frame: np.ndarray) -> np.ndarray:
         """
         Apply CLAHE to the Luminance (L) channel in LAB color space.

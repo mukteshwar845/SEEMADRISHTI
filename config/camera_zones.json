@@ -1,0 +1,137 @@
+{
+  "cam-01": [
+    {
+      "id": "zone-cam-01-main",
+      "camera_id": "cam-01",
+      "name": "Sector Alpha Main Gate Restricted Zone",
+      "zone_type": "RESTRICTED_ZONE",
+      "polygon": [[0.35, 0.40], [0.88, 0.40], [0.88, 0.92], [0.35, 0.92]],
+      "enabled": true,
+      "is_normalized": true
+    },
+    {
+      "id": "line-cam-01-tripwire",
+      "camera_id": "cam-01",
+      "name": "Alpha Entry Tripwire",
+      "zone_type": "TRIPWIRE",
+      "polygon": [[0.20, 0.65], [0.92, 0.65]],
+      "enabled": true,
+      "is_normalized": true
+    }
+  ],
+  "cam-02": [
+    {
+      "id": "zone-cam-02-main",
+      "camera_id": "cam-02",
+      "name": "Sector Alpha East Perimeter Zone",
+      "zone_type": "RESTRICTED_ZONE",
+      "polygon": [[0.15, 0.20], [0.85, 0.20], [0.85, 0.80], [0.15, 0.80]],
+      "enabled": true,
+      "is_normalized": true
+    },
+    {
+      "id": "line-cam-02-tripwire",
+      "camera_id": "cam-02",
+      "name": "East Perimeter Crossing Line",
+      "zone_type": "TRIPWIRE",
+      "polygon": [[0.10, 0.50], [0.90, 0.50]],
+      "enabled": true,
+      "is_normalized": true
+    }
+  ],
+  "cam-03": [
+    {
+      "id": "zone-cam-03-main",
+      "camera_id": "cam-03",
+      "name": "Sector Bravo Access Road Monitored Zone",
+      "zone_type": "RESTRICTED_ZONE",
+      "polygon": [[0.20, 0.25], [0.80, 0.25], [0.80, 0.75], [0.20, 0.75]],
+      "enabled": true,
+      "is_normalized": true
+    },
+    {
+      "id": "line-cam-03-tripwire",
+      "camera_id": "cam-03",
+      "name": "Bravo Access Ingress Line",
+      "zone_type": "TRIPWIRE",
+      "polygon": [[0.15, 0.45], [0.85, 0.45]],
+      "enabled": true,
+      "is_normalized": true
+    }
+  ],
+  "cam-04": [
+    {
+      "id": "zone-cam-04-main",
+      "camera_id": "cam-04",
+      "name": "Sector Bravo Outer Fence Exclusion Area",
+      "zone_type": "RESTRICTED_ZONE",
+      "polygon": [[0.10, 0.20], [0.90, 0.20], [0.90, 0.85], [0.10, 0.85]],
+      "enabled": true,
+      "is_normalized": true
+    }
+  ],
+  "cam-05": [
+    {
+      "id": "zone-cam-05-main",
+      "camera_id": "cam-05",
+      "name": "Sector Charlie Checkpoint Transit Zone",
+      "zone_type": "RESTRICTED_ZONE",
+      "polygon": [[0.15, 0.25], [0.85, 0.25], [0.85, 0.80], [0.15, 0.80]],
+      "enabled": true,
+      "is_normalized": true
+    },
+    {
+      "id": "line-cam-05-tripwire",
+      "camera_id": "cam-05",
+      "name": "Charlie Gate Barrier Line",
+      "zone_type": "TRIPWIRE",
+      "polygon": [[0.20, 0.55], [0.80, 0.55]],
+      "enabled": true,
+      "is_normalized": true
+    }
+  ],
+  "cam-06": [
+    {
+      "id": "zone-cam-06-main",
+      "camera_id": "cam-06",
+      "name": "Sector Charlie Transit Corridor",
+      "zone_type": "RESTRICTED_ZONE",
+      "polygon": [[0.20, 0.30], [0.80, 0.30], [0.80, 0.85], [0.20, 0.85]],
+      "enabled": true,
+      "is_normalized": true
+    }
+  ],
+  "cam-07": [
+    {
+      "id": "zone-cam-07-main",
+      "camera_id": "cam-07",
+      "name": "Sector Delta Approach Monitored Sector",
+      "zone_type": "RESTRICTED_ZONE",
+      "polygon": [[0.20, 0.30], [0.80, 0.30], [0.80, 0.85], [0.20, 0.85]],
+      "enabled": true,
+      "is_normalized": true
+    }
+  ],
+  "cam-08": [
+    {
+      "id": "zone-cam-08-main",
+      "camera_id": "cam-08",
+      "name": "Sector Delta Observation Zone",
+      "zone_type": "RESTRICTED_ZONE",
+      "polygon": [[0.15, 0.25], [0.85, 0.25], [0.85, 0.85], [0.15, 0.85]],
+      "enabled": true,
+      "is_normalized": true
+    }
+  ],
+  "cam-09": [
+    {
+      "id": "zone-cam-09-main",
+      "camera_id": "cam-09",
+      "name": "Sector Echo Border Patrol Corridor",
+      "zone_type": "RESTRICTED_ZONE",
+      "polygon": [[0.15, 0.20], [0.85, 0.20], [0.85, 0.80], [0.15, 0.80]],
+      "enabled": true,
+      "is_normalized": true
+    }
+  ]
+}

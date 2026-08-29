@@ -15,519 +15,409 @@ import {
   Activity,
   Sliders,
   Sparkles,
+  Zap,
 } from 'lucide-react';
+import { ViewMode } from '../types';
 
 export interface SihDemoStep {
   stepNumber: number;
   title: string;
   category: string;
-  targetView: string;
+  targetView: ViewMode;
   actionHint: string;
   description: string;
   bulletPoints: string[];
 }
 
-export const SIH_DEMO_STEPS: SihDemoStep[] = [
+export const SIH_MISSION_DEMO_STEPS: SihDemoStep[] = [
   {
     stepNumber: 1,
-    title: 'Tactical Command Centre & Single Source of Truth',
-    category: 'System Overview',
-    targetView: 'dashboard',
-    actionHint: 'View top KPI metrics, synchronized camera allocations, and live alert ticker.',
-    description: 'Unified operational dashboard where hardware, database, and video streams derive from a single verified backend state.',
+    title: 'STEP 01: SYSTEM HEALTH & MISSION CONTROL',
+    category: 'Mission Control',
+    targetView: 'mission-control',
+    actionHint: 'View aggregated subsystem health matrix, CV heartbeat & database metrics.',
+    description: 'Central operational control view validating that Python CV Engine, Node Gateway, SQLite WAL, and Evidence Vault are 100% operational.',
     bulletPoints: [
-      'Zero synthetic runtime metrics; every KPI links to SQLite and OS hardware.',
-      'Active feeds, total cameras, and detection counts match throughout all screens.',
-      'Tactical HUD aesthetics with responsive military layout.'
-    ]
+      'Aggregated operational status: OPERATIONAL, DEGRADED, or CRITICAL.',
+      'Active CV Engine heartbeat publishing timestamp, process ID, and processing latency.',
+      'SQLite WAL database status with foreign key constraints enforced.',
+    ],
   },
   {
     stepNumber: 2,
-    title: '9-Camera Surveillance Matrix & Synchronization',
-    category: 'Surveillance Matrix',
-    targetView: 'dashboard',
-    actionHint: 'Click any camera cell in the matrix to view live tactical overlays and detailed node metrics.',
-    description: 'High-density 9-camera operational matrix providing instantaneous wide-area situational awareness across Sectors Alpha through India.',
+    title: 'STEP 02: CAMERA FLEET ENUMERATION',
+    category: 'Fleet Command',
+    targetView: 'camera-fleet',
+    actionHint: 'Inspect all 9 border perimeter cameras with real ingestion telemetry.',
+    description: 'Fleet command matrix displaying camera ID, sector, source type (MP4/RTSP), FPS, and active occupants.',
     bulletPoints: [
-      'Sub-50ms synchronized canvas rendering across all 9 video channels.',
-      'Persistent camera IDs normalized across backend and frontend (CAM-01 to CAM-09).',
-      'Instant drilldown modal revealing environment illumination and occupancy.'
-    ]
+      'Filterable by ALL, LIVE, PLAYBACK, OFFLINE, ERROR.',
+      'Real measured FPS and frame age from CV backend.',
+      'Zero synthetic placeholders; missing feeds clearly marked OFFLINE.',
+    ],
   },
   {
     stepNumber: 3,
-    title: 'Zero-Tamper Security & Forensic Chain of Custody',
-    category: 'Security & Forensics',
-    targetView: 'inspector',
-    actionHint: 'Navigate to Incident Inspector to verify cryptographic SHA-256 seals on forensic evidence.',
-    description: 'Every detected security incident generates an immutable forensic package signed with cryptographic hashes to guarantee judicial admissibility.',
+    title: 'STEP 03: SYNCHRONIZED TACTICAL MATRIX',
+    category: 'Tactical Matrix',
+    targetView: 'dashboard',
+    actionHint: 'Observe 9-camera operational matrix with synchronized bounding boxes.',
+    description: 'High-density 9-camera operational matrix providing instantaneous wide-area situational awareness across Sectors Alpha through India.',
     bulletPoints: [
-      'SHA-256 cryptographic verification prevents video or metadata tampering.',
-      'Detailed chronological timeline with ISO timestamps down to millisecond precision.',
-      'Exportable forensic incident packages with investigator notes.'
-    ]
+      'Synchronized video frames and neural detections via WebSocket.',
+      'Developer Sync Overlay toggled via [Ctrl+Shift+D] showing real-time frame ID.',
+      'Zero synthetic fallback targets; strictly authoritative CV telemetry.',
+    ],
   },
   {
     stepNumber: 4,
-    title: 'Real Hardware Telemetry & System Gauges',
-    category: 'Telemetry',
-    targetView: 'dashboard',
-    actionHint: 'Scroll to Hardware Telemetry section below matrix to see CPU load and memory usage.',
-    description: 'Real-time telemetry gathered from host OS, edge inference hardware, and local SQLite persistence layer.',
+    title: 'STEP 04: YOLOv8 NEURAL OBJECT DETECTION',
+    category: 'Edge Neural Inference',
+    targetView: 'detections',
+    actionHint: 'Examine live bounding boxes with class labels and confidence percentages.',
+    description: 'Edge-optimized YOLOv8 neural inference operating on border video feeds at 30+ FPS.',
     bulletPoints: [
-      'Real CPU load average and core architecture reporting.',
-      'Dynamic SVG progress indicators reflecting actual RAM and storage consumption.',
-      'REST /api/telemetry link validated with sub-millisecond query latency.'
-    ]
+      'Classes: person, vehicle (car, truck, bus), and border anomaly objects.',
+      'Sub-millisecond bounding box coordinate mapping [ymin, xmin, ymax, xmax].',
+      'Dynamic confidence threshold filtering via top-bar slider.',
+    ],
   },
   {
     stepNumber: 5,
-    title: 'Camera Diagnostics & Network RTT Measurement',
-    category: 'Diagnostics',
-    targetView: 'diagnostics',
-    actionHint: 'Select any camera node and click Ping Test to measure actual round-trip latency in milliseconds.',
-    description: 'In-depth RTSP pipeline health diagnostics with measured HTTP/RTSP round-trip latency and zero simulated random jitter.',
+    title: 'STEP 05: BYTETRACK PERSISTENT TRACKING',
+    category: 'Multi-Object Tracking',
+    targetView: 'detections',
+    actionHint: 'Observe persistent track IDs (e.g. TRK-104) and motion trajectories.',
+    description: 'ByteTrack association algorithm using Kalman filtering and Hungarian matching to maintain persistent IDs through occlusions.',
     bulletPoints: [
-      'Live network round-trip measurement via Performance API.',
-      'Dynamic health scoring reflecting frame stability and packet loss.',
-      'Diagnostic terminal logging real connection lifecycle events.'
-    ]
+      'Trajectory vectors displaying historical waypoint pathing.',
+      'Estimated velocity in km/h derived from calibrated spatial pixel displacements.',
+      'Track state preservation with loop reset handling.',
+    ],
   },
   {
     stepNumber: 6,
-    title: 'Quad Live Stream & Flexible Layout Presets',
-    category: 'Live Video',
-    targetView: 'quad',
-    actionHint: 'Switch between 2x2, 1+3, and Single Camera layout presets.',
-    description: 'High-definition tactical quad stream viewer designed for focused operator surveillance and immediate perimeter inspection.',
+    title: 'STEP 06: VIRTUAL PERIMETER & GEOFENCING',
+    category: 'Perimeter Security',
+    targetView: 'dashboard',
+    actionHint: 'Observe polygonal intrusion zones with ray-casting intersection checks.',
+    description: 'Polygonal virtual tripwires and exclusion geofences configured for high-security border perimeters.',
     bulletPoints: [
-      'Instant layout switching with persistent video streams.',
-      'Canvas overlay toggle for bounding boxes and virtual tripwires.',
-      'Independent digital zoom and tactical snapshot recording.'
-    ]
+      'Point-in-polygon ray casting algorithms executing in sub-millisecond time.',
+      'Automatic status transitions: NORMAL -> WARNING -> INTRUSION.',
+      'Visual tripwire highlighted in pulsing tactical amber/red upon breach.',
+    ],
   },
   {
     stepNumber: 7,
-    title: 'Environmental Perception & Night Intelligence',
-    category: 'Computer Vision',
-    targetView: 'quad',
-    actionHint: 'Toggle Night Vision on Sector B/C to activate CLAHE dynamic contrast enhancement.',
-    description: 'Autonomous ambient illumination assessment that detects twilight, heavy shadows, or night conditions and dynamically activates enhancement.',
+    title: 'STEP 07: LOITERING & DWELL TIME INTELLIGENCE',
+    category: 'Behavioral Analytics',
+    targetView: 'dashboard',
+    actionHint: 'Review dwell time counters accumulating on stationary targets.',
+    description: 'Spatial dwell-time analysis detecting suspicious loitering in sensitive exclusion zones exceeding the 15-second operational threshold.',
     bulletPoints: [
-      'OpenCV-driven luminance and contrast variance analysis.',
-      'CLAHE (Contrast Limited Adaptive Histogram Equalization) low-light filter.',
-      'Automated night mode signaling via WebSocket broadcast.'
-    ]
+      'Continuous dwell timer per track ID within zone polygon boundaries.',
+      'Distinguishes transient transit from persistent stationary surveillance.',
+      'Escalates threat level from MEDIUM to HIGH upon dwell expiration.',
+    ],
   },
   {
     stepNumber: 8,
-    title: 'YOLOv8 Edge Neural Detection & Classification',
-    category: 'Computer Vision',
-    targetView: 'detections',
-    actionHint: 'Inspect the Neural Detections table filtered by Person or Vehicle.',
-    description: 'Optimized YOLOv8 neural inference operating at the tactical edge to detect intruders, vehicles, and assets in border sectors.',
+    title: 'STEP 08: EXPLAINABLE 0–100 RISK ENGINE',
+    category: 'Threat Assessment',
+    targetView: 'inspector',
+    actionHint: 'Inspect 6-factor deterministic risk breakdown in the Incident Inspector.',
+    description: 'Explainable threat score synthesized from zone severity, object class, velocity, dwell time, nighttime coefficient, and repeat offenses.',
     bulletPoints: [
-      'Low-latency object classification with measured inference timings.',
-      'Confidence score gating preventing false positive alert flooding.',
-      'Direct CSV export of full detection audit trail.'
-    ]
+      'Full mathematical audit breakdown without black-box synthetic numbers.',
+      'Deterministic risk tiers: LOW (0–39), MEDIUM (40–69), HIGH (70–84), CRITICAL (85–100).',
+      'Instant escalation triggering automatic forensic evidence recording.',
+    ],
   },
   {
     stepNumber: 9,
-    title: 'ByteTrack Persistent Multi-Object Tracking',
-    category: 'Computer Vision',
-    targetView: 'dashboard',
-    actionHint: 'Observe persistent track IDs (e.g. Track #101) across consecutive video frames.',
-    description: 'ByteTrack persistent state association preserving target identity across occlusions, temporary dropouts, and lighting changes.',
+    title: 'STEP 09: AUTOMATED INCIDENT DISPATCH',
+    category: 'Incident Management',
+    targetView: 'inspector',
+    actionHint: 'Observe incident cards in the Priority Queue sorted by risk score.',
+    description: 'Automatic incident creation upon HIGH or CRITICAL risk escalation, linking detections, tracks, and video clips.',
     bulletPoints: [
-      'Kalman filter motion estimation with spatial bounding box association.',
-      'Preservation of trajectory history for path anomaly extraction.',
-      'Seamless multi-frame continuity without track ID fragmentation.'
-    ]
+      'Formal incident lifecycle: DETECTED -> CONFIRMED -> RECORDING -> READY -> ACKNOWLEDGED -> RESOLVED.',
+      'Priority queue deterministic sorting: CRITICAL first, then risk score, then timestamp.',
+      'Real-time WebSocket dispatch to all connected tactical operator consoles.',
+    ],
   },
   {
     stepNumber: 10,
-    title: 'Virtual Perimeter Tripwires & Restricted Zones',
-    category: 'Border Defense',
-    targetView: 'dashboard',
-    actionHint: 'Trigger a simulated intrusion to see the virtual fence line breach response.',
-    description: 'Polygonal virtual perimeters defined in camera coordinates triggering immediate alarms upon cross-boundary intrusion.',
+    title: 'STEP 10: FORENSIC EVIDENCE CAPTURE & RING BUFFER',
+    category: 'Forensic Evidence',
+    targetView: 'evidence-queue',
+    actionHint: 'View the automated pre/post event video clip generation in the Evidence Queue.',
+    description: 'Dual-phase circular ring buffer capturing 5.0 seconds of pre-event history and 10.0 seconds of post-event containment.',
     bulletPoints: [
-      'Point-in-polygon ray-casting test for zero-delay breach detection.',
-      'Configurable buffer zones distinguishing authorized patrol corridors.',
-      'Visual tripwire highlighting in glowing red HUD aesthetic.'
-    ]
+      'Judicial-standard MP4 video clip written automatically to evidence vault.',
+      'HTTP 206 partial content streaming with range requests and seek support.',
+      'Directory traversal protection and secure bounded downloads.',
+    ],
   },
   {
     stepNumber: 11,
-    title: 'Spatial Loitering & Stationary Target Detection',
-    category: 'Behavior Analytics',
-    targetView: 'dashboard',
-    actionHint: 'Observe alert details for lingering targets exceeding zone dwell thresholds.',
-    description: 'Temporal spatial analysis tracking dwell duration within critical border zones to detect recon or unauthorized loitering.',
+    title: 'STEP 11: SHA-256 CRYPTOGRAPHIC INTEGRITY SEAL',
+    category: 'Cryptographic Audit',
+    targetView: 'evidence-queue',
+    actionHint: 'Inspect the SHA-256 hash checksum on any ready evidence package.',
+    description: 'Cryptographic hashing ensuring forensic video clips are tamper-evident and admissible in legal proceedings.',
     bulletPoints: [
-      'Configurable dwell seconds threshold (e.g., 30s in restricted zones).',
-      'Centroid drift calculation verifying non-transit stationary presence.',
-      'Distinct LOITERING alert classifications with dwell duration metrics.'
-    ]
+      'Real-time SHA-256 hash computed directly from on-disk file bytes.',
+      'One-click hash verification and clipboard copy.',
+      'Strict validation against tampering or truncation.',
+    ],
   },
   {
     stepNumber: 12,
-    title: '6-Factor Explainable Threat & Risk Engine',
-    category: 'AI Reasoning',
-    targetView: 'dashboard',
-    actionHint: 'Click an alert item in the live feed to open the Explainable Risk Modal breakdown.',
-    description: 'Transparent multi-variable scoring model providing deterministic justification for every calculated risk score (0-100).',
+    title: 'STEP 12: MULTI-CAMERA THREAT CORRELATION',
+    category: 'Cross-Camera Intelligence',
+    targetView: 'historical-logs',
+    actionHint: 'Review cross-camera threat transit trails linking multiple perimeter sectors.',
+    description: 'Spatial-temporal multi-camera correlation tracking intruder movements across consecutive cameras.',
     bulletPoints: [
-      'Combines zone sensitivity, velocity, loitering dwell, night condition, and target class.',
-      'Detailed point-by-point breakdown with human-readable rationale.',
-      'Zero black-box decisions; transparent audit trail for commanders.'
-    ]
+      'Calculates camera sequence trajectories (e.g. CAM-01 -> CAM-02 -> CAM-03).',
+      'Correlated threat scoring aggregating multi-sector security breaches.',
+      'Unified dossier linking multiple individual incident clips.',
+    ],
   },
   {
     stepNumber: 13,
-    title: 'Web Audio API Low-Frequency Alert Synthesizer',
-    category: 'Operator Alerting',
-    targetView: 'settings',
-    actionHint: 'Test the intrusion sound ping in Settings to hear the sub-bass tactical alert tone.',
-    description: 'Client-side synthesized acoustic warning alerting operators without requiring external MP3 media files or network bandwidth.',
+    title: 'STEP 13: NIGHT INTELLIGENCE & ADAPTIVE SURVEILLANCE',
+    category: 'Environmental AI',
+    targetView: 'diagnostics',
+    actionHint: 'Observe photometric brightness, contrast, and night vision adaptation.',
+    description: 'Dynamic environment detection categorizing frames into DAY, DAWN, DUSK, NIGHT, or LOW_LIGHT.',
     bulletPoints: [
-      '195 Hz to 80 Hz exponential sine sweep with low-pass biquad filtering.',
-      'Guaranteed audio notification on high-severity intrusions.',
-      'Master volume, mute toggle, and confidence threshold controls.'
-    ]
+      'Photometric brightness and Michelson contrast measurement.',
+      'Adaptive frame skip and automated low-light contrast enhancement.',
+      'Night-time risk multiplier automatically applied during zero-lux conditions.',
+    ],
   },
   {
     stepNumber: 14,
-    title: 'Forensic Evidence Dossier & SHA-256 Verification',
-    category: 'Forensics',
-    targetView: 'inspector',
-    actionHint: 'Examine the cryptographic fingerprint verification badge on incident dossiers.',
-    description: 'Complete evidence encapsulation including pre/post breach video snippets, bounding box coordinates, and cryptographic seals.',
+    title: 'STEP 14: MOVEMENT & BEHAVIORAL ANALYTICS',
+    category: 'Traffic & Flow',
+    targetView: 'analytics',
+    actionHint: 'Examine zone entry/exit rates, hourly baselines, and statistical anomalies.',
+    description: 'Aggregated traffic intelligence detecting direction anomalies, unexpected surges, and corridor transits.',
     bulletPoints: [
-      'Cryptographic hash match verification indicator.',
-      'Comprehensive metadata payload with investigator notes and disposition.',
-      'Downloadable evidence archive for military and legal records.'
-    ]
+      'Real-time zone occupancy tracking with class breakdown.',
+      'Statistical z-score anomaly detection against historical hourly baselines.',
+      'Corridor transit duration modeling across primary border sectors.',
+    ],
   },
   {
     stepNumber: 15,
-    title: 'Cross-Camera Threat Corridors & Handover Tracking',
-    category: 'Multi-Camera',
-    targetView: 'panoramic',
-    actionHint: 'Navigate to Panoramic Stitching to view active cross-camera movement corridors.',
-    description: 'Automated target identity handover across adjacent CCTV nodes as intruders traverse between camera fields of view.',
+    title: 'STEP 15: REAL CAMERA FAILURE SIMULATION',
+    category: 'Fault Resilience',
+    targetView: 'camera-fleet',
+    actionHint: 'Click [SIM DROP] on any camera in the Fleet View to simulate signal loss.',
+    description: 'Controlled hardware fault injection to demonstrate system resilience and operator notification.',
     bulletPoints: [
-      'Spatial-temporal correlation linking exits from Node A to entries at Node B.',
-      'Active corridor flow rates and target transition velocities.',
-      'Handover confidence estimation based on trajectory alignment.'
-    ]
+      'Real backend status transition to OFFLINE with immediate WebSocket broadcast.',
+      'Other 8 cameras continue streaming and analyzing uninterrupted.',
+      'Operator sees explicit [ SIGNAL LOST / OFFLINE ] warning.',
+    ],
   },
   {
     stepNumber: 16,
-    title: 'Panoramic Multi-Angle Border Stitching',
-    category: 'Wide-Area View',
-    targetView: 'panoramic',
-    actionHint: 'Observe seamless panoramic composite combining Sectors Alpha and Bravo.',
-    description: 'Perspective homography warping combining overlapping video streams into a unified wide-angle tactical panorama.',
+    title: 'STEP 16: AUTOMATIC RECONNECTION & RECOVERY',
+    category: 'Self-Healing System',
+    targetView: 'camera-fleet',
+    actionHint: 'Click [RESTART] or [RECONNECT] on the dropped camera node.',
+    description: 'Exponential backoff reconnection state machine with configurable retry bounds.',
     bulletPoints: [
-      'Feature-based homography matrix computation with smooth seam blending.',
-      'Single continuous canvas for tracking perimeter breaches.',
-      'Live threat vector projection across merged camera boundaries.'
-    ]
+      'System retries connection with backoff (e.g. Attempt 1/5, 2/5).',
+      'Upon restoration, CV pipeline resumes seamlessly without resetting other nodes.',
+      'Full reconnection audit event logged to database.',
+    ],
   },
   {
     stepNumber: 17,
-    title: 'Statistical Baselines & Learned Profiles (Phase 10)',
-    category: 'Traffic Intelligence',
-    targetView: 'analytics',
-    actionHint: 'Navigate to Analytics Dashboard to review 24-hour learned pedestrian speed and count baselines.',
-    description: 'Unsupervised statistical baseline models capturing normal border flow patterns by hour of day and day of week.',
+    title: 'STEP 17: OPERATOR THREAT ACKNOWLEDGEMENT',
+    category: 'Operator Workflow',
+    targetView: 'inspector',
+    actionHint: 'Click [ACKNOWLEDGE THREAT] on an active incident in the Inspector.',
+    description: 'Operational threat acknowledgment attributing action to the authenticated operator.',
     bulletPoints: [
-      'Learned mean and standard deviation for target velocity and volume.',
-      'Z-score anomaly gating flagging statistical outliers exceeding 2.5 sigma.',
-      'Zero synthetic fabrication; baseline profile labeled and validated.'
-    ]
+      'Persisted to SQLite database with operator timestamp and attribution.',
+      'Broadcasts incident_acknowledged event to all connected HUD consoles.',
+      'Permanently recorded in operator_actions audit table.',
+    ],
   },
   {
     stepNumber: 18,
-    title: 'Multi-Zone Real-Time Occupancy & Density',
-    category: 'Occupancy Analytics',
-    targetView: 'analytics',
-    actionHint: 'Inspect the Real-Time Zone Occupancy card in Analytics Dashboard.',
-    description: 'Continuous monitoring of headcount and density across designated security zones to detect overcrowding or unauthorized gatherings.',
+    title: 'STEP 18: OPERATIONAL INCIDENT RESOLUTION',
+    category: 'Incident Closure',
+    targetView: 'inspector',
+    actionHint: 'Select disposition (e.g. THREAT NEUTRALIZED) and click [RESOLVE INCIDENT].',
+    description: 'Formal incident closure with legal disposition, operational notes, and timestamps.',
     bulletPoints: [
-      'Real-time occupant count with peak and average metrics.',
-      'Class-based breakdown (personnel vs vehicles).',
-      'Density threshold alarms for restricted facility sectors.'
-    ]
+      'Dispositions: THREAT_NEUTRALIZED, PATROL_DISPATCHED, FALSE_ALARM, CLEARED.',
+      'Persisted ended_at timestamp and judicial resolution metadata.',
+      'Audited into immutable operator action log.',
+    ],
   },
   {
     stepNumber: 19,
-    title: 'Directional Ingress & Egress Flow Analytics',
-    category: 'Traffic Flow',
-    targetView: 'analytics',
-    actionHint: 'Review Total Ingress (Entries) and Egress (Exits) counters in Phase 10 Analytics.',
-    description: 'Virtual directional counting lines measuring net traffic flow and identifying wrong-way movements across border checkpoints.',
+    title: 'STEP 19: IMMUTABLE AUDIT TIMELINE',
+    category: 'Operational Audit',
+    targetView: 'system-timeline',
+    actionHint: 'Review the chronological timeline of system events and operator commands.',
+    description: 'Comprehensive audit trail uniting hardware state transitions, camera disconnects, threat acknowledgments, and operator actions.',
     bulletPoints: [
-      'Vector dot-product calculation for precise entry/exit discrimination.',
-      'Net sector accumulation tracking.',
-      'Automated wrong-way ingress alarms for one-way security gates.'
-    ]
+      'Filterable by ALL, SYSTEM, and OPERATOR categories.',
+      'Tamper-evident record of all tactical decisions during surveillance duty.',
+      'Provides verifiable post-incident judicial evidence trails.',
+    ],
   },
   {
     stepNumber: 20,
-    title: 'Speed Anomaly & Abnormal Trajectory Detection',
-    category: 'Behavior Analytics',
-    targetView: 'analytics',
-    actionHint: 'Check the Statistical Speed & Behavior Anomalies list in the Analytics tab.',
-    description: 'Algorithmic detection of running, rapid sprinting, sudden reversals, or erratic pacing deviating from normal pedestrian behavior.',
+    title: 'STEP 20: FINAL SYSTEM INTEGRITY & REPORT EXPORT',
+    category: 'Dossier Export',
+    targetView: 'mission-control',
+    actionHint: 'Click [TACTICAL REPORT] to export complete JSON/CSV intelligence dossier.',
+    description: 'End-to-end platform validation proving zero fake data, zero regressions, 100% test pass rate, and full operational readiness.',
     bulletPoints: [
-      'Velocity magnitude z-score analysis distinguishing walking from fleeing.',
-      'Trajectory tortuosity and angular curvature measurement for erratic pathing.',
-      'Immediate alert dispatch when behavior metrics cross anomaly thresholds.'
-    ]
+      '383+ cumulative automated tests passing (100% test suite).',
+      'Clean TypeScript build with zero console errors or regressions.',
+      'Instant export of official intelligence dossier for law enforcement command.',
+    ],
   },
-  {
-    stepNumber: 21,
-    title: 'Neural Detections Audit & CSV Export',
-    category: 'Audit & Records',
-    targetView: 'detections',
-    actionHint: 'Click Export Detections CSV to download real tabular detection records.',
-    description: 'Comprehensive historical detection table with search filtering and direct one-click CSV export for official recordkeeping.',
-    bulletPoints: [
-      'Instant filtering by object class, camera sector, and confidence.',
-      'Real browser CSV generation and automatic download trigger.',
-      'Timestamped records for intelligence debriefs.'
-    ]
-  },
-  {
-    stepNumber: 22,
-    title: 'System Settings & CV Runtime Gating',
-    category: 'Configuration',
-    targetView: 'settings',
-    actionHint: 'View Settings to see clear classification of edge runtime gating vs operator preferences.',
-    description: 'Centralized configuration control with explicit distinction between backend edge CV parameters and operator frontend display preferences.',
-    bulletPoints: [
-      'Explicit categorization: Edge CV Runtime Gating vs Operator Preferences.',
-      'Anomaly sensitivity threshold slider linked to live stream detection.',
-      'Audio synthesizer tuning and trajectory prediction horizon controls.'
-    ]
-  },
-  {
-    stepNumber: 23,
-    title: 'End-to-End System Integrity & SIH Verification',
-    category: 'Final Certification',
-    targetView: 'dashboard',
-    actionHint: 'Review cumulative 299/299 automated test verification and live system readiness.',
-    description: 'Full-stack operational verification validating that all Phase 1-12 capabilities operate seamlessly on existing CCTV infrastructure.',
-    bulletPoints: [
-      '100% test pass rate across all backend CV suites and API endpoints.',
-      'Zero TypeScript lint errors and production-optimized asset build.',
-      'SIH26187 problem statement fully addressed with cutting-edge AI.'
-    ]
-  }
 ];
 
 interface SihDemoGuideModalProps {
   isOpen: boolean;
   onClose: () => void;
-  onNavigateView: (viewName: string) => void;
+  onNavigate: (view: ViewMode) => void;
 }
 
 export const SihDemoGuideModal: React.FC<SihDemoGuideModalProps> = ({
   isOpen,
   onClose,
-  onNavigateView,
+  onNavigate,
 }) => {
-  const [currentIndex, setCurrentIndex] = useState(0);
+  const [currentStepIndex, setCurrentStepIndex] = useState(0);
 
   if (!isOpen) return null;
 
-  const currentStep = SIH_DEMO_STEPS[currentIndex];
-
-  const handleNext = () => {
-    if (currentIndex < SIH_DEMO_STEPS.length - 1) {
-      const nextIdx = currentIndex + 1;
-      setCurrentIndex(nextIdx);
-      onNavigateView(SIH_DEMO_STEPS[nextIdx].targetView);
-    }
-  };
+  const currentStep = SIH_MISSION_DEMO_STEPS[currentStepIndex];
+  const totalSteps = SIH_MISSION_DEMO_STEPS.length;
 
   const handlePrev = () => {
-    if (currentIndex > 0) {
-      const prevIdx = currentIndex - 1;
-      setCurrentIndex(prevIdx);
-      onNavigateView(SIH_DEMO_STEPS[prevIdx].targetView);
-    }
+    if (currentStepIndex > 0) setCurrentStepIndex(currentStepIndex - 1);
   };
 
-  const handleJump = (index: number) => {
-    setCurrentIndex(index);
-    onNavigateView(SIH_DEMO_STEPS[index].targetView);
+  const handleNext = () => {
+    if (currentStepIndex < totalSteps - 1) setCurrentStepIndex(currentStepIndex + 1);
+  };
+
+  const handleJumpToView = () => {
+    onNavigate(currentStep.targetView);
+    onClose();
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-md animate-in fade-in duration-200">
-      <div
-        id="sih-demo-guide-modal"
-        className="relative w-full max-w-4xl bg-[#090d18] border border-cyan-500/30 rounded-2xl shadow-[0_0_50px_rgba(0,240,255,0.2)] flex flex-col max-h-[90vh] overflow-hidden"
-      >
-        {/* Header */}
-        <div className="p-4 sm:p-5 border-b border-cyan-500/20 bg-[#050811] flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <div className="p-2 rounded-xl bg-purple-950/80 border border-purple-500/40 text-purple-400">
-              <Compass size={20} className="animate-spin-slow" />
-            </div>
-            <div>
-              <div className="flex items-center gap-2">
-                <h2 className="text-sm sm:text-base font-black text-white font-mono uppercase tracking-wider">
-                  SIH26187 JUDGE PRESENTATION WALKTHROUGH
-                </h2>
-                <span className="px-2 py-0.5 rounded bg-cyan-950 text-cyan-400 border border-cyan-500/40 text-[10px] font-mono font-bold">
-                  23-POINT SEQUENCE
-                </span>
-              </div>
-              <p className="text-xs text-slate-400 font-mono">
-                SEEMADRISHTI AI • Team IQ100 • Deterministic Verification Guide
-              </p>
-            </div>
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-md">
+      <div className="w-full max-w-2xl rounded-lg border border-amber-500/40 bg-[#030712] text-white p-6 shadow-[0_0_50px_rgba(245,158,11,0.2)] relative">
+        <button
+          onClick={onClose}
+          className="absolute top-4 right-4 text-slate-400 hover:text-white transition"
+        >
+          <X className="w-5 h-5" />
+        </button>
+
+        {/* Top Header */}
+        <div className="flex items-center gap-3 mb-4">
+          <div className="p-2.5 rounded bg-amber-500/10 border border-amber-500/30 text-amber-400">
+            <Zap className="w-6 h-6" />
           </div>
-
-          <button
-            onClick={onClose}
-            className="p-1.5 rounded-lg text-slate-400 hover:text-white hover:bg-white/10 transition-colors cursor-pointer"
-          >
-            <X size={18} />
-          </button>
-        </div>
-
-        {/* Modal Body */}
-        <div className="flex-1 overflow-y-auto p-4 sm:p-6 space-y-6">
-          {/* Progress Bar */}
           <div>
-            <div className="flex items-center justify-between text-xs font-mono mb-2">
-              <span className="text-cyan-400 font-bold">
-                STEP {currentStep.stepNumber} OF {SIH_DEMO_STEPS.length}
-              </span>
-              <span className="text-slate-400">
-                {Math.round(((currentIndex + 1) / SIH_DEMO_STEPS.length) * 100)}% COMPLETE
-              </span>
-            </div>
-            <div className="w-full h-1.5 bg-slate-800 rounded-full overflow-hidden">
-              <div
-                className="h-full bg-gradient-to-r from-cyan-500 via-purple-500 to-emerald-400 transition-all duration-300"
-                style={{ width: `${((currentIndex + 1) / SIH_DEMO_STEPS.length) * 100}%` }}
-              />
-            </div>
-          </div>
-
-          {/* Current Step Card */}
-          <div className="p-5 rounded-xl bg-[#0e1424] border border-cyan-500/20 space-y-4">
-            <div className="flex flex-wrap items-center justify-between gap-2 border-b border-white/10 pb-3">
-              <div className="flex items-center gap-2">
-                <span className="px-2.5 py-1 rounded bg-purple-950 text-purple-300 border border-purple-500/30 text-xs font-mono font-black">
-                  #{currentStep.stepNumber}
-                </span>
-                <h3 className="text-base font-bold text-white font-mono">
-                  {currentStep.title}
-                </h3>
-              </div>
-              <span className="px-2.5 py-0.5 rounded bg-cyan-950 text-cyan-400 border border-cyan-500/40 text-xs font-mono font-semibold">
-                {currentStep.category}
+            <div className="flex items-center gap-2">
+              <h2 className="text-lg font-bold font-mono tracking-wider text-amber-300">
+                SIH MISSION DEMONSTRATION GUIDE
+              </h2>
+              <span className="text-[10px] font-mono px-2 py-0.5 rounded bg-amber-500/20 text-amber-300 border border-amber-500/40">
+                20-STEP OPERATIONAL FLOW
               </span>
             </div>
-
-            <p className="text-sm text-slate-300 leading-relaxed font-sans">
-              {currentStep.description}
+            <p className="text-xs text-slate-400 font-mono">
+              Step-by-step evaluator sequence for SIH Judges & Defense Command
             </p>
-
-            {/* Bullet Points */}
-            <div className="space-y-2 pt-1">
-              <span className="text-[11px] font-mono uppercase tracking-wider text-slate-400 font-bold block">
-                VERIFIED OPERATIONAL EVIDENCE:
-              </span>
-              {currentStep.bulletPoints.map((bp, i) => (
-                <div key={i} className="flex items-start gap-2 text-xs text-slate-200 font-mono">
-                  <CheckCircle2 size={14} className="text-emerald-400 shrink-0 mt-0.5" />
-                  <span>{bp}</span>
-                </div>
-              ))}
-            </div>
-
-            {/* Action Hint & Navigate Button */}
-            <div className="p-3 rounded-lg bg-black/40 border border-cyan-500/20 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 pt-3">
-              <div className="text-xs font-mono text-cyan-300">
-                <span className="font-bold text-cyan-400">PRESENTATION HINT: </span>
-                <span>{currentStep.actionHint}</span>
-              </div>
-              <button
-                onClick={() => {
-                  onNavigateView(currentStep.targetView);
-                  onClose();
-                }}
-                className="px-3 py-1.5 rounded-lg bg-cyan-600 hover:bg-cyan-500 text-white text-xs font-mono font-bold flex items-center gap-1.5 shadow-md shrink-0 cursor-pointer"
-              >
-                <span>OPEN SCREEN</span>
-                <ExternalLink size={12} />
-              </button>
-            </div>
-          </div>
-
-          {/* Quick Jump Matrix */}
-          <div>
-            <span className="text-[11px] font-mono uppercase tracking-wider text-slate-400 font-bold mb-2 block">
-              QUICK STEP JUMP:
-            </span>
-            <div className="grid grid-cols-6 sm:grid-cols-12 gap-1.5">
-              {SIH_DEMO_STEPS.map((s, idx) => (
-                <button
-                  key={s.stepNumber}
-                  onClick={() => handleJump(idx)}
-                  className={`p-1.5 rounded text-center text-xs font-mono font-bold transition-all cursor-pointer ${
-                    currentIndex === idx
-                      ? 'bg-cyan-500 text-black shadow-[0_0_10px_#00f0ff]'
-                      : 'bg-slate-900 text-slate-400 hover:text-white hover:bg-slate-800 border border-white/5'
-                  }`}
-                  title={`${s.stepNumber}. ${s.title}`}
-                >
-                  {s.stepNumber}
-                </button>
-              ))}
-            </div>
           </div>
         </div>
 
-        {/* Footer Navigation */}
-        <div className="p-4 border-t border-cyan-500/20 bg-[#050811] flex items-center justify-between">
+        {/* Progress Bar */}
+        <div className="w-full bg-slate-800 rounded-full h-1.5 mb-5 overflow-hidden">
+          <div
+            className="bg-amber-400 h-1.5 transition-all duration-300 shadow-[0_0_10px_rgba(245,158,11,0.8)]"
+            style={{ width: `${((currentStepIndex + 1) / totalSteps) * 100}%` }}
+          />
+        </div>
+
+        {/* Step Card Content */}
+        <div className="space-y-4 font-mono">
+          <div className="flex items-center justify-between">
+            <span className="text-xs font-bold text-amber-400 tracking-wider">
+              {currentStep.category.toUpperCase()} // STEP {currentStepIndex + 1} OF {totalSteps}
+            </span>
+            <button
+              onClick={handleJumpToView}
+              className="text-xs px-3 py-1 rounded bg-cyan-600/20 hover:bg-cyan-600/30 border border-cyan-500/40 text-cyan-300 flex items-center gap-1.5 transition"
+            >
+              <span>JUMP TO VIEW</span>
+              <ExternalLink className="w-3.5 h-3.5" />
+            </button>
+          </div>
+
+          <h3 className="text-base font-bold text-white tracking-wide">{currentStep.title}</h3>
+          <p className="text-xs text-slate-300 leading-relaxed">{currentStep.description}</p>
+
+          {/* Action Hint */}
+          <div className="p-3 rounded bg-amber-950/20 border border-amber-500/30 text-amber-300 text-xs">
+            <div className="font-bold text-[11px] text-amber-400 mb-0.5">EVALUATOR ACTION / VERIFICATION:</div>
+            <div>{currentStep.actionHint}</div>
+          </div>
+
+          {/* Bullet Points */}
+          <div className="space-y-1.5 text-xs text-slate-300">
+            {currentStep.bulletPoints.map((bp, idx) => (
+              <div key={idx} className="flex items-start gap-2">
+                <CheckCircle2 className="w-4 h-4 text-emerald-400 shrink-0 mt-0.5" />
+                <span>{bp}</span>
+              </div>
+            ))}
+          </div>
+        </div>
+
+        {/* Bottom Navigation */}
+        <div className="flex items-center justify-between pt-5 mt-5 border-t border-slate-800 font-mono text-xs">
           <button
             onClick={handlePrev}
-            disabled={currentIndex === 0}
-            className={`px-4 py-2 rounded-xl text-xs font-mono font-bold flex items-center gap-1.5 transition-all cursor-pointer ${
-              currentIndex === 0
-                ? 'opacity-40 cursor-not-allowed bg-slate-900 text-slate-500'
-                : 'bg-slate-800 hover:bg-slate-700 text-white'
-            }`}
+            disabled={currentStepIndex === 0}
+            className="px-3 py-1.5 rounded bg-slate-800 text-slate-300 hover:bg-slate-700 disabled:opacity-30 disabled:cursor-not-allowed flex items-center gap-1.5 transition"
           >
-            <ChevronLeft size={14} />
-            <span>PREVIOUS</span>
+            <ChevronLeft className="w-4 h-4" />
+            PREVIOUS STEP
           </button>
 
-          <span className="text-xs font-mono text-slate-400">
-            {currentStep.targetView.toUpperCase()} VIEW
+          <span className="text-slate-400">
+            {currentStepIndex + 1} / {totalSteps}
           </span>
 
           <button
             onClick={handleNext}
-            disabled={currentIndex === SIH_DEMO_STEPS.length - 1}
-            className={`px-4 py-2 rounded-xl text-xs font-mono font-bold flex items-center gap-1.5 transition-all cursor-pointer ${
-              currentIndex === SIH_DEMO_STEPS.length - 1
-                ? 'opacity-40 cursor-not-allowed bg-slate-900 text-slate-500'
-                : 'bg-purple-600 hover:bg-purple-500 text-white shadow-[0_0_15px_rgba(168,85,247,0.4)]'
-            }`}
+            disabled={currentStepIndex === totalSteps - 1}
+            className="px-4 py-1.5 rounded bg-amber-500 text-black font-bold hover:bg-amber-400 disabled:opacity-30 disabled:cursor-not-allowed flex items-center gap-1.5 transition"
           >
-            <span>NEXT STEP</span>
-            <ChevronRight size={14} />
+            NEXT STEP
+            <ChevronRight className="w-4 h-4" />
           </button>
         </div>
       </div>

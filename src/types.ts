@@ -1,5 +1,9 @@
 export type ViewMode = 
   | 'dashboard' 
+  | 'mission-control'
+  | 'camera-fleet'
+  | 'evidence-queue'
+  | 'system-timeline'
   | 'inspector'
   | 'cameras' 
   | 'analytics'

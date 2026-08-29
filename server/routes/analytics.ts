@@ -330,7 +330,7 @@ analyticsRouter.post('/events', (req: Request, res: Response, next: NextFunction
       return;
     }
 
-    const eventId = id || `mve-${Date.now()}-${Math.random().toString(36).substr(2, 6)}`;
+    const eventId = id || `mve-${Date.now()}-${Date.now().toString(36)}`;
     const nowIso = new Date().toISOString();
 
     db.prepare(`
@@ -471,7 +471,7 @@ analyticsRouter.post('/anomalies', (req: Request, res: Response, next: NextFunct
       return;
     }
 
-    const anomalyId = id || `anom-${Date.now()}-${Math.random().toString(36).substr(2, 6)}`;
+    const anomalyId = id || `anom-${Date.now()}-${Date.now().toString(36)}`;
     const nowIso = new Date().toISOString();
 
     db.prepare(`

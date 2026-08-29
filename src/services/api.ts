@@ -8,6 +8,14 @@
 
 const API_BASE = '/api';
 
+export interface ApiResponse<T = any> {
+  success: boolean;
+  data?: T;
+  error?: string;
+  message?: string;
+  timestamp: string;
+}
+
 async function request<T>(endpoint: string, options: RequestInit = {}): Promise<T> {
   const url = `${API_BASE}${endpoint}`;
   const headers = {
@@ -315,6 +323,19 @@ export interface IncidentRecord {
   metadata: any;
   acknowledged: boolean;
   created_at: string;
+  sha256?: string;
+  file_size?: number;
+  duration?: number;
+  verification_status?: string;
+}
+
+export interface EvidenceStorageStats {
+  storageUsedBytes: number;
+  storageUsedMb: number;
+  totalClips: number;
+  oldestClip: string | null;
+  newestClip: string | null;
+  evidenceDirectory: string;
 }
 
 export async function fetchIncidents(filters: {
@@ -346,10 +367,18 @@ export function getIncidentDownloadUrl(id: string): string {
   return `/api/incidents/${encodeURIComponent(id)}/download`;
 }
 
-export async function acknowledgeIncident(id: string, operatorId: string = 'OPERATOR-01'): Promise<{ success: boolean; data: IncidentRecord }> {
-  return request(`/incidents/${encodeURIComponent(id)}/acknowledge`, {
+export async function fetchEvidenceStorageStats(): Promise<{ success: boolean; data: EvidenceStorageStats }> {
+  return request('/incidents/storage/stats');
+}
+
+export async function acknowledgeIncident(
+  id: string,
+  operator: string = 'Officer on Duty',
+  notes?: string
+): Promise<ApiResponse<IncidentRecord>> {
+  return request<ApiResponse<IncidentRecord>>(`/incidents/${encodeURIComponent(id)}/acknowledge`, {
     method: 'POST',
-    body: JSON.stringify({ operator_id: operatorId }),
+    body: JSON.stringify({ operator, notes }),
   });
 }
 
@@ -539,4 +568,128 @@ export function exportAnalyticsSummaryJSON(summary: any, occupancy: any[], anoma
   document.body.removeChild(a);
   URL.revokeObjectURL(url);
 }
+
+// ----------------------------------------------------------------------------
+// Phase 15 System Health, Fleet, and Operational Controls
+// ----------------------------------------------------------------------------
+
+export interface SystemHealthResponse {
+  overall: 'OPERATIONAL' | 'DEGRADED' | 'PARTIAL_OUTAGE' | 'CRITICAL';
+  services: {
+    gateway: { status: string; uptimeSeconds: number; nodeVersion: string; memoryUsagePercent: number; loadAverage: number[] };
+    cv: { status: string; lastHeartbeat: string | null; version: string; processId: number | null; latencyMs: number };
+    database: { status: string; type: string; totalRecords: number; journalMode: string; foreignKeys: string };
+    websocket: { status: string; connectedClients: number; path: string };
+    evidence: { status: string; storagePath: string; fileCount: number; totalSizeBytes: number; totalSizeMb: number };
+  };
+}
+
+export async function fetchSystemHealth(): Promise<ApiResponse<SystemHealthResponse>> {
+  return request<ApiResponse<SystemHealthResponse>>('/system/health');
+}
+
+export async function fetchSystemVersion(): Promise<ApiResponse<any>> {
+  return request<ApiResponse<any>>('/system/version');
+}
+
+export async function fetchConfigSnapshot(): Promise<ApiResponse<any>> {
+  return request<ApiResponse<any>>('/system/config/snapshot');
+}
+
+export interface StorageTelemetry {
+  storage_path: string;
+  file_count: number;
+  used_bytes: number;
+  used_mb: number;
+  used_gb: number;
+  oldest_evidence_timestamp: string | null;
+  newest_evidence_timestamp: string | null;
+  storage_status: string;
+  memory_free_mb: number;
+  memory_total_mb: number;
+}
+
+export async function fetchStorageTelemetry(): Promise<ApiResponse<StorageTelemetry>> {
+  return request<ApiResponse<StorageTelemetry>>('/system/storage');
+}
+
+export interface TimelineItem {
+  id: string;
+  event_category: 'SYSTEM' | 'OPERATOR';
+  type: string;
+  severity: string;
+  message: string;
+  timestamp: string;
+  created_at: string;
+  metadata?: any;
+}
+
+export async function fetchSystemTimeline(limit: number = 50): Promise<ApiResponse<TimelineItem[]>> {
+  return request<ApiResponse<TimelineItem[]>>(`/system/timeline?limit=${limit}`);
+}
+
+export async function fetchOperatorActions(limit: number = 50): Promise<ApiResponse<any[]>> {
+  return request<ApiResponse<any[]>>(`/system/operator-actions?limit=${limit}`);
+}
+
+export async function logOperatorAction(
+  action: string,
+  target_type: string,
+  target_id: string,
+  operator: string = 'Commander IQ100',
+  metadata?: any
+): Promise<ApiResponse<any>> {
+  return request<ApiResponse<any>>('/system/operator-actions', {
+    method: 'POST',
+    body: JSON.stringify({ action, target_type, target_id, operator, metadata }),
+  });
+}
+
+export interface FleetCameraItem {
+  id: string;
+  name: string;
+  location: string;
+  source_type: string;
+  source_url: string;
+  status: string;
+  resolution: string;
+  target_fps: number;
+  measured_fps: number;
+  active_tracks: number;
+  current_occupancy: number;
+  environment_mode: string;
+  visibility_score: number;
+  reconnect_count: number;
+  last_error: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+export async function fetchCameraFleet(): Promise<ApiResponse<FleetCameraItem[]>> {
+  return request<ApiResponse<FleetCameraItem[]>>('/cameras/fleet');
+}
+
+export async function controlCamera(
+  cameraId: string,
+  action: 'start' | 'stop' | 'restart' | 'reconnect' | 'simulate_failure',
+  operator: string = 'Commander IQ100'
+): Promise<ApiResponse<any>> {
+  return request<ApiResponse<any>>(`/cameras/${cameraId}/control`, {
+    method: 'POST',
+    body: JSON.stringify({ action, operator }),
+  });
+}
+
+export async function resolveIncident(
+  incidentId: string,
+  operator: string = 'Commander IQ100',
+  disposition: string = 'THREAT_NEUTRALIZED',
+  notes?: string
+): Promise<ApiResponse<IncidentRecord>> {
+  return request<ApiResponse<IncidentRecord>>(`/incidents/${incidentId}/resolve`, {
+    method: 'POST',
+    body: JSON.stringify({ operator, disposition, notes }),
+  });
+}
+
 

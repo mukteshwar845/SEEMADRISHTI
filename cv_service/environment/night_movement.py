@@ -83,8 +83,15 @@ class NightMovementDetector:
             return None
 
         # 3. Compute Centroid
-        cx = (bbox[0] + bbox[2]) / 2.0
-        cy = (bbox[1] + bbox[3]) / 2.0
+        if isinstance(bbox, dict):
+            x1 = bbox.get("x1", bbox.get("x", 0))
+            y1 = bbox.get("y1", bbox.get("y", 0))
+            x2 = bbox.get("x2", x1 + bbox.get("width", bbox.get("w", 0)))
+            y2 = bbox.get("y2", y1 + bbox.get("height", bbox.get("h", 0)))
+        else:
+            x1, y1, x2, y2 = bbox[0], bbox[1], bbox[2], bbox[3]
+        cx = (x1 + x2) / 2.0
+        cy = (y1 + y2) / 2.0
 
         if key not in self._track_history:
             self._track_history[key] = []

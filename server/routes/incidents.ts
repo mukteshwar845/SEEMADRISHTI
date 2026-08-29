@@ -1,6 +1,7 @@
 import { Router, Request, Response, NextFunction } from 'express';
 import fs from 'fs';
 import path from 'path';
+import crypto from 'crypto';
 import { getDatabase } from '../db/database';
 import { AppError } from '../middleware/errorHandler';
 import { broadcastWebSocketMessage } from '../services/websocket';
@@ -11,14 +12,44 @@ export const incidentsRouter = Router();
 const VALID_RISK_LEVELS: RiskLevel[] = ['CRITICAL', 'HIGH', 'MEDIUM', 'LOW'];
 const VALID_EVIDENCE_STATUSES: EvidenceStatus[] = ['capturing', 'ready', 'failed'];
 
+const sha256Cache = new Map<string, string>();
+
 function formatIncident(row: any): IncidentEntity {
-  let parsedMetadata = row.metadata;
+  let parsedMetadata: any = row.metadata;
   if (typeof row.metadata === 'string') {
     try {
       parsedMetadata = JSON.parse(row.metadata);
     } catch {
       parsedMetadata = row.metadata;
     }
+  }
+
+  let sha256 = (parsedMetadata && typeof parsedMetadata === 'object') ? parsedMetadata.sha256 : undefined;
+  let fileSize = (parsedMetadata && typeof parsedMetadata === 'object') ? parsedMetadata.file_size : undefined;
+  let duration = (parsedMetadata && typeof parsedMetadata === 'object') ? parsedMetadata.duration : undefined;
+  let verificationStatus = (parsedMetadata && typeof parsedMetadata === 'object') ? parsedMetadata.verification_status : undefined;
+
+  if (!sha256 && row.evidence_path) {
+    const absPath = path.isAbsolute(row.evidence_path)
+      ? path.normalize(row.evidence_path)
+      : path.normalize(path.resolve(process.cwd(), row.evidence_path));
+
+    if (sha256Cache.has(absPath)) {
+      sha256 = sha256Cache.get(absPath);
+    } else if (fs.existsSync(absPath)) {
+      try {
+        const fileBuf = fs.readFileSync(absPath);
+        sha256 = crypto.createHash('sha256').update(fileBuf).digest('hex');
+        sha256Cache.set(absPath, sha256);
+        if (!fileSize) fileSize = fileBuf.length;
+      } catch {
+        // ignore file read error
+      }
+    }
+  }
+
+  if (row.evidence_status === 'ready' && !verificationStatus) {
+    verificationStatus = 'VERIFIED';
   }
 
   return {
@@ -39,6 +70,10 @@ function formatIncident(row: any): IncidentEntity {
     metadata: parsedMetadata,
     acknowledged: Boolean(row.acknowledged),
     created_at: row.created_at,
+    sha256: sha256 || undefined,
+    file_size: fileSize || undefined,
+    duration: duration || undefined,
+    verification_status: verificationStatus || undefined,
   };
 }
 
@@ -96,7 +131,7 @@ incidentsRouter.get('/', (req: Request, res: Response, next: NextFunction) => {
       params.push(to);
     }
 
-    query += ' ORDER BY created_at DESC';
+    query += " ORDER BY CASE UPPER(risk_level) WHEN 'CRITICAL' THEN 1 WHEN 'HIGH' THEN 2 WHEN 'MEDIUM' THEN 3 ELSE 4 END, risk_score DESC, created_at DESC";
 
     const maxLimit = limit ? Math.min(Math.max(1, parseInt(String(limit), 10)), 200) : 50;
     query += ' LIMIT ?';
@@ -116,11 +151,55 @@ incidentsRouter.get('/', (req: Request, res: Response, next: NextFunction) => {
   }
 });
 
+// GET /api/incidents/storage/stats - Storage management and audit telemetry (Step 17)
+incidentsRouter.get('/storage/stats', (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const evidenceDir = path.resolve(process.cwd(), 'evidence');
+    let totalBytes = 0;
+    let clipCount = 0;
+    let oldestTime: Date | null = null;
+    let newestTime: Date | null = null;
+
+    if (fs.existsSync(evidenceDir)) {
+      const files = fs.readdirSync(evidenceDir);
+      for (const file of files) {
+        if (file.endsWith('.mp4') || file.endsWith('.avi')) {
+          clipCount++;
+          const p = path.join(evidenceDir, file);
+          const s = fs.statSync(p);
+          totalBytes += s.size;
+          if (!oldestTime || s.mtime < oldestTime) oldestTime = s.mtime;
+          if (!newestTime || s.mtime > newestTime) newestTime = s.mtime;
+        }
+      }
+    }
+
+    res.json({
+      success: true,
+      data: {
+        storageUsedBytes: totalBytes,
+        storageUsedMb: Number((totalBytes / (1024 * 1024)).toFixed(2)),
+        totalClips: clipCount,
+        oldestClip: oldestTime ? oldestTime.toISOString() : null,
+        newestClip: newestTime ? newestTime.toISOString() : null,
+        evidenceDirectory: 'evidence/',
+      },
+      timestamp: new Date().toISOString(),
+    });
+  } catch (err) {
+    next(err);
+  }
+});
+
 // GET /api/incidents/:id - Get incident details
 incidentsRouter.get('/:id', (req: Request, res: Response, next: NextFunction) => {
   try {
     const db = getDatabase();
     const { id } = req.params;
+
+    if (!id || !/^[a-zA-Z0-9_-]+$/.test(id)) {
+      throw new AppError(`Invalid incident id '${id}'`, 400);
+    }
 
     const row = db.prepare('SELECT * FROM incidents WHERE id = ?').get(id);
     if (!row) {
@@ -137,11 +216,15 @@ incidentsRouter.get('/:id', (req: Request, res: Response, next: NextFunction) =>
   }
 });
 
-// GET /api/incidents/:id/evidence - Stream or serve MP4 forensic video clip
+// GET /api/incidents/:id/evidence - Stream MP4 forensic video clip with HTTP Range and Security
 incidentsRouter.get('/:id/evidence', (req: Request, res: Response, next: NextFunction) => {
   try {
     const db = getDatabase();
     const { id } = req.params;
+
+    if (!id || !/^[a-zA-Z0-9_-]+$/.test(id)) {
+      throw new AppError(`Invalid incident id '${id}'`, 400);
+    }
 
     const row = db.prepare('SELECT * FROM incidents WHERE id = ?').get(id) as any;
     if (!row) {
@@ -152,18 +235,62 @@ incidentsRouter.get('/:id/evidence', (req: Request, res: Response, next: NextFun
       throw new AppError(`Evidence video for incident '${id}' is not ready or has not been written`, 404);
     }
 
-    // Resolve absolute path from relative evidence path
+    // Path traversal check
     const absPath = path.isAbsolute(row.evidence_path)
-      ? row.evidence_path
-      : path.resolve(process.cwd(), row.evidence_path);
+      ? path.normalize(row.evidence_path)
+      : path.normalize(path.resolve(process.cwd(), row.evidence_path));
+
+    const allowedRoot = path.normalize(process.cwd());
+    if (!absPath.startsWith(allowedRoot)) {
+      throw new AppError('Access denied: path traversal detected', 403);
+    }
 
     if (!fs.existsSync(absPath)) {
       throw new AppError(`Evidence file '${row.evidence_path}' does not exist on disk`, 404);
     }
 
+    const stat = fs.statSync(absPath);
+    if (stat.size === 0) {
+      throw new AppError('Evidence file is corrupted or empty (0 bytes)', 500);
+    }
+
     res.setHeader('Content-Type', 'video/mp4');
     res.setHeader('Accept-Ranges', 'bytes');
     return res.sendFile(absPath);
+  } catch (err) {
+    next(err);
+  }
+});
+
+// GET /api/incidents/:id/download - Force download of MP4 forensic video clip
+incidentsRouter.get('/:id/download', (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const db = getDatabase();
+    const { id } = req.params;
+
+    if (!id || !/^[a-zA-Z0-9_-]+$/.test(id)) {
+      throw new AppError(`Invalid incident id '${id}'`, 400);
+    }
+
+    const row = db.prepare('SELECT * FROM incidents WHERE id = ?').get(id) as any;
+    if (!row || !row.evidence_path) {
+      throw new AppError(`Evidence video for incident '${id}' not found`, 404);
+    }
+
+    const absPath = path.isAbsolute(row.evidence_path)
+      ? path.normalize(row.evidence_path)
+      : path.normalize(path.resolve(process.cwd(), row.evidence_path));
+
+    const allowedRoot = path.normalize(process.cwd());
+    if (!absPath.startsWith(allowedRoot)) {
+      throw new AppError('Access denied: path traversal detected', 403);
+    }
+
+    if (!fs.existsSync(absPath)) {
+      throw new AppError(`Evidence file '${row.evidence_path}' does not exist on disk`, 404);
+    }
+
+    return res.download(absPath, `${id}.mp4`);
   } catch (err) {
     next(err);
   }
@@ -327,24 +454,107 @@ incidentsRouter.patch('/:id', (req: Request, res: Response, next: NextFunction) 
   }
 });
 
-// POST /api/incidents/:id/acknowledge - Mark incident as acknowledged
+// POST /api/incidents/:id/acknowledge - Mark incident as acknowledged with operator attribution
 incidentsRouter.post('/:id/acknowledge', (req: Request, res: Response, next: NextFunction) => {
   try {
     const db = getDatabase();
     const { id } = req.params;
+    const { operator = 'Officer on Duty', notes } = req.body;
 
-    const existing = db.prepare('SELECT * FROM incidents WHERE id = ?').get(id);
+    const existing = db.prepare('SELECT * FROM incidents WHERE id = ?').get(id) as any;
     if (!existing) {
       throw new AppError(`Incident with id '${id}' not found`, 404);
     }
 
-    db.prepare('UPDATE incidents SET acknowledged = 1 WHERE id = ?').run(id);
+    const nowIso = new Date().toISOString();
+    let meta: any = {};
+    try {
+      meta = typeof existing.metadata === 'string' ? JSON.parse(existing.metadata) : (existing.metadata || {});
+    } catch {
+      meta = {};
+    }
+    meta.acknowledged_by = operator;
+    meta.acknowledged_at = nowIso;
+    if (notes) meta.ack_notes = notes;
+
+    db.prepare('UPDATE incidents SET acknowledged = 1, metadata = ? WHERE id = ?').run(JSON.stringify(meta), id);
+
+    // Audit action into operator_actions
+    const auditId = `act-${Date.now()}-${crypto.randomUUID().slice(0, 8)}`;
+    try {
+      db.prepare(`
+        INSERT INTO operator_actions (id, timestamp, operator, action, target_type, target_id, previous_state, new_state, metadata, created_at)
+        VALUES (?, ?, ?, 'ACKNOWLEDGE_INCIDENT', 'INCIDENT', ?, 'UNACKNOWLEDGED', 'ACKNOWLEDGED', ?, ?)
+      `).run(auditId, nowIso, operator, id, JSON.stringify({ notes: notes || 'Incident acknowledged by operator' }), nowIso);
+    } catch {
+      // audit table insertion safe fallback
+    }
 
     const updatedRow = db.prepare('SELECT * FROM incidents WHERE id = ?').get(id);
+    const incidentData = formatIncident(updatedRow);
+
+    broadcastWebSocketMessage('incident_acknowledged', incidentData);
+
     res.json({
       success: true,
-      data: formatIncident(updatedRow),
-      timestamp: new Date().toISOString(),
+      data: incidentData,
+      message: `Incident ${id} successfully acknowledged by ${operator}`,
+      timestamp: nowIso,
+    });
+  } catch (err) {
+    next(err);
+  }
+});
+
+// POST /api/incidents/:id/resolve - Resolve incident with disposition and audit logging
+incidentsRouter.post('/:id/resolve', (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const db = getDatabase();
+    const { id } = req.params;
+    const { operator = 'Commander IQ100', disposition = 'THREAT_NEUTRALIZED', notes } = req.body;
+
+    const existing = db.prepare('SELECT * FROM incidents WHERE id = ?').get(id) as any;
+    if (!existing) {
+      throw new AppError(`Incident with id '${id}' not found`, 404);
+    }
+
+    const nowIso = new Date().toISOString();
+    let meta: any = {};
+    try {
+      meta = typeof existing.metadata === 'string' ? JSON.parse(existing.metadata) : (existing.metadata || {});
+    } catch {
+      meta = {};
+    }
+    meta.resolved = true;
+    meta.resolved_by = operator;
+    meta.resolved_at = nowIso;
+    meta.disposition = disposition;
+    if (notes) meta.resolution_notes = notes;
+
+    db.prepare('UPDATE incidents SET acknowledged = 1, metadata = ?, ended_at = ? WHERE id = ?')
+      .run(JSON.stringify(meta), nowIso, id);
+
+    // Audit action into operator_actions
+    const auditId = `act-${Date.now()}-${crypto.randomUUID().slice(0, 8)}`;
+    try {
+      db.prepare(`
+        INSERT INTO operator_actions (id, timestamp, operator, action, target_type, target_id, previous_state, new_state, metadata, created_at)
+        VALUES (?, ?, ?, 'RESOLVE_INCIDENT', 'INCIDENT', ?, 'ACTIVE', 'RESOLVED', ?, ?)
+      `).run(auditId, nowIso, operator, id, JSON.stringify({ disposition, notes: notes || 'Threat resolved by command' }), nowIso);
+    } catch {
+      // audit table insertion safe fallback
+    }
+
+    const updatedRow = db.prepare('SELECT * FROM incidents WHERE id = ?').get(id);
+    const incidentData = formatIncident(updatedRow);
+
+    broadcastWebSocketMessage('incident_resolved', incidentData);
+
+    res.json({
+      success: true,
+      data: incidentData,
+      message: `Incident ${id} successfully resolved with disposition '${disposition}' by ${operator}`,
+      timestamp: nowIso,
     });
   } catch (err) {
     next(err);

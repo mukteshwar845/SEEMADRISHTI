@@ -247,7 +247,7 @@ class RecordingSessionEngine {
       thumbnailUrl: thumbnail,
       tags: active.tags,
       triggerType: active.triggerType,
-      eventsDetectedCount: Math.floor(Math.random() * 4) + 1,
+      eventsDetectedCount: active.triggerType === 'anomaly_auto' ? 2 : 1,
       dangerZoneBreach: active.triggerType === 'anomaly_auto',
     };
 

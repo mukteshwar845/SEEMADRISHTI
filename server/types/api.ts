@@ -138,6 +138,10 @@ export interface IncidentEntity {
   metadata?: Record<string, any> | string | null;
   acknowledged: boolean | number;
   created_at: string;
+  sha256?: string;
+  file_size?: number;
+  duration?: number;
+  verification_status?: string;
 }
 
 export interface CreateIncidentDTO {
@@ -327,6 +331,8 @@ export type WebSocketMessageType =
   | 'alert_updated'
   | 'risk_assessment'
   | 'incident_created'
+  | 'incident_acknowledged'
+  | 'incident_resolved'
   | 'evidence_ready'
   | 'correlation_created'
   | 'correlation_updated'

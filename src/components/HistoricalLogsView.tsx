@@ -691,6 +691,21 @@ export const HistoricalLogsView: React.FC<HistoricalLogsViewProps> = ({
                 </div>
 
                 <div className="flex items-center gap-2 shrink-0 self-end md:self-center">
+                  {onNavigateToInspector && (
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        onSelectAlert(alert);
+                        onNavigateToInspector();
+                      }}
+                      className="px-3 py-1.5 rounded-lg text-xs font-mono font-bold uppercase tracking-wider cursor-pointer flex items-center gap-1.5 bg-[#141f36] hover:bg-rose-950 text-rose-300 hover:text-rose-200 border border-rose-500/40 transition-all shadow-[0_0_10px_rgba(244,63,94,0.2)]"
+                      title="Inspect forensic video evidence in Incident Inspector"
+                    >
+                      <Film size={12} />
+                      <span>VIEW EVIDENCE</span>
+                    </button>
+                  )}
+
                   <button
                     onClick={(e) => {
                       e.stopPropagation();

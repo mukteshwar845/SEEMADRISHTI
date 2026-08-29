@@ -11,44 +11,28 @@ export function seedDemoData(): void {
 
   const now = new Date().toISOString();
 
-  // 1. Seed Demo Cameras
+  // 1. Seed Demo Cameras (cam-01 through cam-09)
+  const canonicalCameras = [
+    { id: 'cam-01', name: 'Sector Alpha Main Gate', location: 'North Arterial Roadway', source_url: 'cv_service/tests/fixtures/intrusion_test.mp4' },
+    { id: 'cam-02', name: 'Sector Bravo Perimeter', location: 'Inner Exclusion Fence', source_url: 'cv_service/tests/fixtures/loitering_test.mp4' },
+    { id: 'cam-03', name: 'Sector Charlie Vehicle Checkpoint', location: 'Approach Corridor', source_url: 'cv_service/tests/fixtures/moving_objects.mp4' },
+    { id: 'cam-04', name: 'Sector Delta Checkpost', location: 'Tactical Post 4', source_url: 'cv_service/tests/fixtures/sample_test.mp4' },
+    { id: 'cam-05', name: 'Sector Echo Forest Canopy', location: 'Dense Foliage Segment', source_url: 'cv_service/tests/fixtures/sample_test.mp4' },
+    { id: 'cam-06', name: 'Sector Foxtrot Mountain Pass', location: 'High Altitude Transit', source_url: 'cv_service/tests/fixtures/intrusion_test.mp4' },
+    { id: 'cam-07', name: 'Sector Golf Desert Outpost', location: 'Southern Ridge Desert', source_url: 'cv_service/tests/fixtures/loitering_test.mp4' },
+    { id: 'cam-08', name: 'Sector Hotel Logistics Gate', location: 'Heavy Transport Barrier', source_url: 'cv_service/tests/fixtures/moving_objects.mp4' },
+    { id: 'cam-09', name: 'Sector India Coastal Guard', location: 'Waterway Shoreline', source_url: 'cv_service/tests/fixtures/sample_test.mp4' },
+  ];
+
   const insertCamera = db.prepare(`
     INSERT INTO cameras (id, name, location, source_type, source_url, status, created_at, updated_at)
-    VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+    VALUES (?, ?, ?, 'mp4', ?, 'Online', ?, ?)
+    ON CONFLICT(id) DO NOTHING
   `);
 
-  insertCamera.run(
-    'cam-01',
-    'Sector A - Urban Night Corridor [DEMO_SEED]',
-    'North Arterial Roadway',
-    'mp4',
-    'https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ForBiggerBlazes.mp4',
-    'Online',
-    now,
-    now
-  );
-
-  insertCamera.run(
-    'cam-02',
-    'Sector B - Aerial Box Junction [DEMO_SEED]',
-    'Monochrome Aerial UAV Grid C-2',
-    'mp4',
-    'https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ForBiggerEscapes.mp4',
-    'Online',
-    now,
-    now
-  );
-
-  insertCamera.run(
-    'cam-03',
-    'Sector C - Flyover Junction [DEMO_SEED]',
-    'Bangkok Flyover Arterial Bridge',
-    'mp4',
-    'https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ForBiggerFun.mp4',
-    'Online',
-    now,
-    now
-  );
+  for (const cam of canonicalCameras) {
+    insertCamera.run(cam.id, cam.name, cam.location, cam.source_url, now, now);
+  }
 
   // 2. Seed Demo Zones
   const insertZone = db.prepare(`

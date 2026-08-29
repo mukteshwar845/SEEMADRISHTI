@@ -1,13 +1,14 @@
 """
-SEEMADRISHTI AI - Intrusion Detector Module (Phase 4)
+SEEMADRISHTI AI - Intrusion & Virtual Perimeter Detector Module (Phase 4 & Phase 16)
 
-Stateful virtual perimeter crossing detection engine.
+Stateful virtual perimeter crossing and tripwire detection engine.
 Maintains state per (camera_id, track_id, zone_id) and fires alerts
-ONLY upon genuine OUTSIDE -> INSIDE state transitions.
+ONLY upon genuine OUTSIDE -> INSIDE state transitions or tripwire segment intersections.
 Includes duplicate alert gating while targets linger within zones,
 and handles EXIT and subsequent re-entry events.
 """
 
+import os
 import time
 import json
 import logging
@@ -31,7 +32,7 @@ class IntrusionEvent:
     track_id: int
     class_name: str
     confidence: float
-    direction: str  # 'ENTERING' or 'EXITING'
+    direction: str  # 'ENTERING', 'EXITING', or 'CROSSING'
     position: Tuple[float, float]  # (cx, cy)
     timestamp: str
     severity: str = "High"  # Stored as 'High' in SQLite (CRITICAL display level)
@@ -70,6 +71,7 @@ class TrackZoneState:
 class IntrusionDetector:
     """
     Intrusion detection engine for multi-camera CCTV perimeter surveillance.
+    Supports virtual polygons and virtual tripwires with real tracking coordinates.
     """
 
     def __init__(self, api_base_url: str = "http://127.0.0.1:8000/api"):
@@ -92,13 +94,15 @@ class IntrusionDetector:
     def load_zones_from_backend(self, camera_id: str) -> int:
         """
         Fetches active zones for camera_id from the backend REST API.
+        Falls back to config/camera_zones.json if backend is offline or empty.
         """
+        # 1. Try Backend REST API
         try:
             url = f"{self.api_base_url}/zones?camera_id={camera_id}"
-            resp = requests.get(url, timeout=3.0)
+            resp = requests.get(url, timeout=2.0)
             if resp.status_code == 200:
                 body = resp.json()
-                if body.get("success") and "data" in body:
+                if body.get("success") and "data" in body and len(body["data"]) > 0:
                     self.clear_zones(camera_id)
                     for item in body["data"]:
                         if item.get("enabled", True):
@@ -108,11 +112,41 @@ class IntrusionDetector:
                                 name=item["name"],
                                 polygon=item["polygon"],
                                 enabled=item.get("enabled", True),
+                                zone_type=item.get("zone_type", "RESTRICTED_ZONE"),
+                            )
+                            self.add_zone(zone)
+                    count = len([z for z in self.zones.values() if z.camera_id == camera_id])
+                    if count > 0:
+                        return count
+        except Exception as e:
+            logger.debug(f"Could not load zones from backend: {e}")
+
+        # 2. Fallback to config/camera_zones.json
+        try:
+            cfg_path = os.path.abspath(
+                os.path.join(os.path.dirname(__file__), "..", "..", "config", "camera_zones.json")
+            )
+            if os.path.isfile(cfg_path):
+                with open(cfg_path, "r", encoding="utf-8") as f:
+                    cfg_data = json.load(f)
+                cam_zones = cfg_data.get(camera_id) or cfg_data.get(camera_id.lower())
+                if cam_zones:
+                    self.clear_zones(camera_id)
+                    for item in cam_zones:
+                        if item.get("enabled", True):
+                            zone = PolygonZone(
+                                zone_id=item["id"],
+                                camera_id=camera_id,
+                                name=item["name"],
+                                polygon=item["polygon"],
+                                enabled=item.get("enabled", True),
+                                zone_type=item.get("zone_type", "RESTRICTED_ZONE"),
                             )
                             self.add_zone(zone)
                     return len([z for z in self.zones.values() if z.camera_id == camera_id])
         except Exception as e:
-            logger.warning(f"Could not load zones from backend: {e}")
+            logger.debug(f"Could not load zones from camera_zones.json: {e}")
+
         return 0
 
     def reset(self):
@@ -176,13 +210,19 @@ class IntrusionDetector:
                     continue
 
                 state = self.track_states[state_key]
+                prev_pos = state.current_position
                 state.update(is_inside, (cx, cy))
+
+                # Check if tripwire line was crossed between previous position and current position
+                crossed_tripwire = False
+                if getattr(zone, "is_tripwire", False) or len(zone.raw_polygon) == 2:
+                    crossed_tripwire = zone.test_crossing(prev_pos, (cx, cy), frame_width, frame_height)
 
                 # CHECK FOR CROSSING TRANSITION
                 # -------------------------------------------------------------
-                # 1. OUTSIDE -> INSIDE (Intrusion Crossing!)
+                # 1. OUTSIDE -> INSIDE or TRIPWIRE CROSSING (Intrusion / Breach!)
                 # -------------------------------------------------------------
-                if not state.previous_inside and state.current_inside:
+                if (not state.previous_inside and state.current_inside) or crossed_tripwire:
                     state.entry_count += 1
                     event_id = f"evt-{int(time.time() * 1000)}"
                     alert_id = f"alt-{int(time.time() * 1000)}"
@@ -196,22 +236,22 @@ class IntrusionDetector:
                         track_id=tid,
                         class_name=class_name,
                         confidence=confidence,
-                        direction="ENTERING",
+                        direction="CROSSING" if crossed_tripwire else "ENTERING",
                         position=(cx, cy),
                         timestamp=now_ts,
                         severity="High",
                     )
 
-                    if not state.alerted:
+                    if not state.alerted or crossed_tripwire:
                         state.alerted = True
                         events_generated.append(event)
 
                         # Structured CLI output
-                        print(f"\n[INTRUSION]")
+                        print(f"\n[INTRUSION / PERIMETER BREACH]")
                         print(f"Camera:    {camera_id}")
                         print(f"Track:     #{tid} ({class_name})")
                         print(f"Zone:      {zone.name}")
-                        print(f"Direction: ENTERING")
+                        print(f"Direction: {'CROSSING' if crossed_tripwire else 'ENTERING'}")
                         print(f"Position:  ({cx:.1f}, {cy:.1f})")
                         print(f"Timestamp: {now_ts}\n")
 

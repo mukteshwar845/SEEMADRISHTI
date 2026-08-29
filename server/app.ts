@@ -8,6 +8,7 @@ import { correlationsRouter } from './routes/correlations';
 import { environmentRouter } from './routes/environment';
 import { analyticsRouter } from './routes/analytics';
 import { telemetryRouter } from './routes/telemetry';
+import { systemRouter } from './routes/system';
 import { devRouter } from './routes/dev';
 import { errorHandler, notFoundHandler } from './middleware/errorHandler';
 
@@ -46,7 +47,7 @@ export function createApp(): express.Application {
       team: 'IQ100',
       problemStatement: 'SIH26187',
       service: 'seemadrishti-backend',
-      version: '1.0.0-phase1',
+      version: '1.15.0',
       status: 'ok',
       docs: '/api/health',
     });
@@ -62,6 +63,7 @@ export function createApp(): express.Application {
   app.use('/api/environment', environmentRouter);
   app.use('/api/analytics', analyticsRouter);
   app.use('/api/telemetry', telemetryRouter);
+  app.use('/api/system', systemRouter);
   app.use('/api/dev', devRouter);
 
   // 404 & Centralized Error Handling

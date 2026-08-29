@@ -78,12 +78,13 @@ const generate24HourData = () => {
     const isPeakRush = (idx >= 7 && idx <= 9) || (idx >= 17 && idx <= 19);
     const isMidday = idx >= 11 && idx <= 15;
 
-    let person = isNight ? Math.floor(8 + Math.random() * 12) : isPeakRush ? Math.floor(110 + Math.random() * 45) : Math.floor(55 + Math.random() * 30);
-    let vehicle = isNight ? Math.floor(3 + Math.random() * 8) : isPeakRush ? Math.floor(95 + Math.random() * 40) : Math.floor(40 + Math.random() * 25);
-    let intrusion = isNight ? Math.floor(5 + Math.random() * 8) : Math.floor(1 + Math.random() * 4);
-    let noHelmet = isMidday ? Math.floor(8 + Math.random() * 10) : Math.floor(1 + Math.random() * 5);
-    let loitering = isNight ? Math.floor(4 + Math.random() * 6) : Math.floor(2 + Math.random() * 4);
-    let abandoned = isPeakRush ? Math.floor(1 + Math.random() * 3) : Math.random() > 0.6 ? 1 : 0;
+    const hourWave = Math.sin((idx / 24) * Math.PI * 2);
+    let person = isNight ? Math.floor(12 + Math.abs(hourWave) * 4) : isPeakRush ? Math.floor(130 + hourWave * 20) : Math.floor(70 + hourWave * 15);
+    let vehicle = isNight ? Math.floor(6 + Math.abs(hourWave) * 2) : isPeakRush ? Math.floor(110 + hourWave * 20) : Math.floor(50 + hourWave * 12);
+    let intrusion = isNight ? (idx % 3 === 0 ? 6 : 2) : (idx % 4 === 0 ? 3 : 1);
+    let noHelmet = isMidday ? (idx % 2 === 0 ? 8 : 4) : 2;
+    let loitering = isNight ? (idx % 2 === 0 ? 5 : 2) : 2;
+    let abandoned = isPeakRush ? (idx % 2 === 0 ? 2 : 1) : 0;
 
     const totalAnomalies = intrusion + noHelmet + loitering + abandoned;
     const totalDetections = person + vehicle + totalAnomalies;

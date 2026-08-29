@@ -53,6 +53,10 @@ export const Sidebar: React.FC<SidebarProps> = ({
 
   const navItems = [
     { id: 'dashboard' as ViewMode, label: 'Tactical Matrix', icon: LayoutGrid, code: '[SEC-01]' },
+    { id: 'mission-control' as ViewMode, label: 'Mission Control', icon: Activity, badge: 'OPERATIONAL', isHealth: true, code: '[HQ_CMD]' },
+    { id: 'camera-fleet' as ViewMode, label: 'Camera Fleet', icon: Video, badge: '9 NODES', code: '[FLEET_09]' },
+    { id: 'evidence-queue' as ViewMode, label: 'Evidence Vault', icon: Film, isRecTab: true, badge: 'SHA-256', code: '[FORENSIC_REC]' },
+    { id: 'system-timeline' as ViewMode, label: 'Operator Timeline', icon: Layers, code: '[AUDIT_LOG]' },
     { id: 'diagnostics' as ViewMode, label: 'Stream Diagnostics', icon: Activity, badge: '60 FPS', isHealth: true, code: '[HEALTH_NET]' },
     { id: 'inspector' as ViewMode, label: 'Incident Inspector', icon: ShieldAlert, badge: 'CRITICAL', isAlert: true, code: '[FORENSIC]' },
     { id: 'historical-logs' as ViewMode, label: 'Historical Logs', icon: Film, isRecTab: true, badge: activeRecCount > 0 ? `${activeRecCount} REC` : `${savedClipsCount} CLIPS`, code: '[NVR_VAULT]' },

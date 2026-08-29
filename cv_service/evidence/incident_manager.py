@@ -47,6 +47,16 @@ class ActiveIncident:
         self.started_at = datetime.fromtimestamp(trigger_time, tz=timezone.utc).isoformat()
         self.ended_at: Optional[str] = None
         self.result_summary: Optional[Dict[str, Any]] = None
+        self.sha256: Optional[str] = None
+        self.verification_status: str = "PENDING"
+
+    @property
+    def incident_id(self) -> str:
+        return self.id
+
+    @property
+    def severity(self) -> str:
+        return self.risk_level
 
     def add_frame(self, timestamp: float, frame: np.ndarray) -> None:
         self.frames.append((timestamp, frame.copy()))
@@ -61,6 +71,11 @@ class IncidentManager:
     Coordinates the circular buffer, trigger evaluation, post-event collection,
     evidence encoding, SQLite persistence, and WebSocket notifications.
     """
+
+    @staticmethod
+    def should_record(risk_level: str) -> bool:
+        """Determines if a risk level qualifies for automated circular buffer recording."""
+        return str(risk_level).upper() in ("HIGH", "CRITICAL")
 
     def __init__(
         self,
@@ -247,9 +262,12 @@ class IncidentManager:
             )
             incident.status = "ready"
             incident.evidence_path = write_result["file_path"]
+            incident.sha256 = write_result.get("sha256")
+            incident.verification_status = write_result.get("verification_status", "VERIFIED")
             incident.result_summary = write_result
         except Exception as e:
             incident.status = "failed"
+            incident.verification_status = "FAILED"
             write_result = {"success": False, "error": str(e)}
 
         # Update SQLite record in backend
@@ -276,6 +294,8 @@ class IncidentManager:
             "risk_level": incident.risk_level,
             "status": incident.status,
             "evidence_path": incident.evidence_path,
+            "sha256": incident.sha256,
+            "verification_status": incident.verification_status,
             "total_frames": len(incident.frames),
             "write_result": write_result,
         }
@@ -322,11 +342,24 @@ class IncidentManager:
             pass  # Non-blocking fallback
 
     def _persist_incident_finalized(self, incident: ActiveIncident) -> None:
-        """Calls PATCH /api/incidents/:id to update evidence status and path."""
+        """Calls PATCH /api/incidents/:id to update evidence status, path, and cryptographic metadata."""
+        file_size = incident.result_summary.get("file_size_bytes", 0) if incident.result_summary else 0
+        duration = incident.result_summary.get("video_duration_seconds", 0) if incident.result_summary else 0
+
+        metadata_patch = {
+            "class_name": incident.class_name,
+            "reasons": incident.reasons,
+            "sha256": incident.sha256,
+            "verification_status": incident.verification_status,
+            "file_size": file_size,
+            "duration": duration,
+        }
+
         payload = {
             "ended_at": incident.ended_at,
             "evidence_path": incident.evidence_path,
             "evidence_status": incident.status,
+            "metadata": metadata_patch,
         }
         try:
             requests.patch(
@@ -358,6 +391,9 @@ class IncidentManager:
             pass
 
     def _publish_evidence_ready(self, incident: ActiveIncident, publisher: Any) -> None:
+        file_size = incident.result_summary.get("file_size_bytes", 0) if incident.result_summary else 0
+        duration = incident.result_summary.get("video_duration_seconds", 0) if incident.result_summary else 0
+
         payload = {
             "id": incident.id,
             "camera_id": incident.camera_id,
@@ -371,6 +407,10 @@ class IncidentManager:
             "ended_at": incident.ended_at,
             "evidence_path": incident.evidence_path,
             "evidence_status": incident.status,
+            "verification_status": incident.verification_status,
+            "sha256": incident.sha256,
+            "file_size": file_size,
+            "duration": duration,
             "total_frames": len(incident.frames),
         }
         try:

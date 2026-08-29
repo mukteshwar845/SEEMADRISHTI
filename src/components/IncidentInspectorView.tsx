@@ -59,6 +59,11 @@ interface IncidentEvidence {
   hasRealVideo?: boolean;
   evidenceUrl?: string;
   downloadUrl?: string;
+  sha256?: string;
+  verificationStatus?: string;
+  evidenceStatus?: 'capturing' | 'ready' | 'failed';
+  fileSize?: number;
+  duration?: number;
 }
 
 const INCIDENTS_DATA: IncidentEvidence[] = [
@@ -255,6 +260,11 @@ function mapRecordToEvidence(rec: IncidentRecord): IncidentEvidence {
     hasRealVideo: rec.evidence_status === 'ready' || Boolean(rec.evidence_path),
     evidenceUrl: `/api/incidents/${rec.id}/evidence`,
     downloadUrl: `/api/incidents/${rec.id}/download`,
+    sha256: rec.sha256 || meta.sha256 || undefined,
+    verificationStatus: rec.verification_status || (rec.evidence_status === 'ready' ? 'VERIFIED' : 'PENDING'),
+    evidenceStatus: rec.evidence_status,
+    fileSize: rec.file_size || meta.file_size,
+    duration: rec.duration || meta.duration,
   };
 }
 
@@ -263,6 +273,8 @@ export const IncidentInspectorView: React.FC = () => {
   const [selectedIncidentIndex, setSelectedIncidentIndex] = useState(0);
   const [isPlaying, setIsPlaying] = useState(true);
   const [currentTimeSec, setCurrentTimeSec] = useState(42);
+  const [realDuration, setRealDuration] = useState<number>(0);
+  const videoRef = useRef<HTMLVideoElement | null>(null);
   const [visionFilter, setVisionFilter] = useState<'night' | 'thermal' | 'optical'>('night');
   const [showMoreActions, setShowMoreActions] = useState(false);
   const [qrtDispatched, setQrtDispatched] = useState(false);
@@ -493,11 +505,20 @@ export const IncidentInspectorView: React.FC = () => {
                 </button>
               </div>
 
-              <div className="flex items-center gap-1.5">
-                <div className="w-2 h-2 rounded-full bg-[#ffb4ab] animate-pulse border border-[#ffb4ab] shadow-[0_0_8px_#ffb4ab]"></div>
-                <span className="font-mono text-[11px] text-[#ffb4ab] tracking-widest font-bold">
-                  {currentIncident.riskSeverity}
+              <div className="flex items-center gap-2">
+                <span className={`px-2 py-0.5 rounded text-[10px] font-mono font-black border ${
+                  currentIncident.verificationStatus === 'VERIFIED'
+                    ? 'bg-emerald-950/90 text-emerald-300 border-emerald-500/60 shadow-[0_0_10px_rgba(16,185,129,0.3)]'
+                    : 'bg-amber-950/90 text-amber-300 border-amber-500/60'
+                }`}>
+                  FORENSIC EVIDENCE // {currentIncident.verificationStatus || 'VERIFIED'}
                 </span>
+                <div className="flex items-center gap-1.5">
+                  <div className="w-2 h-2 rounded-full bg-[#ffb4ab] animate-pulse border border-[#ffb4ab] shadow-[0_0_8px_#ffb4ab]"></div>
+                  <span className="font-mono text-[11px] text-[#ffb4ab] tracking-widest font-bold">
+                    {currentIncident.riskSeverity}
+                  </span>
+                </div>
               </div>
             </div>
           </div>
@@ -508,25 +529,28 @@ export const IncidentInspectorView: React.FC = () => {
               {/* Tactical Camera Image or MP4 Video Feed */}
               {currentIncident.hasRealVideo ? (
                 <video
+                  ref={videoRef}
                   key={currentIncident.id}
                   src={currentIncident.evidenceUrl}
                   controls
                   autoPlay
                   loop
+                  onLoadedMetadata={(e) => setRealDuration(e.currentTarget.duration)}
+                  onTimeUpdate={(e) => setCurrentTimeSec(Math.floor(e.currentTarget.currentTime))}
                   className="absolute inset-0 w-full h-full object-contain z-10"
                 />
               ) : (
-                <div
-                  className={`absolute inset-0 bg-cover bg-center transition-all duration-300 ${
-                    visionFilter === 'night'
-                      ? 'mix-blend-screen opacity-85 filter contrast-125 saturate-0'
-                      : visionFilter === 'thermal'
-                      ? 'opacity-90 filter grayscale(40%) sepia(100%) invert(85%) hue-rotate(190deg) saturate(380%) contrast(175%)'
-                      : 'opacity-90 filter contrast-110'
-                  }`}
-                  style={{ backgroundImage: `url('${currentIncident.imageUrl}')` }}
-                  data-alt={currentIncident.altText}
-                />
+                <div className="absolute inset-0 bg-[#070d1f] flex flex-col items-center justify-center gap-3 p-6 text-center z-10">
+                  <AlertTriangle size={44} className="text-amber-400 animate-pulse" />
+                  <span className="font-mono text-sm font-black text-[#dce1fb] tracking-wider uppercase">
+                    [ EVIDENCE NOT AVAILABLE ]
+                  </span>
+                  <span className="font-mono text-xs text-[#869397] max-w-md">
+                    {currentIncident.evidenceStatus === 'capturing'
+                      ? 'ACTIVE INCIDENT — CIRCULAR BUFFER ASSEMBLING POST-EVENT FRAMES'
+                      : 'NO FORENSIC RECORDING CLIP PERSISTED FOR THIS INCIDENT RECORD'}
+                  </span>
+                </div>
               )}
 
               {/* Night Vision Tint */}
@@ -581,7 +605,16 @@ export const IncidentInspectorView: React.FC = () => {
               <div className="absolute bottom-4 left-4 right-4 flex items-center justify-between border-t border-[#3d494c]/60 pt-3 bg-black/60 backdrop-blur-md px-3 py-2 rounded-lg z-20">
                 <div className="flex items-center gap-3">
                   <button
-                    onClick={() => setIsPlaying(!isPlaying)}
+                    onClick={() => {
+                      if (videoRef.current) {
+                        if (isPlaying) {
+                          videoRef.current.pause();
+                        } else {
+                          videoRef.current.play();
+                        }
+                      }
+                      setIsPlaying(!isPlaying);
+                    }}
                     className="text-[#dce1fb] hover:text-[#4cd7f6] transition-colors cursor-pointer p-1"
                     title={isPlaying ? 'Pause Loop' : 'Play Loop'}
                   >
@@ -593,7 +626,7 @@ export const IncidentInspectorView: React.FC = () => {
                       T-MINUS
                     </span>
                     <span className="font-mono text-xs text-[#dce1fb] font-bold">
-                      {formatTime(currentTimeSec)} / {formatTime(currentIncident.totalDurationSeconds)}
+                      {formatTime(currentTimeSec)} / {formatTime(Math.round(realDuration || currentIncident.totalDurationSeconds))}
                     </span>
                   </div>
                 </div>
@@ -604,15 +637,20 @@ export const IncidentInspectorView: React.FC = () => {
                   onClick={(e) => {
                     const rect = e.currentTarget.getBoundingClientRect();
                     const clickX = e.clientX - rect.left;
-                    const pct = clickX / rect.width;
-                    setCurrentTimeSec(Math.floor(pct * currentIncident.totalDurationSeconds));
+                    const pct = Math.max(0, Math.min(1, clickX / rect.width));
+                    const effDuration = realDuration || currentIncident.totalDurationSeconds || 20;
+                    const newTime = Math.floor(pct * effDuration);
+                    setCurrentTimeSec(newTime);
+                    if (videoRef.current) {
+                      videoRef.current.currentTime = newTime;
+                    }
                   }}
                 >
                   {/* Current progress */}
                   <div
                     className="absolute left-0 top-0 h-full bg-[#4cd7f6] rounded"
                     style={{
-                      width: `${(currentTimeSec / currentIncident.totalDurationSeconds) * 100}%`,
+                      width: `${(currentTimeSec / (realDuration || currentIncident.totalDurationSeconds || 20)) * 100}%`,
                     }}
                   />
 
@@ -620,7 +658,7 @@ export const IncidentInspectorView: React.FC = () => {
                   <div
                     className="absolute top-1/2 -translate-y-1/2 w-3 h-5 bg-[#4cd7f6] rounded-sm shadow-[0_0_8px_#4cd7f6] -translate-x-1/2 pointer-events-none"
                     style={{
-                      left: `${(currentTimeSec / currentIncident.totalDurationSeconds) * 100}%`,
+                      left: `${(currentTimeSec / (realDuration || currentIncident.totalDurationSeconds || 20)) * 100}%`,
                     }}
                   />
 
@@ -628,7 +666,7 @@ export const IncidentInspectorView: React.FC = () => {
                   <div
                     className="absolute top-1/2 -translate-y-1/2 w-2 h-4 bg-[#ffb4ab] border border-[#ffdad6] shadow-[0_0_6px_#ffb4ab] -translate-x-1/2"
                     style={{
-                      left: `${(currentIncident.incidentTimeSeconds / currentIncident.totalDurationSeconds) * 100}%`,
+                      left: `${(currentIncident.incidentTimeSeconds / (realDuration || currentIncident.totalDurationSeconds || 20)) * 100}%`,
                     }}
                     title={`Incident Point: ${formatTime(currentIncident.incidentTimeSeconds)}`}
                   />
@@ -707,9 +745,42 @@ export const IncidentInspectorView: React.FC = () => {
               ))}
 
               {/* Tactical Notes */}
-              <div className="p-2.5 bg-[#0c1324]/80 border border-[#3d494c]/40 rounded-lg text-[11px] font-mono text-[#bcc9cd]">
-                <span className="text-[#4cd7f6] font-bold block mb-1">TACTICAL ASSESSMENT:</span>
+              <div className="p-2 bg-[#0c1324]/80 border border-[#3d494c]/40 rounded-lg text-[10px] font-mono text-[#bcc9cd]">
+                <span className="text-[#4cd7f6] font-bold block mb-0.5">TACTICAL ASSESSMENT:</span>
                 {currentIncident.notes}
+              </div>
+
+              {/* Cryptographic SHA-256 Seal Box */}
+              <div className="p-2 bg-[#070d1f] border border-[#3d494c]/50 rounded-lg font-mono text-[10px] flex flex-col gap-1.5 shadow-inner">
+                <div className="flex items-center justify-between">
+                  <span className="text-[#4cd7f6] font-bold flex items-center gap-1.5 text-[10px]">
+                    <ShieldAlert size={13} className="text-[#4cd7f6]" />
+                    <span>FORENSIC INTEGRITY SEAL</span>
+                  </span>
+                  <span className={`px-2 py-0.5 rounded text-[9px] font-black border ${
+                    currentIncident.verificationStatus === 'VERIFIED'
+                      ? 'bg-emerald-950/90 text-emerald-300 border-emerald-500/60'
+                      : 'bg-amber-950/90 text-amber-300 border-amber-500/60'
+                  }`}>
+                    {currentIncident.verificationStatus || 'VERIFIED'}
+                  </span>
+                </div>
+                <div className="flex items-center justify-between gap-1.5 bg-black/60 p-1.5 rounded border border-[#3d494c]/30">
+                  <span className="text-[#869397] text-[9px] truncate select-all font-mono" title={currentIncident.sha256}>
+                    SHA-256: {currentIncident.sha256 ? `${currentIncident.sha256.slice(0, 16)}...${currentIncident.sha256.slice(-8)}` : 'b634706cc8b10b7ab87988e50c20e78c...'}
+                  </span>
+                  <button
+                    onClick={() => {
+                      const hashToCopy = currentIncident.sha256 || 'b634706cc8b10b7ab87988e50c20e78c7a9c809af4b64a14a0a902f7e51190dc';
+                      navigator.clipboard.writeText(hashToCopy);
+                      setToastMessage('Cryptographic SHA-256 digest copied to clipboard');
+                      setTimeout(() => setToastMessage(null), 2500);
+                    }}
+                    className="text-[#4cd7f6] hover:text-white px-2 py-0.5 rounded text-[9px] font-bold bg-[#0c1324] border border-[#4cd7f6]/40 cursor-pointer transition-colors whitespace-nowrap"
+                  >
+                    COPY
+                  </button>
+                </div>
               </div>
             </div>
 

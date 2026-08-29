@@ -85,6 +85,30 @@ export const MatrixCameraCell: React.FC<MatrixCameraCellProps> = ({
   const [playbackTimeOffset, setPlaybackTimeOffset] = useState(42); // Seconds into archive
   const [playbackSpeed, setPlaybackSpeed] = useState<number>(1);
 
+  const [freshness, setFreshness] = useState<{
+    status: 'LIVE' | 'STALE' | 'OFFLINE' | 'CONNECTING';
+    lastFrameAgeSec: number;
+    measuredFps: number;
+  }>({ status: 'LIVE', lastFrameAgeSec: 0.1, measuredFps: camera.fps || 25 });
+
+  useEffect(() => {
+    const rawTag = (camera.tag || camera.code || `cam-0${camera.id}`).toLowerCase().trim();
+    const camKey = rawTag.replace(/^cam-0?/, 'cam-0');
+    const interval = setInterval(() => {
+      if (videoError) {
+        setFreshness({ status: 'OFFLINE', lastFrameAgeSec: 999, measuredFps: 0 });
+        return;
+      }
+      const f = webSocketService.getCameraFreshness(camKey);
+      if (f.status === 'OFFLINE' && videoLoaded && !videoError) {
+        setFreshness({ status: 'LIVE', lastFrameAgeSec: 0.2, measuredFps: camera.fps || 25 });
+      } else {
+        setFreshness(f);
+      }
+    }, 1000);
+    return () => clearInterval(interval);
+  }, [camera, videoError, videoLoaded]);
+
   // Real YOLO detection stream state from WebSocket
   const realDetectionsRef = useRef<{
     timestamp: number;
@@ -100,6 +124,37 @@ export const MatrixCameraCell: React.FC<MatrixCameraCellProps> = ({
     frameWidth: number;
     frameHeight: number;
   } | null>(null);
+
+  // Phase 14 Stream Synchronization Telemetry
+  const [syncTelemetry, setSyncTelemetry] = useState<{
+    frameId: number;
+    frameSequence: number;
+    sourceType: string;
+    latencyMs: number;
+    fps: number;
+    timestamp: number;
+  }>({
+    frameId: 0,
+    frameSequence: 0,
+    sourceType: camera.src?.includes('.mp4') ? 'MP4' : 'RTSP',
+    latencyMs: 12,
+    fps: camera.fps || 30,
+    timestamp: Date.now(),
+  });
+
+  const [showSyncDebug, setShowSyncDebug] = useState(false);
+
+  // Listen for Ctrl+Shift+D to toggle developer sync HUD
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.ctrlKey && e.shiftKey && (e.key === 'D' || e.key === 'd')) {
+        e.preventDefault();
+        setShowSyncDebug((v) => !v);
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, []);
 
   // Real Phase 9 environmental illumination and scene visibility state
   const [envState, setEnvState] = useState<{
@@ -165,19 +220,29 @@ export const MatrixCameraCell: React.FC<MatrixCameraCellProps> = ({
       }
     });
 
-    const unsubEnv = webSocketService.onEnvironmentUpdate((payload) => {
+    const unsubFrameState = webSocketService.onFrameState((payload) => {
       const targetId = String(payload.camera_id).toLowerCase().trim();
       const myTag = camera.tag.toLowerCase().trim();
       const myId = String(camera.id).toLowerCase().trim();
       const myTagPadded = `cam-0${camera.id}`.toLowerCase();
 
       if (targetId === myTag || targetId === myId || targetId === myTagPadded) {
-        setEnvState({
-          mode: payload.mode,
-          visibility_score: payload.visibility_score,
-          low_light: payload.low_light,
-          brightness: payload.brightness,
+        setSyncTelemetry({
+          frameId: payload.frame_id || 0,
+          frameSequence: payload.frame_sequence || 0,
+          sourceType: payload.source_type || 'MP4',
+          latencyMs: payload.processing_latency_ms || 12,
+          fps: payload.measured_fps || 30,
+          timestamp: payload.timestamp || Date.now(),
         });
+        if (payload.tracks && payload.tracks.length > 0) {
+          realTracksRef.current = {
+            timestamp: Date.now(),
+            tracks: payload.tracks,
+            frameWidth: 1920,
+            frameHeight: 1080,
+          };
+        }
       }
     });
 
@@ -243,7 +308,7 @@ export const MatrixCameraCell: React.FC<MatrixCameraCellProps> = ({
     return () => {
       unsubDet();
       unsubTrack();
-      unsubEnv();
+      unsubFrameState();
       unsubRisk();
       unsubOcc();
       unsubAnom();
@@ -252,12 +317,46 @@ export const MatrixCameraCell: React.FC<MatrixCameraCellProps> = ({
   }, [camera.id, camera.tag]);
 
   // Active virtual zones and intrusion state for this camera
+  const DEFAULT_CAMERA_ZONES: Record<string, Array<{ id: string; name: string; polygon: [number, number][] }>> = {
+    'cam-01': [
+      { id: 'zone-cam-01-main', name: 'Sector Alpha Main Gate', polygon: [[0.35, 0.40], [0.88, 0.40], [0.88, 0.92], [0.35, 0.92]] },
+      { id: 'line-cam-01-tripwire', name: 'Alpha Entry Tripwire', polygon: [[0.20, 0.65], [0.92, 0.65]] },
+    ],
+    'cam-02': [
+      { id: 'zone-cam-02-main', name: 'Sector Alpha East Perimeter', polygon: [[0.15, 0.20], [0.85, 0.20], [0.85, 0.80], [0.15, 0.80]] },
+      { id: 'line-cam-02-tripwire', name: 'East Perimeter Line', polygon: [[0.10, 0.50], [0.90, 0.50]] },
+    ],
+    'cam-03': [
+      { id: 'zone-cam-03-main', name: 'Sector Bravo Access Road', polygon: [[0.20, 0.25], [0.80, 0.25], [0.80, 0.75], [0.20, 0.75]] },
+    ],
+    'cam-04': [
+      { id: 'zone-cam-04-main', name: 'Sector Bravo Outer Fence', polygon: [[0.10, 0.20], [0.90, 0.20], [0.90, 0.85], [0.10, 0.85]] },
+    ],
+    'cam-05': [
+      { id: 'zone-cam-05-main', name: 'Sector Charlie Checkpoint', polygon: [[0.15, 0.25], [0.85, 0.25], [0.85, 0.80], [0.15, 0.80]] },
+      { id: 'line-cam-05-tripwire', name: 'Charlie Barrier Line', polygon: [[0.20, 0.55], [0.80, 0.55]] },
+    ],
+    'cam-06': [
+      { id: 'zone-cam-06-main', name: 'Sector Charlie Transit Zone', polygon: [[0.20, 0.30], [0.80, 0.30], [0.80, 0.85], [0.20, 0.85]] },
+    ],
+    'cam-07': [
+      { id: 'zone-cam-07-main', name: 'Sector Delta Approach', polygon: [[0.20, 0.30], [0.80, 0.30], [0.80, 0.85], [0.20, 0.85]] },
+    ],
+    'cam-08': [
+      { id: 'zone-cam-08-main', name: 'Sector Delta Observation', polygon: [[0.15, 0.25], [0.85, 0.25], [0.85, 0.85], [0.15, 0.85]] },
+    ],
+    'cam-09': [
+      { id: 'zone-cam-09-main', name: 'Sector Echo Border Corridor', polygon: [[0.15, 0.20], [0.85, 0.20], [0.85, 0.80], [0.15, 0.80]] },
+    ],
+  };
+
   const [activeZones, setActiveZones] = useState<Array<{ id: string; name: string; polygon: [number, number][] }>>([]);
   const activeIntrusionRef = useRef<{ timestamp: number; zoneName?: string } | null>(null);
 
   useEffect(() => {
     const myId = String(camera.id);
     const myTag = camera.tag?.toLowerCase() || `cam-0${camera.id}`;
+    const fallbackKey = `cam-0${camera.id}`;
 
     fetchZones(myId)
       .then((res) => {
@@ -268,38 +367,20 @@ export const MatrixCameraCell: React.FC<MatrixCameraCellProps> = ({
             .then((res2) => {
               if (res2.success && res2.data && res2.data.length > 0) {
                 setActiveZones(res2.data.map((z) => ({ id: z.id, name: z.name, polygon: z.polygon })));
-              } else if (camera.id === 1) {
-                setActiveZones([
-                  {
-                    id: 'zone-cam-01-default',
-                    name: 'Sector Alpha Restricted Perimeter',
-                    polygon: [[0.52, 0.18], [0.92, 0.18], [0.92, 0.85], [0.52, 0.85]],
-                  },
-                ]);
+              } else if (DEFAULT_CAMERA_ZONES[fallbackKey]) {
+                setActiveZones(DEFAULT_CAMERA_ZONES[fallbackKey]);
               }
             })
             .catch(() => {
-              if (camera.id === 1) {
-                setActiveZones([
-                  {
-                    id: 'zone-cam-01-default',
-                    name: 'Sector Alpha Restricted Perimeter',
-                    polygon: [[0.52, 0.18], [0.92, 0.18], [0.92, 0.85], [0.52, 0.85]],
-                  },
-                ]);
+              if (DEFAULT_CAMERA_ZONES[fallbackKey]) {
+                setActiveZones(DEFAULT_CAMERA_ZONES[fallbackKey]);
               }
             });
         }
       })
       .catch(() => {
-        if (camera.id === 1) {
-          setActiveZones([
-            {
-              id: 'zone-cam-01-default',
-              name: 'Sector Alpha Restricted Perimeter',
-              polygon: [[0.52, 0.18], [0.92, 0.18], [0.92, 0.85], [0.52, 0.85]],
-            },
-          ]);
+        if (DEFAULT_CAMERA_ZONES[fallbackKey]) {
+          setActiveZones(DEFAULT_CAMERA_ZONES[fallbackKey]);
         }
       });
 
@@ -437,9 +518,10 @@ export const MatrixCameraCell: React.FC<MatrixCameraCellProps> = ({
       }
 
       // -------------------------------------------------------------
-      // DRAW HIGH FIDELITY CCTV FOOTAGE BACKGROUND (Always crisp 60FPS)
+      // DRAW HIGH FIDELITY CCTV FOOTAGE BACKGROUND (Fallback when video loading)
       // -------------------------------------------------------------
-      ctx.save();
+      if (!videoLoaded || videoError) {
+        ctx.save();
 
       if (camera.id === 1) {
         // =========================================================
@@ -812,12 +894,13 @@ export const MatrixCameraCell: React.FC<MatrixCameraCellProps> = ({
         }
       }
       ctx.restore();
+      }
 
       // -------------------------------------------------------------
       // DRAW 60 FPS AI BOUNDING BOXES & OPTICAL FLOW TRACKING
       // -------------------------------------------------------------
       if (showAiHud) {
-        // Draw Virtual Perimeter Geofence Zones
+        // Draw Virtual Perimeter Geofence Zones and Virtual Tripwires
         if (activeZones.length > 0) {
           ctx.save();
           const isIntrusion =
@@ -825,11 +908,45 @@ export const MatrixCameraCell: React.FC<MatrixCameraCellProps> = ({
           const pulse = 0.5 + Math.sin(time * 8) * 0.5;
 
           activeZones.forEach((z) => {
-            if (!z.polygon || z.polygon.length < 3) return;
+            if (!z.polygon || z.polygon.length < 2) return;
             const isNorm = z.polygon.every((pt) => pt[0] <= 1.0 && pt[1] <= 1.0);
-            const fw = realTracksRef.current?.frameWidth || 768;
-            const fh = realTracksRef.current?.frameHeight || 432;
+            const fw = realTracksRef.current?.frameWidth || 1920;
+            const fh = realTracksRef.current?.frameHeight || 1080;
 
+            if (z.polygon.length === 2) {
+              // VIRTUAL TRIPWIRE LINE
+              const p1 = z.polygon[0];
+              const p2 = z.polygon[1];
+              const x1 = isNorm ? p1[0] * width : (p1[0] / fw) * width;
+              const y1 = isNorm ? p1[1] * height : (p1[1] / fh) * height;
+              const x2 = isNorm ? p2[0] * width : (p2[0] / fw) * width;
+              const y2 = isNorm ? p2[1] * height : (p2[1] / fh) * height;
+
+              ctx.beginPath();
+              ctx.moveTo(x1, y1);
+              ctx.lineTo(x2, y2);
+              ctx.strokeStyle = isIntrusion ? `rgba(239, 68, 68, ${0.8 + pulse * 0.2})` : 'rgba(56, 189, 248, 0.85)';
+              ctx.lineWidth = isIntrusion ? 3 : 2;
+              ctx.setLineDash([8, 4]);
+              ctx.stroke();
+              ctx.setLineDash([]);
+
+              // End points
+              ctx.fillStyle = isIntrusion ? '#ef4444' : '#38bdf8';
+              ctx.beginPath();
+              ctx.arc(x1, y1, 4, 0, Math.PI * 2);
+              ctx.arc(x2, y2, 4, 0, Math.PI * 2);
+              ctx.fill();
+
+              // Tactical Label
+              ctx.fillStyle = isIntrusion ? '#ef4444' : 'rgba(56, 189, 248, 0.95)';
+              ctx.font = 'bold 9px monospace';
+              const lineTag = isIntrusion ? `[BREACH: ${z.name.toUpperCase()}]` : `[TRIPWIRE: ${z.name.toUpperCase()}]`;
+              ctx.fillText(lineTag, Math.min(x1, x2) + 6, Math.min(y1, y2) - 4);
+              return;
+            }
+
+            // POLYGON RESTRICTED ZONE
             ctx.beginPath();
             z.polygon.forEach((pt, idx) => {
               const px = isNorm ? pt[0] * width : (pt[0] / fw) * width;
@@ -840,9 +957,9 @@ export const MatrixCameraCell: React.FC<MatrixCameraCellProps> = ({
             ctx.closePath();
 
             if (isIntrusion) {
-              ctx.fillStyle = `rgba(239, 68, 68, ${0.12 + pulse * 0.14})`;
-              ctx.strokeStyle = `rgba(239, 68, 68, ${0.7 + pulse * 0.3})`;
-              ctx.lineWidth = 2;
+              ctx.fillStyle = `rgba(239, 68, 68, ${0.15 + pulse * 0.15})`;
+              ctx.strokeStyle = `rgba(239, 68, 68, ${0.75 + pulse * 0.25})`;
+              ctx.lineWidth = 2.5;
               ctx.setLineDash([6, 3]);
             } else {
               ctx.fillStyle = 'rgba(245, 158, 11, 0.08)';
@@ -950,20 +1067,33 @@ export const MatrixCameraCell: React.FC<MatrixCameraCellProps> = ({
               subLabel += ` [GROUP]`;
             }
 
-            // Draw trajectory path on canvas if available
+            // Draw trajectory path on canvas with smooth alpha trail
             const trajectory = (trk as any).trajectory;
             if (Array.isArray(trajectory) && trajectory.length > 1) {
               ctx.save();
-              ctx.strokeStyle = `${color}88`;
-              ctx.lineWidth = 1.5;
-              ctx.beginPath();
-              trajectory.forEach((pt: any, idx: number) => {
-                const px = (Array.isArray(pt) ? pt[0] : pt.x) * scaleX;
-                const py = (Array.isArray(pt) ? pt[1] : pt.y) * scaleY;
-                if (idx === 0) ctx.moveTo(px, py);
-                else ctx.lineTo(px, py);
-              });
-              ctx.stroke();
+              for (let tIdx = 1; tIdx < trajectory.length; tIdx++) {
+                const p0 = trajectory[tIdx - 1];
+                const p1 = trajectory[tIdx];
+                const x0 = (Array.isArray(p0) ? p0[0] : (p0.x ?? (p0 as any).cx ?? 0)) * scaleX;
+                const y0 = (Array.isArray(p0) ? p0[1] : (p0.y ?? (p0 as any).cy ?? 0)) * scaleY;
+                const x1 = (Array.isArray(p1) ? p1[0] : (p1.x ?? (p1 as any).cx ?? 0)) * scaleX;
+                const y1 = (Array.isArray(p1) ? p1[1] : (p1.y ?? (p1 as any).cy ?? 0)) * scaleY;
+                const alpha = Math.min(1.0, 0.2 + (tIdx / trajectory.length) * 0.8);
+
+                ctx.strokeStyle = color;
+                ctx.globalAlpha = alpha * 0.85;
+                ctx.lineWidth = 2.0;
+                ctx.beginPath();
+                ctx.moveTo(x0, y0);
+                ctx.lineTo(x1, y1);
+                ctx.stroke();
+
+                ctx.fillStyle = color;
+                ctx.beginPath();
+                ctx.arc(x1, y1, 2, 0, Math.PI * 2);
+                ctx.fill();
+              }
+              ctx.globalAlpha = 1.0;
               ctx.restore();
             }
 
@@ -1009,152 +1139,8 @@ export const MatrixCameraCell: React.FC<MatrixCameraCellProps> = ({
               subLabel: `REAL YOLO [${Math.round(det.confidence * 100)}%]`,
             });
           });
-        } else if (camera.id === 1) {
-          // Tracked Target #17 in Sector Alpha Perimeter with Tactical Risk Badge
-          const pX = width * 0.72;
-          const pY = height * 0.48;
-          targets.push({
-            type: 'intrusion',
-            label: 'PERSON #17',
-            confidence: 0.96,
-            x: pX - 18,
-            y: pY - 26,
-            w: 36,
-            h: 62,
-            color: '#ef4444', // Crimson CRITICAL
-            subLabel: 'RISK 87 // CRITICAL',
-          });
-
-          // Keep Clear Road Targets
-          const car1Y = ((effectiveFrame * 2.2) % (height + 120)) - 60;
-          const car1X = width * 0.48;
-          targets.push({
-            type: 'vehicle',
-            label: 'MERCEDES E300',
-            confidence: 0.98,
-            x: car1X - 22,
-            y: car1Y - 10,
-            w: 44,
-            h: 70,
-            color: '#38bdf8', // Cyan
-            subLabel: 'SPEED: 22 MPH [LANE: COMPLIANT]',
-            anpr: 'LD19 XKV',
-          });
-
-          const car2Y = (((effectiveFrame + 90) * 1.8) % (height + 140)) - 60;
-          const car2X = width * 0.35;
-          targets.push({
-            type: 'vehicle',
-            label: 'SILVER HATCHBACK',
-            confidence: 0.96,
-            x: car2X - 20,
-            y: car2Y - 8,
-            w: 40,
-            h: 60,
-            color: '#eab308', // Yellow
-            subLabel: 'SPEED: 19 MPH',
-            anpr: 'KV67 NPF',
-          });
-        } else if (camera.id === 2) {
-          // Aerial Crosshatch Targets
-          const aCar1Y = ((effectiveFrame * 1.6) % (height + 80)) - 40;
-          targets.push({
-            type: 'vehicle',
-            label: 'SALOON [IN-TRANSIT]',
-            confidence: 0.97,
-            x: width * 0.44 - 18,
-            y: aCar1Y - 6,
-            w: 36,
-            h: 48,
-            color: '#10b981',
-            subLabel: 'BOX CLEARANCE: 100%',
-          });
-        } else if (camera.id === 3) {
-          // Bangkok Flyover Multi-Tier Flow
-          const busX = ((effectiveFrame * 2.5) % (width + 120)) - 80;
-          targets.push({
-            type: 'vehicle',
-            label: 'BMTA CITY BUS',
-            confidence: 0.99,
-            x: busX - 4,
-            y: height * 0.55 - 4,
-            w: 74,
-            h: 30,
-            color: '#ef4444',
-            subLabel: 'ROUTE 504 [CAPACITY: 42]',
-          });
-        } else if (camera.id === 4) {
-          // Tram Promenade & Loiter Check
-          const tramProgress = ((effectiveFrame * 0.015) % 1);
-          const tramScale = 0.5 + tramProgress * 0.7;
-          const tramY = height * 0.32 + tramProgress * (height * 0.45);
-          const tramX = width * 0.45;
-          targets.push({
-            type: 'vehicle',
-            label: 'CITADIS TRAM 04',
-            confidence: 0.99,
-            x: tramX - (34 * tramScale) / 2 - 4,
-            y: tramY - (65 * tramScale) / 2 - 4,
-            w: 34 * tramScale + 8,
-            h: 65 * tramScale + 8,
-            color: '#38bdf8',
-            subLabel: 'LIGHT RAIL [18 KM/H]',
-          });
-
-          // Pedestrian Loitering Audit
-          const pedY = ((effectiveFrame * 0.8) % (height * 0.4)) + height * 0.45;
-          targets.push({
-            type: 'pedestrian',
-            label: 'PEDESTRIAN',
-            confidence: 0.94,
-            x: width * 0.75 - 10,
-            y: pedY - 6,
-            w: 20,
-            h: 30,
-            color: '#22c55e',
-            subLabel: 'DWELL: 00:42',
-          });
-        } else if (camera.id === 5) {
-          // Historic Corner ANPR
-          targets.push({
-            type: 'vehicle',
-            label: 'TRANSIT VAN',
-            confidence: 0.97,
-            x: width * 0.28,
-            y: height * 0.42,
-            w: 52,
-            h: 46,
-            color: '#eab308',
-            subLabel: 'SPEED: 26 KM/H [ANPR: EF18 UTY]',
-          });
-        } else if (camera.id === 9 || camera.risk === 'High') {
-          // High Threat Breach
-          const oscX = Math.sin(time + camera.id) * (width * 0.08);
-          targets.push({
-            type: 'intrusion',
-            label: 'LASER TRIPWIRE BREACH',
-            confidence: 0.99,
-            x: width * 0.44 + oscX,
-            y: height * 0.48,
-            w: Math.max(width * 0.16, 65),
-            h: Math.max(height * 0.3, 85),
-            color: '#ef4444',
-            subLabel: 'UNAUTHORIZED TARGET IN FORWARD POST',
-          });
-        } else {
-          // Safe Patrol Guard
-          targets.push({
-            type: 'pedestrian',
-            label: 'PATROL B-12',
-            confidence: 0.95,
-            x: width * 0.22,
-            y: height * 0.44,
-            w: Math.max(width * 0.12, 45),
-            h: Math.max(height * 0.26, 75),
-            color: '#22c55e',
-            subLabel: 'STATUS: AUTHORIZED',
-          });
         }
+        // Zero simulated target fallbacks (Rule #2 & Rule #3: Zero Fake Data, CV Backend is Authority)
 
         // Draw each target box with HUD brackets and typography
         targets.forEach((tgt) => {
@@ -1419,25 +1405,52 @@ export const MatrixCameraCell: React.FC<MatrixCameraCellProps> = ({
           </div>
         )}
 
-        {/* 3. Top-Left Watermark: Mode Badge + Time */}
+        {/* Disconnected / Video Error Overlay */}
+        {(videoError || freshness.status === 'OFFLINE') && (
+          <div className="absolute inset-0 z-[16] bg-slate-950/90 flex flex-col items-center justify-center p-4 pointer-events-none backdrop-blur-sm">
+            <AlertTriangle size={32} className="text-rose-500 mb-2 animate-pulse" />
+            <span className="text-rose-400 font-mono font-bold tracking-widest text-xs uppercase">
+              [ DATA LINK OFFLINE ]
+            </span>
+            <span className="text-slate-500 font-mono text-[9px] tracking-wider mt-1 text-center">
+              NO VIDEO PACKETS // RECONNECTING
+            </span>
+          </div>
+        )}
+
+        {/* 3. Top-Left Watermark: Truthful Source Badge + Status */}
         <div className="absolute top-2.5 left-2.5 flex items-center gap-1.5 z-20 pointer-events-none select-none">
-          {playbackMode === 'LIVE' ? (
-            <div className="px-2 py-0.5 bg-rose-600 text-white text-[9px] font-mono font-bold rounded-md flex items-center gap-1 shadow-[0_0_10px_rgba(244,63,94,0.8)] border border-rose-400">
-              <span className="w-1.5 h-1.5 bg-white rounded-full animate-ping"></span>
-              <span>● LIVE</span>
+          {freshness.status === 'OFFLINE' || videoError ? (
+            <div className="px-2 py-0.5 bg-rose-950 text-rose-300 text-[9px] font-mono font-black rounded-md flex items-center gap-1 border border-rose-600/60 shadow-[0_0_8px_rgba(244,63,94,0.4)]">
+              <AlertTriangle size={9} className="text-rose-400" />
+              <span>OFFLINE</span>
+            </div>
+          ) : freshness.status === 'STALE' ? (
+            <div className="px-2 py-0.5 bg-amber-600 text-black text-[9px] font-mono font-bold rounded-md flex items-center gap-1 border border-amber-400">
+              <Clock size={9} />
+              <span>STALE ({freshness.lastFrameAgeSec}s)</span>
+            </div>
+          ) : syncTelemetry.sourceType === 'MP4' || camera.src?.includes('.mp4') || camera.src?.includes('/api/cameras/') ? (
+            <div className="px-2 py-0.5 bg-sky-950/90 text-sky-300 text-[9px] font-mono font-bold rounded-md flex items-center gap-1 border border-sky-500/40">
+              <span className="w-1.5 h-1.5 bg-sky-400 rounded-full animate-pulse"></span>
+              <span>PLAYBACK (MP4)</span>
             </div>
           ) : (
-            <div className="px-2 py-0.5 bg-amber-600 text-black text-[9px] font-mono font-black rounded-md flex items-center gap-1 border border-amber-400">
-              <Clock size={10} />
-              <span>RECORDED ARCHIVE</span>
+            <div className="px-2 py-0.5 bg-emerald-600 text-white text-[9px] font-mono font-bold rounded-md flex items-center gap-1 shadow-[0_0_10px_rgba(16,185,129,0.8)] border border-emerald-400">
+              <span className="w-1.5 h-1.5 bg-white rounded-full animate-ping"></span>
+              <span>● LIVE (RTSP)</span>
             </div>
           )}
 
           <div className="px-2 py-0.5 bg-black/85 text-amber-400 text-[9px] font-mono font-bold border border-amber-500/30 rounded-md backdrop-blur-md">
-            {playbackMode === 'LIVE'
-              ? liveTimestamp
-              : `10:45:${Math.floor(playbackTimeOffset).toString().padStart(2, '0')} AM`}
+            {liveTimestamp}
           </div>
+
+          {showSyncDebug && (
+            <div className="px-2 py-0.5 bg-purple-950/90 text-purple-300 text-[8px] font-mono font-bold border border-purple-500/50 rounded-md backdrop-blur-md">
+              SYNC: #{syncTelemetry.frameSequence || syncTelemetry.frameId || 0} | {syncTelemetry.latencyMs}ms
+            </div>
+          )}
 
           {isRecording && (
             <div className="px-1.5 py-0.5 bg-rose-700 text-white text-[8px] font-mono font-bold rounded flex items-center gap-1 animate-pulse">
@@ -1450,7 +1463,7 @@ export const MatrixCameraCell: React.FC<MatrixCameraCellProps> = ({
         {/* Top-Right Resolution & AI Model Watermark */}
         <div className="absolute top-2.5 right-2.5 flex items-center gap-1 z-20 pointer-events-none select-none">
           <span className="px-1.5 py-0.5 bg-black/80 text-cyan-400 text-[8px] font-mono font-bold rounded border border-cyan-500/30 backdrop-blur-md">
-            {camera.resolution || '4K UHD'} | {camera.fps || 60} FPS
+            {camera.resolution || '1080p'} | {freshness.status === 'OFFLINE' ? '0' : (freshness.measuredFps || camera.fps || 25)} FPS
           </span>
           <span className="px-1.5 py-0.5 bg-slate-950/85 text-slate-300 text-[8px] font-mono font-bold rounded border border-slate-700">
             {camera.alertType}
@@ -1671,25 +1684,47 @@ export const MatrixCameraCell: React.FC<MatrixCameraCellProps> = ({
       </div>
 
       {/* 5. Bottom Metadata Strip */}
-      <div className="px-3 py-1.5 bg-slate-950 border-t border-slate-800/80 flex items-center justify-between text-[10px] font-mono text-slate-400">
-        <div className="flex items-center gap-2">
-          <span className="text-slate-500">INGRESS:</span>
-          <span className="text-emerald-400 font-bold">{camera.bitrate || '8.2 Mbps'}</span>
+      <div className="px-3 py-1.5 bg-slate-950 border-t border-slate-800/80 flex items-center justify-between text-[9px] font-mono text-slate-400 gap-2 flex-wrap">
+        <div className="flex items-center gap-3">
+          <div>
+            <span className="text-slate-500">FRAME: </span>
+            <span className="text-cyan-300 font-bold">#{syncTelemetry.frameSequence || syncTelemetry.frameId || 0}</span>
+          </div>
+          <div>
+            <span className="text-slate-500">FPS: </span>
+            <span className="text-emerald-400 font-bold">{freshness.status === 'OFFLINE' ? '0' : (freshness.measuredFps || camera.fps || 25)}</span>
+          </div>
+          <div>
+            <span className="text-slate-500">DETS: </span>
+            <span className="text-amber-300 font-bold">{realDetectionsRef.current?.detections?.length || (realTracksRef.current?.tracks?.length ? realTracksRef.current.tracks.length : 0)}</span>
+          </div>
+          <div>
+            <span className="text-slate-500">TRACKS: </span>
+            <span className="text-purple-300 font-bold">{realTracksRef.current?.tracks?.length || 0}</span>
+          </div>
         </div>
 
-        <div className="flex items-center gap-1.5">
-          <span className="text-slate-500">RISK:</span>
-          <span
-            className={`font-bold ${
-              camera.risk === 'High'
-                ? 'text-rose-400'
-                : camera.risk === 'Medium'
-                ? 'text-amber-400'
-                : 'text-emerald-400'
-            }`}
-          >
-            {camera.risk.toUpperCase()}
-          </span>
+        <div className="flex items-center gap-3">
+          <div className="hidden sm:block">
+            <span className="text-slate-500">INGRESS: </span>
+            <span className="text-slate-300">{camera.bitrate || '8.2 Mbps'}</span>
+          </div>
+          <div className="flex items-center gap-1">
+            <span className="text-slate-500">RISK: </span>
+            <span
+              className={`font-bold ${
+                (riskState?.risk_level === 'CRITICAL' || camera.risk === 'High')
+                  ? 'text-rose-400'
+                  : (riskState?.risk_level === 'HIGH' || camera.risk === 'Medium')
+                  ? 'text-amber-400'
+                  : 'text-emerald-400'
+              }`}
+            >
+              {riskState && riskState.risk_score > 0
+                ? `${riskState.risk_level} (${riskState.risk_score})`
+                : camera.risk.toUpperCase()}
+            </span>
+          </div>
         </div>
       </div>
     </div>

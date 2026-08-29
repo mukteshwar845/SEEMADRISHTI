@@ -101,6 +101,10 @@ export interface IncidentPayload {
   metadata?: any;
   acknowledged?: boolean;
   created_at: string;
+  sha256?: string;
+  file_size?: number;
+  duration?: number;
+  verification_status?: string;
 }
 export type IncidentListener = (data: IncidentPayload) => void;
 
@@ -198,6 +202,22 @@ export interface GroupMovementPayload {
 }
 export type GroupMovementListener = (data: GroupMovementPayload) => void;
 
+export interface FrameStatePayload {
+  type: string;
+  camera_id: string;
+  frame_id: number;
+  frame_sequence: number;
+  source_type: string;
+  timestamp: number;
+  measured_fps: number;
+  processing_latency_ms: number;
+  detections: RealYoloDetection[];
+  tracks: TrackItem[];
+  environment?: any;
+  risk?: { max_score: number; level: string };
+}
+export type FrameStateListener = (data: FrameStatePayload) => void;
+
 const WS_URL_STORAGE_KEY = 'seemadrishti_ws_url_v2';
 const DEFAULT_WS_URL = 'ws://127.0.0.1:8000/ws/alerts';
 
@@ -233,6 +253,8 @@ class WebSocketService {
   private occupancyListeners: Set<OccupancyListener> = new Set();
   private anomalyListeners: Set<AnomalyListener> = new Set();
   private groupMovementListeners: Set<GroupMovementListener> = new Set();
+  private frameStateListeners: Set<FrameStateListener> = new Set();
+  private latestFrameStates: Map<string, FrameStatePayload> = new Map();
   private latestEnvironmentStates: Map<string, EnvironmentUpdatePayload> = new Map();
   private latestOccupancyStates: Map<string, OccupancyUpdatePayload> = new Map();
   private latestRiskStates: Map<string, any> = new Map();
@@ -241,6 +263,8 @@ class WebSocketService {
   private latestMovementUpdates: Map<string, MovementUpdatePayload[]> = new Map();
   private recentAlertIds: Set<string> = new Set();
   private lastEventTimestamp: number = Date.now();
+  private cameraFrameTracking: Map<string, { lastSeen: number; fps: number; count: number; windowStart: number }> = new Map();
+  private pingTimestamp: number = 0;
 
   constructor() {
     try {
@@ -288,6 +312,53 @@ class WebSocketService {
 
   public isLive(): boolean {
     return this.status === 'CONNECTED' && (Date.now() - this.lastEventTimestamp < 30000);
+  }
+
+  public recordCameraFrame(cameraId: string, fps?: number) {
+    if (!cameraId) return;
+    const key = cameraId.toLowerCase();
+    const now = Date.now();
+    const existing = this.cameraFrameTracking.get(key);
+    if (!existing) {
+      this.cameraFrameTracking.set(key, {
+        lastSeen: now,
+        fps: fps || 25.0,
+        count: 1,
+        windowStart: now,
+      });
+    } else {
+      existing.lastSeen = now;
+      existing.count++;
+      const elapsed = (now - existing.windowStart) / 1000;
+      if (elapsed >= 1.0) {
+        existing.fps = Math.round((existing.count / elapsed) * 10) / 10;
+        existing.count = 0;
+        existing.windowStart = now;
+      }
+    }
+  }
+
+  public getCameraFreshness(cameraId: string): {
+    status: 'LIVE' | 'STALE' | 'OFFLINE' | 'CONNECTING';
+    lastFrameAgeSec: number;
+    measuredFps: number;
+  } {
+    const raw = String(cameraId || '').toLowerCase().trim();
+    const normalized = raw.startsWith('cam-')
+      ? raw.replace(/^cam-0?/, 'cam-0')
+      : `cam-0${raw}`;
+    const tracking = this.cameraFrameTracking.get(raw) || this.cameraFrameTracking.get(normalized);
+    if (!tracking) {
+      return { status: 'OFFLINE', lastFrameAgeSec: 999, measuredFps: 0 };
+    }
+    const age = Math.round(((Date.now() - tracking.lastSeen) / 1000) * 10) / 10;
+    if (age < 2.5) {
+      return { status: 'LIVE', lastFrameAgeSec: age, measuredFps: tracking.fps };
+    }
+    if (age < 10.0) {
+      return { status: 'STALE', lastFrameAgeSec: age, measuredFps: tracking.fps };
+    }
+    return { status: 'OFFLINE', lastFrameAgeSec: age, measuredFps: 0 };
   }
 
   private pushAlert(uiAlert: AlertItem) {
@@ -401,10 +472,9 @@ class WebSocketService {
   private startPingPong() {
     this.stopPingPong();
     this.pingInterval = setInterval(() => {
-      const startTime = performance.now();
       if (this.socket && this.socket.readyState === WebSocket.OPEN) {
+        this.pingTimestamp = performance.now();
         this.socket.send(JSON.stringify({ type: 'PING', timestamp: Date.now() }));
-        this.latencyMs = Math.max(4, Math.round(performance.now() - startTime + Math.random() * 8));
         this.lastHeartbeat = Date.now();
         this.notifyState();
       }
@@ -434,13 +504,30 @@ class WebSocketService {
         }
         break;
       case 'PING_PONG':
-        this.latencyMs = Math.max(5, Math.round(Date.now() - msg.timestamp));
+        if (this.pingTimestamp > 0) {
+          this.latencyMs = Math.max(1, Math.round(performance.now() - this.pingTimestamp));
+        } else {
+          this.latencyMs = Math.max(1, Math.round(Date.now() - msg.timestamp));
+        }
         this.lastHeartbeat = Date.now();
         break;
+      case 'frame_state' as any:
+      case 'FRAME_STATE' as any: {
+        const payload = (msg as any).data || msg.payload;
+        if (payload && payload.camera_id) {
+          this.recordCameraFrame(payload.camera_id, payload.measured_fps);
+          this.latestFrameStates.set(payload.camera_id.toLowerCase(), payload);
+          this.frameStateListeners.forEach((listener) => listener(payload));
+        }
+        break;
+      }
       case 'detection' as any:
       case 'DETECTION' as any: {
         const payload = (msg as any).data || msg.payload;
         if (payload) {
+          if (payload.camera_id) {
+            this.recordCameraFrame(payload.camera_id);
+          }
           this.detectionListeners.forEach((listener) => listener(payload));
         }
         break;
@@ -449,7 +536,21 @@ class WebSocketService {
       case 'TRACKING' as any: {
         const payload = (msg as any).data || msg.payload;
         if (payload) {
+          if (payload.camera_id) {
+            this.recordCameraFrame(payload.camera_id);
+          }
           this.trackingListeners.forEach((listener) => listener(payload));
+        }
+        break;
+      }
+      case 'camera_status' as any: {
+        const payload = (msg as any).data || msg.payload;
+        if (payload && payload.cameraId) {
+          if (payload.connected === false || payload.status === 'Offline') {
+            this.cameraFrameTracking.delete(payload.cameraId.toLowerCase());
+          } else {
+            this.recordCameraFrame(payload.cameraId, payload.measuredFps || 25.0);
+          }
         }
         break;
       }
@@ -782,8 +883,8 @@ class WebSocketService {
     this.emulationTimer = setInterval(() => {
       if (!this.isEmulationEnabled) return;
 
-      // Update jitter / latency variations
-      this.latencyMs = Math.round(12 + Math.random() * 8 + (Math.sin(Date.now() / 3000) * 4));
+      // Update jitter / latency variations deterministically without Math.random
+      this.latencyMs = Math.round(14 + (Math.sin(Date.now() / 3000) * 3));
       this.lastHeartbeat = Date.now();
       this.packetsReceived++;
 
@@ -804,13 +905,13 @@ class WebSocketService {
     const ampm = h >= 12 ? 'PM' : 'AM';
     h = h % 12 || 12;
     const timeStr = `${String(h).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}:${String(d.getSeconds()).padStart(2, '0')} ${ampm}`;
-    const camIdx = Math.floor(Math.random() * 9) + 1;
+    const camIdx = ((Date.now() % 9) + 1);
     const camTag = `CAM-0${camIdx}`;
-    const confidence = Math.round((60 + Math.random() * 39.5) * 10) / 10;
-    const severity = confidence >= 88 ? 'High' : confidence >= 72 ? 'Medium' : 'Low';
+    const confidence = 0.94;
+    const severity = 'High';
 
     const alert: AlertItem = {
-      id: `ws-alt-${Date.now()}-${Math.floor(Math.random() * 1000)}`,
+      id: `alt-${Date.now()}`,
       title: 'Neural Intrusion Breach',
       camera: camTag,
       severity,
@@ -819,10 +920,10 @@ class WebSocketService {
       timestamp: Date.now(),
       status: 'active',
       description: `Target crossing detected on ${camTag}. Neural vector confirmation speed: 1.8 m/s.`,
-      location: `Sector ${String.fromCharCode(65 + camIdx % 4)} - North Border Line`,
+      location: `Sector Alpha - North Border Line`,
       confidence,
-      assignedUnit: `Quick Reaction Team ${camIdx % 3 + 1}`,
-      audioTriggered: severity === 'High',
+      assignedUnit: `Quick Reaction Team 1`,
+      audioTriggered: true,
       thresholdAtTime: 85,
       ...customAlert,
     };
@@ -847,12 +948,12 @@ class WebSocketService {
     return camerasData.map((c, idx) => {
       const isDegraded = idx === 4 && Math.sin(Date.now() / 15000) > 0.6;
       const baseLat = 12 + (idx * 2);
-      const jitter = Math.round((0.8 + Math.random() * 2.2) * 10) / 10;
+      const jitter = Math.round((1.2 + (idx * 0.15)) * 10) / 10;
       const latency = Math.round(baseLat + (Math.sin(Date.now() / 2000 + idx) * 4) + (isDegraded ? 48 : 0));
-      const frameDrop = isDegraded ? 2.4 : Math.round(Math.random() * 0.25 * 100) / 100;
-      const packetLoss = isDegraded ? 1.2 : Math.round(Math.random() * 0.08 * 100) / 100;
+      const frameDrop = isDegraded ? 2.4 : 0.05;
+      const packetLoss = isDegraded ? 1.2 : 0.01;
       const actualFps = isDegraded ? 42 : idx % 2 === 0 ? 60 : 30;
-      const healthScore = isDegraded ? 76 : Math.round(96 + Math.random() * 3.8);
+      const healthScore = isDegraded ? 76 : 98;
 
       return {
         cameraId: c.id,
@@ -864,14 +965,14 @@ class WebSocketService {
         jitterMs: jitter,
         frameDropRate: frameDrop,
         packetLossPercent: packetLoss,
-        bitrateMbps: Math.round((7.5 + (idx * 0.3) + Math.random() * 0.8) * 10) / 10,
+        bitrateMbps: Math.round((7.5 + (idx * 0.3)) * 10) / 10,
         targetFps: idx % 2 === 0 ? 60 : 30,
         actualFps: actualFps,
         uptimePercent: 99.92,
         protocol: idx % 3 === 0 ? 'WebRTC' : 'RTSP/TCP',
         resolution: '4K UHD (3840x2160)',
         codec: idx % 2 === 0 ? 'H.265 (HEVC)' : 'H.264 High',
-        edgeTemperatureC: Math.round(39 + (idx * 0.7) + Math.random() * 2),
+        edgeTemperatureC: Math.round(39 + (idx * 0.7)),
         healthScore,
         lastPingTimestamp: Date.now(),
         historyLatency: [
@@ -964,6 +1065,15 @@ class WebSocketService {
   public onGroupMovement(listener: GroupMovementListener): () => void {
     this.groupMovementListeners.add(listener);
     return () => this.groupMovementListeners.delete(listener);
+  }
+
+  public onFrameState(listener: FrameStateListener): () => void {
+    this.frameStateListeners.add(listener);
+    return () => this.frameStateListeners.delete(listener);
+  }
+
+  public getLatestFrameState(cameraId: string): FrameStatePayload | undefined {
+    return this.latestFrameStates.get(cameraId.toLowerCase());
   }
 
   public getLatestEnvironment(cameraId: string): EnvironmentUpdatePayload | undefined {

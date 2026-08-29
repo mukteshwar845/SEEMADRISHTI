@@ -1,0 +1,83 @@
+{
+  "cam-01": {
+    "name": "Sector Alpha Main Gate",
+    "source_type": "mp4",
+    "source_uri": "cv_service/tests/fixtures/visdrone/CAM-01.mp4",
+    "resolution": "1904x1072",
+    "target_fps": 25,
+    "enabled": true,
+    "description": "Perimeter entry point - real VisDrone UAV sequence uav0000339_00001_v"
+  },
+  "cam-02": {
+    "name": "Sector Alpha East Perimeter",
+    "source_type": "mp4",
+    "source_uri": "cv_service/tests/fixtures/visdrone/CAM-02.mp4",
+    "resolution": "1344x756",
+    "target_fps": 25,
+    "enabled": true,
+    "description": "High-density pedestrian patrol corridor - real VisDrone UAV sequence uav0000086_00000_v (A)"
+  },
+  "cam-03": {
+    "name": "Sector Bravo Access Road",
+    "source_type": "mp4",
+    "source_uri": "cv_service/tests/fixtures/visdrone/CAM-03.mp4",
+    "resolution": "1344x756",
+    "target_fps": 25,
+    "enabled": true,
+    "description": "Rapid motorized & vehicle approach road - real VisDrone UAV sequence uav0000182_00000_v"
+  },
+  "cam-04": {
+    "name": "Sector Bravo Outer Fence",
+    "source_type": "mp4",
+    "source_uri": "cv_service/tests/fixtures/visdrone/CAM-04.mp4",
+    "resolution": "2720x1530",
+    "target_fps": 25,
+    "enabled": true,
+    "description": "High-resolution wide perimeter fence - real VisDrone UAV sequence uav0000117_02622_v"
+  },
+  "cam-05": {
+    "name": "Sector Charlie Checkpoint",
+    "source_type": "mp4",
+    "source_uri": "cv_service/tests/fixtures/visdrone/CAM-05.mp4",
+    "resolution": "2688x1512",
+    "target_fps": 25,
+    "enabled": true,
+    "description": "Multi-modal transit & cyclist checkpoint - real VisDrone UAV sequence uav0000137_00458_v"
+  },
+  "cam-06": {
+    "name": "Sector Charlie Transit Zone",
+    "source_type": "mp4",
+    "source_uri": "cv_service/tests/fixtures/visdrone/CAM-06.mp4",
+    "resolution": "3840x2160",
+    "target_fps": 25,
+    "enabled": true,
+    "description": "4K long-range vehicle transit corridor - real VisDrone UAV sequence uav0000268_05773_v (A)"
+  },
+  "cam-07": {
+    "name": "Sector Delta Approach",
+    "source_type": "mp4",
+    "source_uri": "cv_service/tests/fixtures/visdrone/CAM-07.mp4",
+    "resolution": "3840x2160",
+    "target_fps": 25,
+    "enabled": true,
+    "description": "4K forward observation sector - real VisDrone UAV sequence uav0000268_05773_v (B)"
+  },
+  "cam-08": {
+    "name": "Sector Delta Observation",
+    "source_type": "mp4",
+    "source_uri": "cv_service/tests/fixtures/visdrone/CAM-08.mp4",
+    "resolution": "1904x1072",
+    "target_fps": 25,
+    "enabled": true,
+    "description": "Multi-lane transport & bus convoy observation - real VisDrone UAV sequence uav0000305_00000_v"
+  },
+  "cam-09": {
+    "name": "Sector Echo Border Corridor",
+    "source_type": "mp4",
+    "source_uri": "cv_service/tests/fixtures/visdrone/CAM-09.mp4",
+    "resolution": "1344x756",
+    "target_fps": 25,
+    "enabled": true,
+    "description": "Dispersed patrol tracking corridor - real VisDrone UAV sequence uav0000086_00000_v (B)"
+  }
+}

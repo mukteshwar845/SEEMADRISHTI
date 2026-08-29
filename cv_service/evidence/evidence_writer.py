@@ -1,5 +1,6 @@
 import os
 import time
+import hashlib
 from datetime import datetime, timezone
 from typing import Any, Dict, List, Optional, Tuple
 import cv2
@@ -221,6 +222,28 @@ class EvidenceWriter:
         if file_size == 0:
             raise RuntimeError(f"Evidence file was written with 0 bytes: '{chosen_path}'")
 
+        # Compute SHA-256 cryptographic digest of recorded MP4
+        hasher = hashlib.sha256()
+        with open(chosen_path, "rb") as f:
+            while chunk := f.read(65536):
+                hasher.update(chunk)
+        sha256_digest = hasher.hexdigest()
+
+        # Step 5: Recording Validation
+        verification_status = "FAILED"
+        reopen_frames = 0
+        reopen_fps = self.fps
+        try:
+            check_cap = cv2.VideoCapture(chosen_path)
+            if check_cap.isOpened():
+                reopen_frames = int(check_cap.get(cv2.CAP_PROP_FRAME_COUNT))
+                reopen_fps = check_cap.get(cv2.CAP_PROP_FPS) or self.fps
+                check_cap.release()
+                if reopen_frames > 0 and file_size > 0:
+                    verification_status = "VERIFIED"
+        except Exception:
+            verification_status = "FAILED"
+
         # Standardize relative path for database storage
         rel_path = os.path.relpath(chosen_path, os.getcwd()).replace("\\", "/")
 
@@ -235,4 +258,87 @@ class EvidenceWriter:
             "write_duration_ms": round(write_duration_ms, 2),
             "fps": self.fps,
             "resolution": f"{w}x{h}",
+            "sha256": sha256_digest,
+            "verification_status": verification_status,
         }
+
+    @staticmethod
+    def calculate_sha256(file_path: str) -> str:
+        """Computes hexadecimal SHA-256 hash of a file."""
+        hasher = hashlib.sha256()
+        with open(file_path, "rb") as f:
+            while chunk := f.read(65536):
+                hasher.update(chunk)
+        return hasher.hexdigest()
+
+    @staticmethod
+    def verify_evidence_file(
+        file_path: str,
+        expected_sha256: Optional[str] = None,
+    ) -> Dict[str, Any]:
+        """
+        Validates an existing MP4 evidence file on disk:
+        1. Checks file exists and is non-empty
+        2. Verifies OpenCV can reopen the video and read frames
+        3. Computes SHA-256 and compares with expected digest if provided
+        """
+        if not os.path.exists(file_path):
+            return {"valid": False, "status": "FAILED", "error": f"File not found: {file_path}"}
+
+        size = os.path.getsize(file_path)
+        if size == 0:
+            return {"valid": False, "status": "FAILED", "error": "File is empty (0 bytes)"}
+
+        # SHA-256
+        hasher = hashlib.sha256()
+        with open(file_path, "rb") as f:
+            while chunk := f.read(65536):
+                hasher.update(chunk)
+        digest = hasher.hexdigest()
+
+        if expected_sha256 and digest.lower() != expected_sha256.lower():
+            return {
+                "valid": False,
+                "status": "FAILED",
+                "sha256": digest,
+                "error": f"SHA-256 mismatch: computed {digest} vs expected {expected_sha256}",
+            }
+
+        # OpenCV Reopen test
+        cap = cv2.VideoCapture(file_path)
+        if not cap.isOpened():
+            return {
+                "valid": False,
+                "status": "FAILED",
+                "sha256": digest,
+                "error": "OpenCV failed to decode video container",
+            }
+
+        frames = int(cap.get(cv2.CAP_PROP_FRAME_COUNT))
+        fps = cap.get(cv2.CAP_PROP_FPS) or 15.0
+        cap.release()
+
+        if frames <= 0:
+            return {
+                "valid": False,
+                "status": "FAILED",
+                "sha256": digest,
+                "error": "Video container has zero frames",
+            }
+
+        duration = round(frames / fps, 2)
+        return {
+            "valid": True,
+            "status": "VERIFIED",
+            "sha256": digest,
+            "file_size": size,
+            "frame_count": frames,
+            "fps": round(fps, 2),
+            "duration": duration,
+        }
+
+
+# Module level alias for convenience
+verify_evidence_file = EvidenceWriter.verify_evidence_file
+
+

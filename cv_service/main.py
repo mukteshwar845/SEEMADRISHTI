@@ -45,8 +45,8 @@ def parse_args():
     parser.add_argument(
         "--source",
         type=str,
-        default="cv_service/tests/fixtures/intrusion_test.mp4",
-        help="Path to video file or webcam index (default: intrusion_test.mp4)",
+        default="cv_service/tests/fixtures/visdrone/CAM-01.mp4",
+        help="Path to video file or webcam index (default: CAM-01.mp4)",
     )
     parser.add_argument(
         "--camera-id",
@@ -420,10 +420,26 @@ def main():
     try:
         print("[CV-Service] Video tracking, intrusion, loitering & risk monitoring running. Press Ctrl+C to stop.")
         while True:
+            t_frame_start = time.perf_counter()
             ret, frame = source.read_frame()
             if not ret or frame is None:
                 print("[CV-Service] End of video stream reached.")
                 break
+
+            # Handle MP4 loop event: reset trackers and memory to prevent ghost tracks across loops
+            if getattr(source, "did_loop", False):
+                if tracker:
+                    tracker.reset()
+                if intrusion_detector:
+                    intrusion_detector.reset()
+                if loitering_detector:
+                    loitering_detector.track_states.clear()
+                if risk_engine:
+                    risk_engine.active_tracks.clear()
+                if analytics_engine and hasattr(analytics_engine, "active_tracks"):
+                    analytics_engine.active_tracks.clear()
+                if night_movement_detector and hasattr(night_movement_detector, "track_histories"):
+                    night_movement_detector.track_histories.clear()
 
             frame_counter += 1
 
@@ -458,15 +474,15 @@ def main():
                 if publisher and (processed_counter % 10 == 0 or env_metrics.low_light):
                     publisher.publish(env_metrics.to_dict(), message_type="environment_update")
 
-            # Phase 9: Non-destructive low-light enhancement for detection
+            # Phase 9: Dynamic Optical Enhancement (CLAHE / Gamma) in low-light conditions
             detection_frame = frame
-            if enhancer and env_metrics and env_metrics.low_light:
+            if enhancer and env_metrics and (env_metrics.low_light or env_metrics.mode == "NIGHT"):
                 t_enh0 = time.perf_counter()
-                detection_frame = enhancer.enhance(frame)
+                detection_frame = enhancer.enhance_frame(frame, method=config.enhancement_method)
                 total_enh_time_ms += (time.perf_counter() - t_enh0) * 1000.0
                 total_enhanced_frames_count += 1
 
-            # Rule #7: Pass ORIGINAL pristine frame to evidence buffer
+            # Step 5: Incident Evidence Frame Recording
             if incident_manager:
                 t_ev0 = time.perf_counter()
                 completed = incident_manager.record_frame(
@@ -479,8 +495,13 @@ def main():
                 total_evidence_clips_count += len(completed)
 
             if use_tracking and tracker:
-                # Step A: YOLO + ByteTrack (using enhanced detection_frame)
-                output = tracker.track(detection_frame, camera_id=config.camera_id)
+                # Step A: YOLO + ByteTrack (using enhanced detection_frame and frame_id)
+                output = tracker.track(
+                    detection_frame,
+                    camera_id=config.camera_id,
+                    frame_id=frame_counter,
+                    timestamp=current_frame_time,
+                )
                 count = output["track_count"]
                 total_objects_count += count
                 total_inference_time_ms += output.get("inference_ms", 0.0)
@@ -681,9 +702,37 @@ def main():
                         config.camera_id, {t["track_id"] for t in output["tracks"]}
                     )
 
+                # Calculate frame processing latency and enrich telemetry
+                frame_latency_ms = round((time.perf_counter() - t_frame_start) * 1000.0, 2)
+                output["processing_latency_ms"] = frame_latency_ms
+                output["frame_id"] = frame_counter
+                output["frame_sequence"] = frame_counter
+                output["measured_fps"] = source.measured_fps
+                output["source_type"] = source.source_type.upper()
+
                 # Publish tracking telemetry packet over WebSocket
                 if publisher:
                     publisher.publish(output, message_type="tracking")
+
+                    # Phase 14: Unified frame_state packet for camera stream synchronization
+                    frame_state = {
+                        "type": "frame_state",
+                        "camera_id": config.camera_id,
+                        "frame_id": frame_counter,
+                        "frame_sequence": frame_counter,
+                        "source_type": source.source_type.upper(),
+                        "timestamp": current_frame_time,
+                        "measured_fps": source.measured_fps,
+                        "processing_latency_ms": frame_latency_ms,
+                        "detections": output.get("detections", []),
+                        "tracks": output.get("tracks", []),
+                        "environment": env_metrics.to_dict() if env_metrics else {},
+                        "risk": {
+                            "max_score": max((t.get("risk_score", 0) for t in output.get("tracks", [])), default=0),
+                            "level": max((t.get("risk_level", "LOW") for t in output.get("tracks", [])), default="LOW"),
+                        },
+                    }
+                    publisher.publish(frame_state, message_type="frame_state")
 
             else:
                 # Fallback: Raw Detection Only

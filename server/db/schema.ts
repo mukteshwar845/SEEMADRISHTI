@@ -238,5 +238,51 @@ export function initializeSchema(): void {
     );
 
     CREATE INDEX IF NOT EXISTS idx_corr_stat_from ON corridor_statistics(from_camera);
+
+    -- Operator Actions Audit Table (Phase 15 - Part I)
+    CREATE TABLE IF NOT EXISTS operator_actions (
+      id TEXT PRIMARY KEY,
+      timestamp TEXT NOT NULL,
+      operator TEXT NOT NULL,
+      action TEXT NOT NULL,
+      target_type TEXT NOT NULL,
+      target_id TEXT NOT NULL,
+      previous_state TEXT,
+      new_state TEXT,
+      metadata TEXT,
+      created_at TEXT NOT NULL
+    );
+
+    CREATE INDEX IF NOT EXISTS idx_op_actions_timestamp ON operator_actions(timestamp);
+    CREATE INDEX IF NOT EXISTS idx_op_actions_action ON operator_actions(action);
+    CREATE INDEX IF NOT EXISTS idx_op_actions_target ON operator_actions(target_type, target_id);
+
+    -- System Operational Lifecycle Events (Phase 15 - Part U)
+    CREATE TABLE IF NOT EXISTS system_events (
+      id TEXT PRIMARY KEY,
+      event_type TEXT NOT NULL,
+      severity TEXT NOT NULL CHECK(severity IN ('INFO', 'WARNING', 'ERROR', 'CRITICAL')),
+      source TEXT NOT NULL,
+      message TEXT NOT NULL,
+      metadata TEXT,
+      timestamp TEXT NOT NULL,
+      created_at TEXT NOT NULL
+    );
+
+    CREATE INDEX IF NOT EXISTS idx_sys_events_timestamp ON system_events(timestamp);
+    CREATE INDEX IF NOT EXISTS idx_sys_events_type ON system_events(event_type);
+    CREATE INDEX IF NOT EXISTS idx_sys_events_severity ON system_events(severity);
+
+    -- Service Heartbeats (Phase 15 - Part E)
+    CREATE TABLE IF NOT EXISTS system_heartbeats (
+      service TEXT PRIMARY KEY,
+      timestamp TEXT NOT NULL,
+      process_id INTEGER,
+      version TEXT NOT NULL,
+      status TEXT NOT NULL CHECK(status IN ('HEALTHY', 'DEGRADED', 'UNHEALTHY', 'OFFLINE')),
+      latency_ms REAL NOT NULL DEFAULT 0.0,
+      metadata TEXT,
+      updated_at TEXT NOT NULL
+    );
   `);
 }

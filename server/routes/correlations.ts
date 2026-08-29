@@ -223,7 +223,7 @@ correlationsRouter.post('/', (req: Request, res: Response, next: NextFunction) =
     const level: RiskLevel = VALID_LEVELS.includes(body.correlation_level) ? body.correlation_level : 'LOW';
     const status: CorrelationStatus = VALID_STATUSES.includes(body.status as any) ? (body.status as CorrelationStatus) : 'ACTIVE';
 
-    const id = body.id || `CORR-${Date.now().toString(36).toUpperCase()}-${Math.random().toString(36).substring(2, 6).toUpperCase()}`;
+    const id = body.id || `CORR-${Date.now().toString(36).toUpperCase()}-${Date.now().toString(36).substring(2, 6).toUpperCase()}`;
     const now = new Date().toISOString();
 
     const cameraSequenceJson = JSON.stringify(body.camera_sequence || []);

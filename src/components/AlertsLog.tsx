@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { AlertItem } from '../types';
 import { ChevronRight, ShieldAlert, AlertTriangle, Radio, Shield, Filter, Search, Download } from 'lucide-react';
+import { motion, AnimatePresence } from 'motion/react';
 
 interface AlertsLogProps {
   alerts: AlertItem[];
@@ -145,86 +146,99 @@ export const AlertsLog: React.FC<AlertsLogProps> = ({
 
       {/* Vertical Alert Cards */}
       <div className="flex-1 overflow-y-auto p-2.5 space-y-2 max-h-[480px]" id="alerts-list-container">
-        {filteredAlerts.length === 0 ? (
-          <div className="p-4 text-center text-xs font-mono text-slate-500">
-            No alerts match current filter.
-          </div>
-        ) : (
-          filteredAlerts.map((alert) => {
-            const style = getSeverityStyle(alert.severity);
-            const shortSeverity =
-              alert.severity.toLowerCase() === 'medium'
-                ? 'MED PRIORITY'
-                : `${alert.severity.toUpperCase()} THREAT`;
+        <AnimatePresence initial={false} mode="popLayout">
+          {filteredAlerts.length === 0 ? (
+            <motion.div
+              key="empty-alerts"
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              className="p-4 text-center text-xs font-mono text-slate-500"
+            >
+              No alerts match current filter.
+            </motion.div>
+          ) : (
+            filteredAlerts.map((alert) => {
+              const style = getSeverityStyle(alert.severity);
+              const shortSeverity =
+                alert.severity.toLowerCase() === 'medium'
+                  ? 'MED PRIORITY'
+                  : `${alert.severity.toUpperCase()} THREAT`;
 
-            return (
-              <div
-                key={alert.id}
-                id={`alert-card-${alert.id}`}
-                onClick={() => onSelectAlert(alert)}
-                className={`${style.box} p-2.5 rounded-lg transition-all duration-200 cursor-pointer group hover:translate-x-1`}
-              >
-                <div className="flex items-start justify-between gap-2">
-                  <p className="text-[11px] font-bold text-slate-100 leading-snug group-hover:text-cyan-300 transition-colors font-mono">
-                    {alert.title}
-                  </p>
-                  <div className={`w-1.5 h-1.5 rounded-full ${style.dot} shrink-0 mt-1 animate-ping`} />
-                </div>
+              return (
+                <motion.div
+                  key={alert.id}
+                  id={`alert-card-${alert.id}`}
+                  onClick={() => onSelectAlert(alert)}
+                  layout
+                  initial={{ opacity: 0, y: -16, scale: 0.95 }}
+                  animate={{ opacity: 1, y: 0, scale: 1 }}
+                  exit={{ opacity: 0, x: 20, scale: 0.92 }}
+                  transition={{ duration: 0.25, ease: 'easeOut' }}
+                  className={`${style.box} p-2.5 rounded-lg transition-all duration-200 cursor-pointer group hover:translate-x-1`}
+                >
+                  <div className="flex items-start justify-between gap-2">
+                    <p className="text-[11px] font-bold text-slate-100 leading-snug group-hover:text-cyan-300 transition-colors font-mono">
+                      {alert.title}
+                    </p>
+                    <div className={`w-1.5 h-1.5 rounded-full ${style.dot} shrink-0 mt-1 animate-ping`} />
+                  </div>
 
-                {alert.description && (
-                  <p className="text-[10px] text-slate-400 mt-1 font-mono line-clamp-2">
-                    {alert.description}
-                  </p>
-                )}
+                  {alert.description && (
+                    <p className="text-[10px] text-slate-400 mt-1 font-mono line-clamp-2">
+                      {alert.description}
+                    </p>
+                  )}
 
-                {/* Rich Badges Line */}
-                <div className="flex flex-wrap items-center gap-1 mt-1.5 font-mono text-[8px]">
-                  {alert.trackId && (
-                    <span className="px-1 py-0.2 rounded bg-cyan-950 text-cyan-300 border border-cyan-500/30 font-bold">
-                      #{alert.trackId} {alert.className || ''}
-                    </span>
-                  )}
-                  {alert.riskScore !== undefined && (
-                    <span className={`px-1 py-0.2 rounded font-bold border ${
-                      alert.riskScore >= 70
-                        ? 'bg-rose-950 text-rose-300 border-rose-500/40'
-                        : alert.riskScore >= 40
-                        ? 'bg-amber-950 text-amber-300 border-amber-500/40'
-                        : 'bg-yellow-950 text-yellow-300 border-yellow-500/40'
-                    }`}>
-                      RISK {alert.riskScore}
-                    </span>
-                  )}
-                  {alert.hasEvidence && (
-                    <span className="px-1 py-0.2 rounded bg-emerald-950 text-emerald-300 border border-emerald-500/30 font-bold">
-                      EVIDENCE
-                    </span>
-                  )}
-                  {alert.cameraSequence && alert.cameraSequence.length > 0 && (
-                    <span className="px-1 py-0.2 rounded bg-purple-950 text-purple-300 border border-purple-500/30 font-bold">
-                      CORRIDOR
-                    </span>
-                  )}
-                  {alert.dwellSeconds && (
-                    <span className="px-1 py-0.2 rounded bg-amber-950 text-amber-300 border border-amber-500/30 font-bold">
-                      {Math.round(alert.dwellSeconds)}s DWELL
-                    </span>
-                  )}
-                </div>
+                  {/* Rich Badges Line */}
+                  <div className="flex flex-wrap items-center gap-1 mt-1.5 font-mono text-[8px]">
+                    {alert.trackId && (
+                      <span className="px-1 py-0.2 rounded bg-cyan-950 text-cyan-300 border border-cyan-500/30 font-bold">
+                        #{alert.trackId} {alert.className || ''}
+                      </span>
+                    )}
+                    {alert.riskScore !== undefined && (
+                      <span className={`px-1 py-0.2 rounded font-bold border ${
+                        alert.riskScore >= 70
+                          ? 'bg-rose-950 text-rose-300 border-rose-500/40'
+                          : alert.riskScore >= 40
+                          ? 'bg-amber-950 text-amber-300 border-amber-500/40'
+                          : 'bg-yellow-950 text-yellow-300 border-yellow-500/40'
+                      }`}>
+                        RISK {alert.riskScore}
+                      </span>
+                    )}
+                    {alert.hasEvidence && (
+                      <span className="px-1 py-0.2 rounded bg-emerald-950 text-emerald-300 border border-emerald-500/30 font-bold">
+                        EVIDENCE
+                      </span>
+                    )}
+                    {alert.cameraSequence && alert.cameraSequence.length > 0 && (
+                      <span className="px-1 py-0.2 rounded bg-purple-950 text-purple-300 border border-purple-500/30 font-bold">
+                        CORRIDOR
+                      </span>
+                    )}
+                    {alert.dwellSeconds && (
+                      <span className="px-1 py-0.2 rounded bg-amber-950 text-amber-300 border border-amber-500/30 font-bold">
+                        {Math.round(alert.dwellSeconds)}s DWELL
+                      </span>
+                    )}
+                  </div>
 
-                {/* Subtitle / Meta Line */}
-                <div className="flex justify-between items-center mt-2 pt-1.5 border-t border-slate-800/80">
-                  <span className={`text-[8px] font-mono font-bold px-1.5 py-0.5 rounded border ${style.badge} tracking-wider`}>
-                    {alert.camera} // {shortSeverity}
-                  </span>
-                  <span className="text-[9px] text-cyan-400 font-mono font-bold">
-                    {alert.time}
-                  </span>
-                </div>
-              </div>
-            );
-          })
-        )}
+                  {/* Subtitle / Meta Line */}
+                  <div className="flex justify-between items-center mt-2 pt-1.5 border-t border-slate-800/80">
+                    <span className={`text-[8px] font-mono font-bold px-1.5 py-0.5 rounded border ${style.badge} tracking-wider`}>
+                      {alert.camera} // {shortSeverity}
+                    </span>
+                    <span className="text-[9px] text-cyan-400 font-mono font-bold">
+                      {alert.time}
+                    </span>
+                  </div>
+                </motion.div>
+              );
+            })
+          )}
+        </AnimatePresence>
       </div>
 
       {/* Footer link to full alerts log */}

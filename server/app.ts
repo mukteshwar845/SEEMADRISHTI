@@ -1,4 +1,5 @@
 import express, { Request, Response, NextFunction } from 'express';
+import path from 'path';
 import { camerasRouter } from './routes/cameras';
 import { zonesRouter } from './routes/zones';
 import { eventsRouter } from './routes/events';
@@ -40,18 +41,17 @@ export function createApp(): express.Application {
     });
   });
 
-  // Root welcome route
-  app.get('/', (req: Request, res: Response) => {
-    res.json({
-      project: 'SEEMADRISHTI AI',
-      team: 'IQ100',
-      problemStatement: 'SIH26187',
+  app.get('/api/v1/health', (req: Request, res: Response) => {
+    res.status(200).json({
+      status: 'HEALTHY',
       service: 'seemadrishti-backend',
-      version: '1.15.0',
-      status: 'ok',
-      docs: '/api/health',
+      version: '4.2.0',
     });
   });
+
+  // Static Serving for Evidence and Video Fixtures
+  app.use('/evidence', express.static(path.resolve(process.cwd(), 'evidence')));
+  app.use('/fixtures', express.static(path.resolve(process.cwd(), 'cv_service/tests/fixtures')));
 
   // Mount API Sub-Routers
   app.use('/api/cameras', camerasRouter);
@@ -66,8 +66,23 @@ export function createApp(): express.Application {
   app.use('/api/system', systemRouter);
   app.use('/api/dev', devRouter);
 
-  // 404 & Centralized Error Handling
-  app.use(notFoundHandler);
+  // V1 Alias Sub-Routers
+  app.use('/api/v1/cameras', camerasRouter);
+  app.use('/api/v1/zones', zonesRouter);
+  app.use('/api/v1/events', eventsRouter);
+  app.use('/api/v1/alerts', alertsRouter);
+  app.use('/api/v1/incidents', incidentsRouter);
+  app.use('/api/v1/correlations', correlationsRouter);
+  app.use('/api/v1/environment', environmentRouter);
+  app.use('/api/v1/analytics', analyticsRouter);
+  app.use('/api/v1/telemetry', telemetryRouter);
+  app.use('/api/v1/system', systemRouter);
+
+  // 404 for unhandled API routes only
+  app.use('/api', notFoundHandler);
+  app.use('/api/v1', notFoundHandler);
+
+  // Centralized Error Handling
   app.use(errorHandler);
 
   return app;

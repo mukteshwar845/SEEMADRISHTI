@@ -15,8 +15,11 @@ import {
   Volume2,
   Film,
   Download,
+  FileText,
+  Loader2,
 } from 'lucide-react';
 import { audioAlertEngine } from '../utils/audioAlert';
+import { generateAlertPdfReport } from '../utils/pdfReportGenerator';
 
 interface AlertDetailModalProps {
   alert: AlertItem | null;
@@ -38,11 +41,23 @@ export const AlertDetailModal: React.FC<AlertDetailModalProps> = ({
   );
   const [sirenActive, setSirenActive] = useState(false);
   const [isPlayingAudioPing, setIsPlayingAudioPing] = useState(false);
+  const [isGeneratingPdf, setIsGeneratingPdf] = useState(false);
   const [notes, setNotes] = useState('');
 
   const handleDispatch = () => {
     setResponseStatus('RESPONSE INITIATED');
     onInitiateResponse(alert.id);
+  };
+
+  const handleDownloadPdf = async () => {
+    try {
+      setIsGeneratingPdf(true);
+      await generateAlertPdfReport(alert, notes);
+    } catch (err) {
+      console.error('Failed to generate PDF report:', err);
+    } finally {
+      setIsGeneratingPdf(false);
+    }
   };
 
   const handlePlayPingSound = () => {
@@ -354,21 +369,42 @@ export const AlertDetailModal: React.FC<AlertDetailModalProps> = ({
         </div>
 
         {/* Modal Footer */}
-        <div className="px-5 py-3.5 bg-[#0d1424] border-t border-white/[0.08] flex items-center justify-end gap-3 font-mono">
+        <div className="px-5 py-3.5 bg-[#0d1424] border-t border-white/[0.08] flex items-center justify-between gap-3 font-mono">
           <button
-            onClick={onClose}
-            className="px-4 py-2 rounded-xl bg-white/[0.04] hover:bg-white/[0.08] text-slate-300 text-xs font-bold border border-white/[0.08] transition-colors cursor-pointer"
+            onClick={handleDownloadPdf}
+            disabled={isGeneratingPdf}
+            className="px-3.5 py-2 rounded-xl bg-cyan-950/80 hover:bg-cyan-900 text-cyan-300 hover:text-white text-xs font-bold border border-cyan-500/40 shadow-[0_0_12px_rgba(6,182,212,0.2)] transition-all cursor-pointer flex items-center gap-2 active:scale-95 disabled:opacity-50"
+            title="Generate and download a high-definition PDF intelligence report with snapshots and metadata"
           >
-            DISMISS
+            {isGeneratingPdf ? (
+              <>
+                <Loader2 size={14} className="animate-spin text-cyan-400" />
+                <span>GENERATING PDF...</span>
+              </>
+            ) : (
+              <>
+                <FileText size={14} className="text-cyan-400" />
+                <span>DOWNLOAD PDF REPORT</span>
+              </>
+            )}
           </button>
 
-          <button
-            onClick={handleDispatch}
-            className="px-4 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold uppercase border border-emerald-400/40 shadow-[0_0_15px_rgba(16,185,129,0.3)] transition-all cursor-pointer flex items-center gap-2 active:scale-95"
-          >
-            <Send size={13} />
-            <span>{responseStatus}</span>
-          </button>
+          <div className="flex items-center gap-2">
+            <button
+              onClick={onClose}
+              className="px-4 py-2 rounded-xl bg-white/[0.04] hover:bg-white/[0.08] text-slate-300 text-xs font-bold border border-white/[0.08] transition-colors cursor-pointer"
+            >
+              DISMISS
+            </button>
+
+            <button
+              onClick={handleDispatch}
+              className="px-4 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold uppercase border border-emerald-400/40 shadow-[0_0_15px_rgba(16,185,129,0.3)] transition-all cursor-pointer flex items-center gap-2 active:scale-95"
+            >
+              <Send size={13} />
+              <span>{responseStatus}</span>
+            </button>
+          </div>
         </div>
       </div>
     </div>

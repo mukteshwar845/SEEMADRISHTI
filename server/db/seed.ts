@@ -80,6 +80,7 @@ export function seedDemoData(): void {
   const insertAlert = db.prepare(`
     INSERT INTO alerts (id, event_id, camera_id, severity, title, reason, acknowledged, timestamp)
     VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+    ON CONFLICT(id) DO NOTHING
   `);
 
   insertAlert.run(
@@ -92,4 +93,189 @@ export function seedDemoData(): void {
     0,
     now
   );
+
+  // 5. Seed Forensic Incidents (INC-000001 through INC-000005)
+  const countIncidents: any = db.prepare('SELECT COUNT(*) as count FROM incidents').get();
+  if (!countIncidents || countIncidents.count === 0) {
+    const insertIncident = db.prepare(`
+      INSERT INTO incidents (
+        id, camera_id, track_id, event_id, event_type, risk_score, risk_level, zone_name,
+        started_at, ended_at, evidence_path, pre_event_seconds, post_event_seconds,
+        evidence_status, metadata, acknowledged, created_at
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+      ON CONFLICT(id) DO NOTHING
+    `);
+
+    const demoIncidents = [
+      {
+        id: 'INC-000001',
+        camera_id: 'cam-02',
+        track_id: 'TRK-992',
+        event_id: 'evt-seed-01',
+        event_type: 'PERIMETER_SCALING',
+        risk_score: 98,
+        risk_level: 'CRITICAL',
+        zone_name: 'Sector Bravo Restricted Line',
+        started_at: '2026-08-24T02:14:03Z',
+        ended_at: '2026-08-24T02:15:18Z',
+        evidence_path: 'evidence/INC-000001.mp4',
+        pre_event_seconds: 10,
+        post_event_seconds: 10,
+        evidence_status: 'ready',
+        metadata: JSON.stringify({
+          class_name: 'person',
+          confidence: 0.96,
+          sha256: 'b634706cc8b10b7ab87988e50c20e78ce4589258df9a5621415174577884d8a2',
+          verification_status: 'VERIFIED',
+          reasons: [
+            { code: 'RESTRICTED_FENCE_SCALING', description: 'Restricted Fence Scaling', points: 35 },
+            { code: 'ZONE_VIOLATION', description: 'Restricted Fence Line Incursion', points: 30 },
+            { code: 'DWELL_VIOLATION', description: 'Dwell Time 42s (Threshold 15s)', points: 25 },
+            { code: 'NIGHT_INCIDENT', description: 'Night Operation (02:14 AM)', points: 10 },
+          ],
+        }),
+        acknowledged: 0,
+        created_at: '2026-08-24T02:14:03Z',
+      },
+      {
+        id: 'INC-000002',
+        camera_id: 'cam-03',
+        track_id: 'TRK-408',
+        event_id: null,
+        event_type: 'UNATTENDED_CARGO',
+        risk_score: 89,
+        risk_level: 'CRITICAL',
+        zone_name: 'Ammunition Airlock Level 2',
+        started_at: '2026-08-24T03:41:18Z',
+        ended_at: '2026-08-24T03:42:48Z',
+        evidence_path: 'evidence/INC-000002.mp4',
+        pre_event_seconds: 10,
+        post_event_seconds: 10,
+        evidence_status: 'ready',
+        metadata: JSON.stringify({
+          class_name: 'backpack',
+          confidence: 0.92,
+          sha256: '7c89f1d0b3456a89cde9123456789abcdef0123456789abcdef0123456789abc',
+          verification_status: 'VERIFIED',
+          reasons: [
+            { code: 'UNATTENDED_PAYLOAD', description: 'Abandoned Heavy Payload Deposit', points: 35 },
+            { code: 'ZONE_RESTRICTED', description: 'Armory Ingress Zone Violation', points: 30 },
+            { code: 'DWELL_VIOLATION', description: 'Dwell Time 58s (Threshold 30s)', points: 25 },
+            { code: 'ZERO_SHIFT', description: 'Zero Shift (03:41 AM)', points: 10 },
+          ],
+        }),
+        acknowledged: 0,
+        created_at: '2026-08-24T03:41:18Z',
+      },
+      {
+        id: 'INC-000003',
+        camera_id: 'cam-01',
+        track_id: 'TRK-7819',
+        event_id: null,
+        event_type: 'ANOMALOUS_VEHICLE',
+        risk_score: 78,
+        risk_level: 'HIGH',
+        zone_name: 'Main Barrier Buffer',
+        started_at: '2026-08-24T04:12:55Z',
+        ended_at: '2026-08-24T04:13:55Z',
+        evidence_path: 'evidence/INC-000003.mp4',
+        pre_event_seconds: 10,
+        post_event_seconds: 10,
+        evidence_status: 'ready',
+        metadata: JSON.stringify({
+          class_name: 'car',
+          confidence: 0.94,
+          sha256: '9f8e7d6c5b4a39281701f2e3d4c5b6a7890123456789abcdef0123456789abcd',
+          verification_status: 'VERIFIED',
+          reasons: [
+            { code: 'REVERSE_TRAJECTORY', description: 'Abrupt Reverse Acceleration at Gate', points: 35 },
+            { code: 'UNREGISTERED_ANPR', description: 'Unmatched ANPR License Plate', points: 25 },
+            { code: 'BUFFER_ZONE', description: 'Barrier Gate Buffer Incursion', points: 20 },
+          ],
+        }),
+        acknowledged: 0,
+        created_at: '2026-08-24T04:12:55Z',
+      },
+      {
+        id: 'INC-000004',
+        camera_id: 'cam-04',
+        track_id: 'TRK-2201',
+        event_id: null,
+        event_type: 'GROUP_LOITERING',
+        risk_score: 82,
+        risk_level: 'HIGH',
+        zone_name: 'Sector Delta Outer Trench',
+        started_at: '2026-08-24T05:03:12Z',
+        ended_at: '2026-08-24T05:04:30Z',
+        evidence_path: 'evidence/INC-000004.mp4',
+        pre_event_seconds: 10,
+        post_event_seconds: 10,
+        evidence_status: 'ready',
+        metadata: JSON.stringify({
+          class_name: 'person',
+          confidence: 0.91,
+          sha256: '4a5b6c7d8e9f0123456789abcdef0123456789abcdef0123456789abcdef0123',
+          verification_status: 'VERIFIED',
+          reasons: [
+            { code: 'GROUP_FORMATION', description: 'Coordinated Multi-Target Gathering', points: 40 },
+            { code: 'PROLONGED_LOITER', description: 'Dwell Threshold Exceeded (64s)', points: 30 },
+            { code: 'BLIND_SPOT_CONVERGENCE', description: 'Approach via Ridge Blind Spot', points: 15 },
+          ],
+        }),
+        acknowledged: 0,
+        created_at: '2026-08-24T05:03:12Z',
+      },
+      {
+        id: 'INC-000005',
+        camera_id: 'cam-05',
+        track_id: 'TRK-8834',
+        event_id: null,
+        event_type: 'CANOPY_CROSSING',
+        risk_score: 91,
+        risk_level: 'CRITICAL',
+        zone_name: 'Sector Echo Ridge Canopy',
+        started_at: '2026-08-24T06:19:40Z',
+        ended_at: '2026-08-24T06:21:00Z',
+        evidence_path: 'evidence/INC-000005.mp4',
+        pre_event_seconds: 10,
+        post_event_seconds: 10,
+        evidence_status: 'ready',
+        metadata: JSON.stringify({
+          class_name: 'person',
+          confidence: 0.95,
+          sha256: '1a2b3c4d5e6f7890123456789abcdef0123456789abcdef0123456789abcdef0',
+          verification_status: 'VERIFIED',
+          reasons: [
+            { code: 'FOLIAGE_BREACH', description: 'Camouflaged Infiltration Under Dense Canopy', points: 40 },
+            { code: 'THERMAL_HEAT_ANOMALY', description: 'Distinct Bipedal Thermal Signature', points: 35 },
+            { code: 'SPEED_BURST', description: 'High Velocity Transit through Neutral Zone', points: 20 },
+          ],
+        }),
+        acknowledged: 0,
+        created_at: '2026-08-24T06:19:40Z',
+      },
+    ];
+
+    for (const inc of demoIncidents) {
+      insertIncident.run(
+        inc.id,
+        inc.camera_id,
+        inc.track_id,
+        inc.event_id,
+        inc.event_type,
+        inc.risk_score,
+        inc.risk_level,
+        inc.zone_name,
+        inc.started_at,
+        inc.ended_at,
+        inc.evidence_path,
+        inc.pre_event_seconds,
+        inc.post_event_seconds,
+        inc.evidence_status,
+        inc.metadata,
+        inc.acknowledged,
+        inc.created_at
+      );
+    }
+  }
 }

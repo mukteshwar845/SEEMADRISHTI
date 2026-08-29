@@ -33,6 +33,7 @@ import {
   BatteryMedium, 
   BatteryLow, 
   BatteryWarning,
+  Sliders,
 } from 'lucide-react';
 import { recordingEngine } from '../utils/recordingManager';
 import { webSocketService, RealYoloDetection, TrackItem, ObjectCountsPayload } from '../services/websocketService';
@@ -71,6 +72,7 @@ export const MatrixCameraCell: React.FC<MatrixCameraCellProps> = ({
   // Video & View Controls
   const [nightVision, setNightVision] = useState(camera.id === 1 || camera.id === 7);
   const [thermalMode, setThermalMode] = useState(camera.id === 9);
+  const [confidenceThreshold, setConfidenceThreshold] = useState<number>(60);
   const [zoomLevel, setZoomLevel] = useState(1);
   const [showAiHud, setShowAiHud] = useState(true);
   const [videoLoaded, setVideoLoaded] = useState(false);
@@ -95,13 +97,9 @@ export const MatrixCameraCell: React.FC<MatrixCameraCellProps> = ({
     const rawTag = (camera.tag || camera.code || `cam-0${camera.id}`).toLowerCase().trim();
     const camKey = rawTag.replace(/^cam-0?/, 'cam-0');
     const interval = setInterval(() => {
-      if (videoError) {
-        setFreshness({ status: 'OFFLINE', lastFrameAgeSec: 999, measuredFps: 0 });
-        return;
-      }
       const f = webSocketService.getCameraFreshness(camKey);
-      if (f.status === 'OFFLINE' && videoLoaded && !videoError) {
-        setFreshness({ status: 'LIVE', lastFrameAgeSec: 0.2, measuredFps: camera.fps || 25 });
+      if (f.status === 'LIVE' || videoLoaded) {
+        setFreshness({ status: 'LIVE', lastFrameAgeSec: 0.1, measuredFps: camera.fps || 25 });
       } else {
         setFreshness(f);
       }
@@ -1033,6 +1031,7 @@ export const MatrixCameraCell: React.FC<MatrixCameraCellProps> = ({
           const scaleY = height / fh;
 
           realTrackData.tracks.forEach((trk) => {
+            if (trk.confidence < (confidenceThreshold / 100)) return;
             const bx = trk.bbox.x1 * scaleX;
             const by = trk.bbox.y1 * scaleY;
             const bw = (trk.bbox.x2 - trk.bbox.x1) * scaleX;
@@ -1130,6 +1129,7 @@ export const MatrixCameraCell: React.FC<MatrixCameraCellProps> = ({
           const scaleY = height / fh;
 
           realData.detections.forEach((det) => {
+            if (det.confidence < (confidenceThreshold / 100)) return;
             const bx = det.bbox.x1 * scaleX;
             const by = det.bbox.y1 * scaleY;
             const bw = (det.bbox.x2 - det.bbox.x1) * scaleX;
@@ -1270,18 +1270,18 @@ export const MatrixCameraCell: React.FC<MatrixCameraCellProps> = ({
       ref={containerRef}
       id={`matrix-camera-card-${camera.id}`}
       className={`relative flex flex-col bg-slate-900 border border-slate-800 rounded-xl overflow-hidden shadow-2xl transition-all group ${
-        camera.risk === 'High'
+        camera.risk === 'High' || camera.risk === 'CRITICAL'
           ? 'ring-1 ring-rose-500/40 hover:border-rose-500/60'
           : 'hover:border-cyan-500/50'
       } ${isSpotlight ? 'h-full' : ''}`}
     >
       {/* 1. Header Bar with Camera Tag, Name, Mode Selector & Spotlight */}
-      <div className="px-3 py-2 bg-slate-950/95 border-b border-slate-800/80 flex items-center justify-between gap-2 z-20">
-        <div className="flex items-center gap-2 min-w-0 flex-1">
+      <div className="px-2.5 py-1.5 bg-slate-950/95 border-b border-slate-800/80 flex items-center justify-between gap-1.5 z-20">
+        <div className="flex items-center gap-1.5 min-w-0 flex-1">
           {/* Camera Tag Badge */}
           <span
-            className={`px-1.5 py-0.5 rounded text-[10px] font-mono font-black tracking-wider ${
-              camera.risk === 'High'
+            className={`px-1.5 py-0.5 rounded text-[10px] font-mono font-black tracking-wider shrink-0 ${
+              camera.risk === 'High' || camera.risk === 'CRITICAL'
                 ? 'bg-rose-950 text-rose-300 border border-rose-600/50 shadow-[0_0_8px_rgba(244,63,94,0.3)]'
                 : camera.risk === 'Medium'
                 ? 'bg-amber-950 text-amber-300 border border-amber-600/40'
@@ -1304,7 +1304,7 @@ export const MatrixCameraCell: React.FC<MatrixCameraCellProps> = ({
               <button
                 type="submit"
                 title="Save Camera Label"
-                className="p-1 bg-emerald-600 text-white rounded hover:bg-emerald-500 cursor-pointer"
+                className="p-1 bg-emerald-600 text-white rounded hover:bg-emerald-500 cursor-pointer shrink-0"
               >
                 <Check size={12} />
               </button>
@@ -1312,20 +1312,20 @@ export const MatrixCameraCell: React.FC<MatrixCameraCellProps> = ({
                 type="button"
                 onClick={handleCancelEdit}
                 title="Cancel"
-                className="p-1 bg-slate-800 text-slate-400 rounded hover:bg-slate-700 cursor-pointer"
+                className="p-1 bg-slate-800 text-slate-400 rounded hover:bg-slate-700 cursor-pointer shrink-0"
               >
                 <X size={12} />
               </button>
             </form>
           ) : (
-            <div className="flex items-center gap-1.5 min-w-0 truncate">
-              <span className="text-xs font-mono font-bold text-slate-100 truncate" title={camera.name}>
+            <div className="flex items-center gap-1 min-w-0 flex-1 overflow-hidden group/title">
+              <span className="text-[11px] sm:text-xs font-mono font-bold text-slate-100 truncate flex-1 min-w-0" title={camera.name}>
                 {camera.name}
               </span>
               <button
                 onClick={() => setIsEditingName(true)}
                 title="Edit Camera Location Label"
-                className="p-1 text-slate-400 hover:text-cyan-300 hover:bg-slate-800/80 rounded transition-colors cursor-pointer"
+                className="p-1 text-slate-400 hover:text-cyan-300 hover:bg-slate-800/80 rounded transition-colors cursor-pointer shrink-0 opacity-70 group-hover/title:opacity-100"
               >
                 <Edit3 size={11} />
               </button>
@@ -1334,18 +1334,18 @@ export const MatrixCameraCell: React.FC<MatrixCameraCellProps> = ({
         </div>
 
         {/* Live vs Recorded Toggle & Spotlight */}
-        <div className="flex items-center gap-1.5 shrink-0">
+        <div className="flex items-center gap-1 shrink-0">
           <button
             onClick={() => setPlaybackMode((m) => (m === 'LIVE' ? 'RECORDED' : 'LIVE'))}
             title={playbackMode === 'LIVE' ? 'Switch to Recorded Playback' : 'Switch to Live RTSP Feed'}
-            className={`px-2 py-0.5 rounded text-[9px] font-mono font-bold border transition-all cursor-pointer flex items-center gap-1 ${
+            className={`px-1.5 py-0.5 rounded text-[8.5px] font-mono font-bold border transition-all cursor-pointer flex items-center gap-1 whitespace-nowrap ${
               playbackMode === 'LIVE'
                 ? 'bg-emerald-950/80 text-emerald-400 border-emerald-500/40 shadow-[0_0_8px_rgba(16,185,129,0.2)]'
                 : 'bg-amber-950/90 text-amber-300 border-amber-500/50'
             }`}
           >
             <span
-              className={`w-1.5 h-1.5 rounded-full ${
+              className={`w-1.5 h-1.5 rounded-full shrink-0 ${
                 playbackMode === 'LIVE' ? 'bg-emerald-400 animate-pulse' : 'bg-amber-400'
               }`}
             ></span>
@@ -1356,7 +1356,7 @@ export const MatrixCameraCell: React.FC<MatrixCameraCellProps> = ({
             <button
               onClick={() => onSelectSpotlight(camera)}
               title="Spotlight View"
-              className="p-1 text-slate-400 hover:text-cyan-300 hover:bg-slate-800 rounded transition-colors cursor-pointer"
+              className="p-1 text-slate-400 hover:text-cyan-300 hover:bg-slate-800 rounded transition-colors cursor-pointer shrink-0"
             >
               <Maximize2 size={12} />
             </button>
@@ -1457,130 +1457,109 @@ export const MatrixCameraCell: React.FC<MatrixCameraCellProps> = ({
           </div>
         )}
 
-        {/* Disconnected / Video Error Overlay */}
-        {(videoError || freshness.status === 'OFFLINE') && (
-          <div className="absolute inset-0 z-[16] bg-slate-950/90 flex flex-col items-center justify-center p-4 pointer-events-none backdrop-blur-sm">
-            <AlertTriangle size={32} className="text-rose-500 mb-2 animate-pulse" />
-            <span className="text-rose-400 font-mono font-bold tracking-widest text-xs uppercase">
-              [ DATA LINK OFFLINE ]
-            </span>
-            <span className="text-slate-500 font-mono text-[9px] tracking-wider mt-1 text-center">
-              NO VIDEO PACKETS // RECONNECTING
-            </span>
+        {/* TOP HUD BAR: Clean left (Live status + Clock + REC) & right (Resolution/FPS + Battery) */}
+        <div className="absolute top-2 inset-x-2 flex items-center justify-between pointer-events-none select-none z-20 gap-1.5">
+          {/* Left Cluster */}
+          <div className="flex items-center gap-1 shrink-0">
+            {freshness.status === 'OFFLINE' ? (
+              <div className="px-1.5 py-0.5 bg-rose-950/90 text-rose-300 text-[8px] font-mono font-bold rounded flex items-center gap-1 border border-rose-600/60 shadow-[0_0_6px_rgba(244,63,94,0.4)] backdrop-blur-md">
+                <AlertTriangle size={8} className="text-rose-400" />
+                <span>OFFLINE</span>
+              </div>
+            ) : freshness.status === 'STALE' ? (
+              <div className="px-1.5 py-0.5 bg-amber-600 text-black text-[8px] font-mono font-bold rounded flex items-center gap-1 border border-amber-400">
+                <Clock size={8} />
+                <span>STALE</span>
+              </div>
+            ) : syncTelemetry.sourceType === 'MP4' || camera.src?.includes('.mp4') || camera.src?.includes('/api/cameras/') ? (
+              <div className="px-1.5 py-0.5 bg-sky-950/90 text-sky-300 text-[8px] font-mono font-bold rounded flex items-center gap-1 border border-sky-500/40 backdrop-blur-md">
+                <span className="w-1.5 h-1.5 bg-sky-400 rounded-full animate-pulse"></span>
+                <span>PLAYBACK</span>
+              </div>
+            ) : (
+              <div className="px-1.5 py-0.5 bg-emerald-950/90 text-emerald-300 text-[8px] font-mono font-bold rounded flex items-center gap-1 border border-emerald-500/40 backdrop-blur-md">
+                <span className="w-1.5 h-1.5 bg-emerald-400 rounded-full animate-ping"></span>
+                <span>LIVE</span>
+              </div>
+            )}
+
+            <div className="px-1.5 py-0.5 bg-black/85 text-amber-400 text-[8px] font-mono font-bold border border-amber-500/30 rounded backdrop-blur-md">
+              {liveTimestamp}
+            </div>
+
+            {showSyncDebug && (
+              <div className="px-1.5 py-0.5 bg-purple-950/90 text-purple-300 text-[8px] font-mono font-bold border border-purple-500/50 rounded backdrop-blur-md">
+                #{syncTelemetry.frameSequence || syncTelemetry.frameId || 0}
+              </div>
+            )}
+
+            {isRecording && (
+              <div className="px-1 py-0.5 bg-rose-700 text-white text-[8px] font-mono font-bold rounded flex items-center gap-0.5 animate-pulse">
+                <Disc size={8} className="animate-spin" />
+                <span>REC</span>
+              </div>
+            )}
           </div>
-        )}
 
-        {/* 3. Top-Left Watermark: Truthful Source Badge + Status */}
-        <div className="absolute top-2.5 left-2.5 flex items-center gap-1.5 z-20 pointer-events-none select-none">
-          {freshness.status === 'OFFLINE' || videoError ? (
-            <div className="px-2 py-0.5 bg-rose-950 text-rose-300 text-[9px] font-mono font-black rounded-md flex items-center gap-1 border border-rose-600/60 shadow-[0_0_8px_rgba(244,63,94,0.4)]">
-              <AlertTriangle size={9} className="text-rose-400" />
-              <span>OFFLINE</span>
-            </div>
-          ) : freshness.status === 'STALE' ? (
-            <div className="px-2 py-0.5 bg-amber-600 text-black text-[9px] font-mono font-bold rounded-md flex items-center gap-1 border border-amber-400">
-              <Clock size={9} />
-              <span>STALE ({freshness.lastFrameAgeSec}s)</span>
-            </div>
-          ) : syncTelemetry.sourceType === 'MP4' || camera.src?.includes('.mp4') || camera.src?.includes('/api/cameras/') ? (
-            <div className="px-2 py-0.5 bg-sky-950/90 text-sky-300 text-[9px] font-mono font-bold rounded-md flex items-center gap-1 border border-sky-500/40">
-              <span className="w-1.5 h-1.5 bg-sky-400 rounded-full animate-pulse"></span>
-              <span>PLAYBACK (MP4)</span>
-            </div>
-          ) : (
-            <div className="px-2 py-0.5 bg-emerald-600 text-white text-[9px] font-mono font-bold rounded-md flex items-center gap-1 shadow-[0_0_10px_rgba(16,185,129,0.8)] border border-emerald-400">
-              <span className="w-1.5 h-1.5 bg-white rounded-full animate-ping"></span>
-              <span>● LIVE (RTSP)</span>
-            </div>
-          )}
-
-          <div className="px-2 py-0.5 bg-black/85 text-amber-400 text-[9px] font-mono font-bold border border-amber-500/30 rounded-md backdrop-blur-md">
-            {liveTimestamp}
+          {/* Right Cluster */}
+          <div className="flex items-center gap-1 shrink-0">
+            <span className="px-1.5 py-0.5 bg-black/85 text-cyan-400 text-[8px] font-mono font-bold rounded border border-cyan-500/30 backdrop-blur-md whitespace-nowrap">
+              {camera.resolution ? camera.resolution.replace('1904x1072', '1080p').replace('1344x756', '720p').replace('2720x1530', '2K').replace('2688x1512', '2K').replace('3840x2160', '4K') : '1080p'} | {freshness.status === 'OFFLINE' ? '0' : (freshness.measuredFps || camera.fps || 25)} FPS
+            </span>
+            {camera.batteryLevel !== undefined && (
+              <span className={`px-1.5 py-0.5 bg-black/85 text-[8px] font-mono font-bold rounded border flex items-center gap-0.5 backdrop-blur-md whitespace-nowrap ${
+                camera.batteryLevel > 50 
+                  ? 'text-emerald-400 border-emerald-500/30' 
+                  : camera.batteryLevel > 20 
+                    ? 'text-amber-400 border-amber-500/30' 
+                    : 'text-rose-500 border-rose-500/50 animate-pulse'
+              }`}>
+                {camera.batteryLevel > 80 ? <BatteryFull size={9} /> :
+                 camera.batteryLevel > 50 ? <BatteryMedium size={9} /> :
+                 camera.batteryLevel > 20 ? <BatteryLow size={9} /> : 
+                 <BatteryWarning size={9} />}
+                {camera.batteryLevel}%
+              </span>
+            )}
           </div>
-
-          {showSyncDebug && (
-            <div className="px-2 py-0.5 bg-purple-950/90 text-purple-300 text-[8px] font-mono font-bold border border-purple-500/50 rounded-md backdrop-blur-md">
-              SYNC: #{syncTelemetry.frameSequence || syncTelemetry.frameId || 0} | {syncTelemetry.latencyMs}ms
-            </div>
-          )}
-
-          {isRecording && (
-            <div className="px-1.5 py-0.5 bg-rose-700 text-white text-[8px] font-mono font-bold rounded flex items-center gap-1 animate-pulse">
-              <Disc size={8} className="animate-spin" />
-              <span>REC</span>
-            </div>
-          )}
         </div>
 
-        {/* Top-Right Resolution & AI Model Watermark */}
-        <div className="absolute top-2.5 right-2.5 flex items-center gap-1 z-20 pointer-events-none select-none">
-          <span className="px-1.5 py-0.5 bg-black/80 text-cyan-400 text-[8px] font-mono font-bold rounded border border-cyan-500/30 backdrop-blur-md">
-            {camera.resolution || '1080p'} | {freshness.status === 'OFFLINE' ? '0' : (freshness.measuredFps || camera.fps || 25)} FPS
-          </span>
-          <span className="px-1.5 py-0.5 bg-slate-950/85 text-slate-300 text-[8px] font-mono font-bold rounded border border-slate-700">
-            {camera.alertType}
-          </span>
-          {envState && (
-            <span
-              className={`px-1.5 py-0.5 text-[8px] font-mono font-bold rounded border backdrop-blur-md flex items-center gap-1 ${
-                envState.mode === 'NIGHT'
-                  ? 'bg-indigo-950/80 text-indigo-300 border-indigo-500/40'
-                  : envState.low_light
-                  ? 'bg-amber-950/80 text-amber-300 border-amber-500/40'
-                  : 'bg-emerald-950/80 text-emerald-300 border-emerald-500/40'
-              }`}
-            >
-              <span className="w-1 h-1 rounded-full bg-current animate-pulse"></span>
-              {envState.mode} // VIS {Math.round(envState.visibility_score)}%
+        {/* SECONDARY HUD ROW: Zone / Detection Purpose & Threat Assessment Chip */}
+        <div className="absolute top-7.5 inset-x-2 flex items-center justify-between pointer-events-none select-none z-20 gap-1">
+          {camera.alertType && (
+            <span className="px-1.5 py-0.5 bg-slate-950/85 text-slate-300 text-[8px] font-mono font-medium rounded border border-slate-700/70 backdrop-blur-md whitespace-nowrap truncate max-w-[55%]">
+              {camera.alertType}
             </span>
           )}
-          {/* Phase 6 Threat Risk Badge */}
-          {riskState && riskState.risk_score > 0 && (
-            <span
-              className={`px-1.5 py-0.5 text-[8px] font-mono font-black rounded border backdrop-blur-md flex items-center gap-1 ${
-                riskState.risk_level === 'CRITICAL'
-                  ? 'bg-rose-950/90 text-rose-300 border-rose-500/50 shadow-[0_0_8px_rgba(244,63,94,0.4)] animate-pulse'
-                  : riskState.risk_level === 'HIGH'
-                  ? 'bg-amber-950/90 text-amber-300 border-amber-500/50'
-                  : 'bg-yellow-950/90 text-yellow-300 border-yellow-500/50'
-              }`}
-            >
-              RISK: {riskState.risk_score} [{riskState.risk_level}]
-            </span>
-          )}
-          {/* Phase 10 Occupancy Badge */}
-          {occupancyState && occupancyState.occupants > 0 && (
-            <span className="px-1.5 py-0.5 text-[8px] font-mono font-bold rounded border bg-slate-950/90 text-cyan-300 border-cyan-500/40 backdrop-blur-md">
-              OCCUPANTS: {occupancyState.occupants}
-            </span>
-          )}
-          {/* Phase 10 Movement Anomaly Alert Badge */}
-          {activeAnomaly && (
-            <span className="px-1.5 py-0.5 text-[8px] font-mono font-bold rounded border bg-rose-950/90 text-rose-300 border-rose-500/50 backdrop-blur-md animate-pulse">
-              ANOMALY: {activeAnomaly.type}
-            </span>
-          )}
-          {/* Phase 10 Group Movement Badge */}
-          {groupCount > 0 && (
-            <span className="px-1.5 py-0.5 text-[8px] font-mono font-bold rounded border bg-purple-950/90 text-purple-300 border-purple-500/50 backdrop-blur-md">
-              GROUP MOVEMENT
-            </span>
-          )}
-          {camera.batteryLevel !== undefined && (
-            <span className={`px-1.5 py-0.5 bg-black/80 text-[8px] font-mono font-bold rounded border flex items-center gap-0.5 backdrop-blur-md ${
-              camera.batteryLevel > 50 
-                ? 'text-emerald-400 border-emerald-500/30' 
-                : camera.batteryLevel > 20 
-                  ? 'text-amber-400 border-amber-500/30' 
-                  : 'text-rose-500 border-rose-500/50 animate-pulse'
-            }`}>
-              {camera.batteryLevel > 80 ? <BatteryFull size={10} /> :
-               camera.batteryLevel > 50 ? <BatteryMedium size={10} /> :
-               camera.batteryLevel > 20 ? <BatteryLow size={10} /> : 
-               <BatteryWarning size={10} />}
-              {camera.batteryLevel}%
-            </span>
-          )}
+
+          <div className="flex items-center gap-1 shrink-0 ml-auto">
+            {/* Priority 1: Critical Threat */}
+            {riskState && riskState.risk_score > 0 ? (
+              <span
+                className={`px-1.5 py-0.5 text-[8px] font-mono font-black rounded border backdrop-blur-md flex items-center gap-1 whitespace-nowrap ${
+                  riskState.risk_level === 'CRITICAL'
+                    ? 'bg-rose-950/90 text-rose-300 border-rose-500/50 shadow-[0_0_8px_rgba(244,63,94,0.4)] animate-pulse'
+                    : riskState.risk_level === 'HIGH'
+                    ? 'bg-amber-950/90 text-amber-300 border-amber-500/50'
+                    : 'bg-yellow-950/90 text-yellow-300 border-yellow-500/50'
+                }`}
+              >
+                RISK {riskState.risk_score}
+              </span>
+            ) : camera.risk === 'High' || camera.risk === 'CRITICAL' ? (
+              <span className="px-1.5 py-0.5 text-[8px] font-mono font-bold rounded border bg-rose-950/90 text-rose-300 border-rose-500/50 backdrop-blur-md whitespace-nowrap animate-pulse">
+                HIGH RISK
+              </span>
+            ) : activeAnomaly ? (
+              <span className="px-1.5 py-0.5 text-[8px] font-mono font-bold rounded border bg-rose-950/90 text-rose-300 border-rose-500/50 backdrop-blur-md animate-pulse whitespace-nowrap">
+                ANOMALY
+              </span>
+            ) : envState && envState.mode === 'NIGHT' ? (
+              <span className="px-1.5 py-0.5 text-[8px] font-mono font-bold rounded border bg-indigo-950/80 text-indigo-300 border-indigo-500/40 backdrop-blur-md whitespace-nowrap">
+                NV-IR {Math.round(envState.visibility_score)}%
+              </span>
+            ) : null}
+          </div>
         </div>
 
         {/* 4. Bottom Recorded Timeline Scrubber (When in RECORDED Mode) */}
@@ -1673,6 +1652,26 @@ export const MatrixCameraCell: React.FC<MatrixCameraCellProps> = ({
             >
               HUD: {showAiHud ? 'ON' : 'OFF'}
             </button>
+
+            {/* Individual Camera Confidence Threshold Slider */}
+            <div
+              className="flex items-center gap-1 bg-slate-900 border border-slate-700/80 px-1.5 py-0.5 rounded"
+              title={`Camera Zone Confidence Sensitivity: ${confidenceThreshold}% (Filters out detections below this threshold)`}
+            >
+              <Sliders size={9} className="text-cyan-400" />
+              <span className="text-[8px] font-mono text-cyan-300 font-bold whitespace-nowrap">
+                CONF:{confidenceThreshold}%
+              </span>
+              <input
+                type="range"
+                min="30"
+                max="95"
+                step="5"
+                value={confidenceThreshold}
+                onChange={(e) => setConfidenceThreshold(Number(e.target.value))}
+                className="w-10 sm:w-12 h-1 accent-cyan-400 bg-slate-800 rounded cursor-pointer"
+              />
+            </div>
           </div>
 
           <div className="flex items-center gap-1">

@@ -54,10 +54,24 @@ camerasRouter.get('/:id/video', (req: Request, res: Response, next: NextFunction
       const camNum = camNumMatch ? parseInt(camNumMatch[0], 10) : 1;
       const paddedId = `CAM-${camNum < 10 ? '0' + camNum : camNum}`;
       const visdronePath = `cv_service/tests/fixtures/visdrone/${paddedId}.mp4`;
-      if (fs.existsSync(path.resolve(process.cwd(), visdronePath))) {
-        videoRelPath = visdronePath;
-      } else {
-        videoRelPath = 'cv_service/tests/fixtures/visdrone/CAM-01.mp4';
+      
+      const candidatePaths = [
+        visdronePath,
+        `cv_service/tests/fixtures/visdrone/CAM-0${((camNum - 1) % 3 === 0 ? '2' : (camNum - 1) % 3 === 1 ? '8' : '9')}.mp4`,
+        camNum === 1 ? 'cv_service/tests/fixtures/intrusion_test.mp4' : null,
+        camNum === 3 ? 'cv_service/tests/fixtures/moving_objects.mp4' : null,
+        camNum === 4 ? 'cv_service/tests/fixtures/sample_test.mp4' : null,
+        camNum === 5 ? 'cv_service/tests/fixtures/loitering_test.mp4' : null,
+        `evidence/INC-00000${((camNum - 1) % 5) + 1}.mp4`,
+        'cv_service/tests/fixtures/visdrone/CAM-02.mp4',
+        'cv_service/tests/fixtures/sample_test.mp4',
+      ].filter(Boolean) as string[];
+
+      for (const cand of candidatePaths) {
+        if (fs.existsSync(path.resolve(process.cwd(), cand))) {
+          videoRelPath = cand;
+          break;
+        }
       }
     }
 

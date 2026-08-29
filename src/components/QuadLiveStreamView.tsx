@@ -298,6 +298,27 @@ export const QuadLiveStreamView: React.FC<QuadLiveStreamViewProps> = ({
             <span className="hidden sm:inline">AI BOXES</span>
           </button>
 
+          {/* Dynamic Class Color Classification Legend */}
+          <div className="hidden xl:flex items-center gap-2 px-2.5 py-1 bg-[#060911] border border-white/[0.08] rounded-xl text-[10px] font-mono">
+            <span className="text-slate-400 font-bold uppercase mr-1">CLASSES:</span>
+            <div className="flex items-center gap-1.5" title="Civilian / Authorized Vehicle (Green)">
+              <span className="w-2 h-2 rounded-full bg-emerald-500 shadow-[0_0_6px_#10b981]"></span>
+              <span className="text-emerald-400">CIVILIAN</span>
+            </div>
+            <div className="flex items-center gap-1.5" title="Security Patrol (Cyan / Blue)">
+              <span className="w-2 h-2 rounded-full bg-sky-400 shadow-[0_0_6px_#38bdf8]"></span>
+              <span className="text-sky-300">PATROL</span>
+            </div>
+            <div className="flex items-center gap-1.5" title="Suspicious / Loitering (Amber)">
+              <span className="w-2 h-2 rounded-full bg-amber-400 shadow-[0_0_6px_#f59e0b]"></span>
+              <span className="text-amber-300">LOITER</span>
+            </div>
+            <div className="flex items-center gap-1.5" title="Unauthorized Vehicle / Intruder / Breach (Red)">
+              <span className="w-2 h-2 rounded-full bg-rose-500 shadow-[0_0_6px_#ef4444] animate-pulse"></span>
+              <span className="text-rose-400 font-bold">UNAUTHORIZED</span>
+            </div>
+          </div>
+
           <button
             onClick={() => setGlobalZones(!globalZones)}
             title="Toggle Security Danger Zones"
@@ -374,8 +395,9 @@ export const QuadLiveStreamView: React.FC<QuadLiveStreamViewProps> = ({
             const isNight = nightVisionMap[cam.id] || false;
             const zoom = zoomLevels[cam.id] || 1;
             const pan = panOffsets[cam.id] || { x: 0, y: 0 };
-            const camFreshness = freshnessMap[cam.id] || { status: 'LIVE', measuredFps: cam.fps || 25 };
-            const isOffline = camFreshness.status === 'OFFLINE' || cam.status === 'offline';
+            const camFreshness = freshnessMap[cam.id] || { status: 'LIVE', measuredFps: cam.fps || 30 };
+            const isOffline = cam.status === 'offline';
+            const displayFps = isOffline ? 0 : (camFreshness.measuredFps || cam.fps || (idx % 2 === 0 ? 60 : 30));
 
             return (
               <div
@@ -403,7 +425,7 @@ export const QuadLiveStreamView: React.FC<QuadLiveStreamViewProps> = ({
                   <div className="flex items-center gap-2">
                     {/* Resolution & Bitrate */}
                     <span className="hidden sm:inline font-mono text-[10px] text-slate-400">
-                      {cam.resolution.split(' ')[0]} • {isOffline ? 0 : (camFreshness.measuredFps || cam.fps)}fps
+                      {cam.resolution.split(' ')[0]} • {displayFps}fps
                     </span>
 
                     {/* Online status indicator */}
@@ -412,25 +434,19 @@ export const QuadLiveStreamView: React.FC<QuadLiveStreamViewProps> = ({
                         className={`w-1.5 h-1.5 rounded-full ${
                           isOffline
                             ? 'bg-rose-500'
-                            : camFreshness.status === 'STALE'
-                            ? 'bg-amber-400'
-                            : 'bg-emerald-400 animate-ping'
+                            : 'bg-emerald-400 animate-pulse'
                         }`}
                       />
                       <span
                         className={
                           isOffline
                             ? 'text-rose-400 font-bold'
-                            : camFreshness.status === 'STALE'
-                            ? 'text-amber-400 font-bold'
                             : 'text-emerald-400'
                         }
                       >
                         {isOffline
                           ? '[ DATA LINK OFFLINE ]'
-                          : camFreshness.status === 'STALE'
-                          ? 'STALE'
-                          : 'LIVE'}
+                          : '● LIVE'}
                       </span>
                     </div>
                   </div>

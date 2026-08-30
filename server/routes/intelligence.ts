@@ -823,7 +823,7 @@ intelligenceRouter.get('/threat-heatmap', (req: Request, res: Response, next: Ne
       return corr;
     }).sort((a, b) => b.threat_score - a.threat_score);
 
-    res.json({
+    const heatmapPayload = {
       success: true,
       time_window: windowStr,
       window_seconds: windowSecs,
@@ -833,6 +833,11 @@ intelligenceRouter.get('/threat-heatmap', (req: Request, res: Response, next: Ne
       corridors: corridorResults,
       weights: HEATMAP_WEIGHTS,
       timestamp: new Date().toISOString(),
+    };
+
+    res.json({
+      ...heatmapPayload,
+      data: heatmapPayload,
     });
   } catch (err) {
     next(err);
@@ -887,7 +892,7 @@ intelligenceRouter.get('/cameras/:cameraId/threat-profile', (req: Request, res: 
     const threatIndex = computeThreatIndex(stats);
     const threatLevel = getThreatLevel(threatIndex);
 
-    res.json({
+    const profilePayload = {
       success: true,
       camera_id: cid,
       camera_name: cam.name,
@@ -898,6 +903,11 @@ intelligenceRouter.get('/cameras/:cameraId/threat-profile', (req: Request, res: 
       total_events: events.length,
       total_incidents: incidents.length,
       recent_incidents: incidents.slice(0, 5),
+    };
+
+    res.json({
+      ...profilePayload,
+      data: profilePayload,
     });
   } catch (err) {
     next(err);
@@ -947,6 +957,7 @@ intelligenceRouter.get('/threat-corridors', (req: Request, res: Response, next: 
       success: true,
       count: corridors.length,
       corridors,
+      data: corridors,
     });
   } catch (err) {
     next(err);

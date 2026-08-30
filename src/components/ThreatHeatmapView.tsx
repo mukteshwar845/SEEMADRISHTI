@@ -59,11 +59,12 @@ export const ThreatHeatmapView: React.FC<ThreatHeatmapViewProps> = ({
   const loadHeatmap = useCallback(async () => {
     setIsLoading(true);
     try {
-      const res = await fetchThreatHeatmap(timeWindow);
-      if (res.data) {
-        setHeatmapData(res.data);
-        if (!selectedCameraId && res.data.hotspot) {
-          setSelectedCameraId(res.data.hotspot.camera_id);
+      const res: any = await fetchThreatHeatmap(timeWindow);
+      const data = res?.data || (res?.cameras ? res : null);
+      if (data) {
+        setHeatmapData(data);
+        if (!selectedCameraId && data.hotspot) {
+          setSelectedCameraId(data.hotspot.camera_id);
         }
       }
     } catch (err) {
@@ -101,8 +102,9 @@ export const ThreatHeatmapView: React.FC<ThreatHeatmapViewProps> = ({
     if (selectedCameraId) {
       setIsLoadingProfile(true);
       fetchCameraThreatProfile(selectedCameraId, timeWindow)
-        .then((res) => {
-          if (res.data) setCameraProfile(res.data);
+        .then((res: any) => {
+          const pData = res?.data || (res?.camera_id ? res : null);
+          if (pData) setCameraProfile(pData);
         })
         .catch((err) => {
           console.warn('[ThreatHeatmapView] Camera profile error:', err);

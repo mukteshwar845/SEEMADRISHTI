@@ -12,9 +12,15 @@ import {
   Moon,
   Terminal,
   Compass,
+  Mic,
+  MicOff,
+  Volume2,
+  Sliders,
+  CheckCircle,
 } from 'lucide-react';
 import { useTheme } from '../context/ThemeContext';
 import { webSocketService, WebSocketServiceState } from '../services/websocketService';
+import { voiceCommandService, VoiceServiceState } from '../services/voiceCommandService';
 
 interface HeaderProps {
   onToggleSidebarMobile: () => void;
@@ -38,10 +44,18 @@ export const Header: React.FC<HeaderProps> = ({
   const [wsState, setWsState] = useState<WebSocketServiceState>(() =>
     webSocketService.getState()
   );
+  const [voiceState, setVoiceState] = useState<VoiceServiceState>(() =>
+    voiceCommandService.getState()
+  );
+  const [showVoiceHelp, setShowVoiceHelp] = useState(false);
 
   useEffect(() => {
     const unsubWs = webSocketService.onStateChange((st) => setWsState(st));
-    return unsubWs;
+    const unsubVoice = voiceCommandService.onStateChange((st) => setVoiceState(st));
+    return () => {
+      unsubWs();
+      unsubVoice();
+    };
   }, []);
 
   useEffect(() => {
@@ -76,6 +90,10 @@ export const Header: React.FC<HeaderProps> = ({
     const timer = setInterval(updateTime, 1000);
     return () => clearInterval(timer);
   }, []);
+
+  const handleToggleVoice = () => {
+    voiceCommandService.toggle();
+  };
 
   return (
     <header
@@ -139,8 +157,75 @@ export const Header: React.FC<HeaderProps> = ({
         </div>
       </div>
 
+      {/* Center Feedback HUD (When Voice Command is actively heard or executed) */}
+      {voiceState.feedbackText && (
+        <div
+          id="voice-feedback-banner"
+          className="hidden lg:flex items-center gap-2 px-3 py-1 bg-cyan-950/90 border border-cyan-400 text-cyan-300 rounded-full font-mono text-xs font-bold shadow-[0_0_15px_rgba(0,240,255,0.4)] animate-pulse"
+        >
+          <Mic size={12} className="text-cyan-400 animate-bounce" />
+          <span className="truncate max-w-[280px]">{voiceState.feedbackText}</span>
+        </div>
+      )}
+
       {/* Right: Telemetry & Actions */}
       <div className="flex items-center gap-2 sm:gap-3">
+        {/* Voice-to-Text Command Listener Toggle Button */}
+        <div className="relative">
+          <button
+            id="btn-toggle-voice-commands"
+            onClick={handleToggleVoice}
+            onMouseEnter={() => setShowVoiceHelp(true)}
+            onMouseLeave={() => setShowVoiceHelp(false)}
+            title="Voice Commands: Speak 'Switch to quad view', 'Show alerts', 'Simulate intrusion'..."
+            className={`p-2 sm:px-2.5 sm:py-1.5 rounded-lg border font-mono text-xs font-bold flex items-center gap-1.5 transition-all cursor-pointer ${
+              voiceState.isListening
+                ? 'bg-rose-600 hover:bg-rose-500 text-white border-rose-400 shadow-[0_0_18px_rgba(244,63,94,0.6)] animate-pulse'
+                : isDaylight
+                ? 'bg-slate-100 hover:bg-slate-200 text-slate-800 border-slate-300'
+                : 'bg-[#050b14] hover:bg-cyan-950/60 border-cyan-500/30 hover:border-cyan-400 text-cyan-400'
+            }`}
+          >
+            {voiceState.isListening ? (
+              <>
+                <Mic size={14} className="animate-bounce" />
+                <span className="hidden sm:inline text-[10px] uppercase tracking-wider font-mono font-black">
+                  LISTENING...
+                </span>
+              </>
+            ) : (
+              <>
+                <MicOff size={14} className="opacity-70" />
+                <span className="hidden sm:inline text-[10px] uppercase tracking-wider font-mono">
+                  VOICE CMD
+                </span>
+              </>
+            )}
+          </button>
+
+          {/* Voice Command Tooltip on Hover */}
+          {showVoiceHelp && !voiceState.isListening && (
+            <div className="absolute right-0 top-11 w-64 p-2.5 bg-slate-950/95 border border-cyan-500/40 rounded-xl shadow-2xl z-50 text-[10px] font-mono pointer-events-none space-y-1.5 backdrop-blur-md">
+              <div className="flex items-center gap-1.5 text-cyan-300 font-bold border-b border-white/10 pb-1">
+                <Mic size={11} />
+                <span>Web Speech API Voice Commands</span>
+              </div>
+              <p className="text-slate-400 text-[9px]">
+                Click mic to speak surveillance controls:
+              </p>
+              <ul className="text-slate-300 space-y-0.5 list-disc list-inside text-[9.5px]">
+                <li><span className="text-cyan-400">&ldquo;Switch to quad view&rdquo;</span></li>
+                <li><span className="text-cyan-400">&ldquo;Switch to 3x3 matrix&rdquo;</span></li>
+                <li><span className="text-cyan-400">&ldquo;Show alerts&rdquo;</span></li>
+                <li><span className="text-cyan-400">&ldquo;Show dashboard&rdquo;</span></li>
+                <li><span className="text-cyan-400">&ldquo;Simulate intrusion&rdquo;</span></li>
+                <li><span className="text-cyan-400">&ldquo;Mute audio&rdquo;</span> / <span className="text-cyan-400">&ldquo;Unmute&rdquo;</span></li>
+                <li><span className="text-cyan-400">&ldquo;Calibrate feeds&rdquo;</span></li>
+              </ul>
+            </div>
+          )}
+        </div>
+
         {/* WebSocket Real-time Status Pill */}
         <div
           id="ws-status-hud-pill"
@@ -222,12 +307,12 @@ export const Header: React.FC<HeaderProps> = ({
           )}
         </button>
 
-        {/* SIH 23-Point Judge Demo Flow Guide */}
+        {/* SIH 21-Point Judge Demo Flow Guide */}
         {onOpenDemoMode && (
           <button
             id="btn-sih-demo-flow"
             onClick={onOpenDemoMode}
-            title="Open SIH Judge 23-Point Live Demo Sequence"
+            title="Open SIH Judge 21-Point Live Demo Sequence"
             className="p-1.5 px-2.5 rounded-lg border border-purple-500/40 bg-purple-950/60 hover:bg-purple-900/80 text-purple-300 font-mono text-[11px] font-bold flex items-center gap-1.5 shadow-[0_0_12px_rgba(168,85,247,0.3)] transition-all cursor-pointer active:scale-95"
           >
             <Compass size={13} className="text-purple-400 animate-spin-slow" />
@@ -284,6 +369,3 @@ export const Header: React.FC<HeaderProps> = ({
     </header>
   );
 };
-
-
-

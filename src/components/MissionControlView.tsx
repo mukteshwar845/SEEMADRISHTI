@@ -158,7 +158,7 @@ export const MissionControlView: React.FC<MissionControlViewProps> = ({
               className="px-3.5 py-1.5 text-xs font-mono font-semibold rounded bg-gradient-to-r from-amber-500/20 to-orange-500/20 border border-amber-500/50 text-amber-300 hover:from-amber-500/30 hover:to-orange-500/30 flex items-center gap-2 transition shadow-[0_0_15px_rgba(245,158,11,0.2)]"
             >
               <Zap className="w-3.5 h-3.5 text-amber-400" />
-              SIH MISSION DEMO (20-STEP)
+              SIH MISSION DEMO (21-STEP)
             </button>
           </div>
         </div>

@@ -380,11 +380,11 @@ class EvidenceWriter:
         3. Computes SHA-256 and compares with expected digest if provided
         """
         if not os.path.exists(file_path):
-            return {"valid": False, "status": "FAILED", "error": f"File not found: {file_path}"}
+            return {"valid": False, "verified": False, "tampered": True, "status": "FAILED", "error": f"File not found: {file_path}"}
 
         size = os.path.getsize(file_path)
         if size == 0:
-            return {"valid": False, "status": "FAILED", "error": "File is empty (0 bytes)"}
+            return {"valid": False, "verified": False, "tampered": True, "status": "FAILED", "error": "File is empty (0 bytes)"}
 
         # SHA-256
         hasher = hashlib.sha256()
@@ -396,6 +396,8 @@ class EvidenceWriter:
         if expected_sha256 and digest.lower() != expected_sha256.lower():
             return {
                 "valid": False,
+                "verified": False,
+                "tampered": True,
                 "status": "FAILED",
                 "sha256": digest,
                 "error": f"SHA-256 mismatch: computed {digest} vs expected {expected_sha256}",
@@ -406,6 +408,8 @@ class EvidenceWriter:
         if not cap.isOpened():
             return {
                 "valid": False,
+                "verified": False,
+                "tampered": True,
                 "status": "FAILED",
                 "sha256": digest,
                 "error": "OpenCV failed to decode video container",
@@ -418,6 +422,8 @@ class EvidenceWriter:
         if frames <= 0:
             return {
                 "valid": False,
+                "verified": False,
+                "tampered": True,
                 "status": "FAILED",
                 "sha256": digest,
                 "error": "Video container has zero frames",
@@ -426,6 +432,8 @@ class EvidenceWriter:
         duration = round(frames / fps, 2)
         return {
             "valid": True,
+            "verified": True,
+            "tampered": False,
             "status": "VERIFIED",
             "sha256": digest,
             "file_size": size,

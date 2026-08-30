@@ -39,6 +39,7 @@ import { ReportsModal } from './components/ReportsModal';
 import { audioAlertEngine, triggerIntrusionAudioAlert } from './utils/audioAlert';
 import { ThemeProvider, useTheme } from './context/ThemeContext';
 import { webSocketService } from './services/websocketService';
+import { voiceCommandService } from './services/voiceCommandService';
 import { fetchAlerts, fetchCameras, fetchTelemetry } from './services/api';
 import { Siren, ShieldAlert } from 'lucide-react';
 
@@ -54,8 +55,30 @@ function SeemadrishtiMainApp() {
   const [isReportsModalOpen, setIsReportsModalOpen] = useState(false);
 
   // App Data States
-  const [cameras, setCameras] = useState<CameraFeed[]>(initialCameras);
-  const [matrixCameras, setMatrixCameras] = useState<MatrixCameraFeed[]>(initialMatrixCameras);
+  const [cameras, setCameras] = useState<CameraFeed[]>(() => {
+    const fixtures = [
+      '/fixtures/moving_objects.mp4',
+      '/fixtures/intrusion_test.mp4',
+      '/fixtures/loitering_test.mp4',
+      '/fixtures/sample_test.mp4',
+    ];
+    return initialCameras.map((cam, i) => ({
+      ...cam,
+      rtspUrl: fixtures[i % fixtures.length],
+    }));
+  });
+  const [matrixCameras, setMatrixCameras] = useState<MatrixCameraFeed[]>(() => {
+    const fixtures = [
+      '/fixtures/moving_objects.mp4',
+      '/fixtures/intrusion_test.mp4',
+      '/fixtures/loitering_test.mp4',
+      '/fixtures/sample_test.mp4',
+    ];
+    return initialMatrixCameras.map((cam, i) => ({
+      ...cam,
+      src: fixtures[i % fixtures.length],
+    }));
+  });
   const [selectedCameraId, setSelectedCameraId] = useState<string>('cam-1');
   const [alerts, setAlerts] = useState<AlertItem[]>(initialAlerts);
   const [isGlobalFlashActive, setIsGlobalFlashActive] = useState(false);
@@ -275,6 +298,30 @@ function SeemadrishtiMainApp() {
         setIsRefreshing(false);
       });
   };
+
+  // Voice-to-Text Command Dispatcher Integration
+  useEffect(() => {
+    const unsub = voiceCommandService.onCommand((match) => {
+      const act = match.action;
+      if (act.type === 'NAVIGATE') {
+        setCurrentView(act.view);
+      } else if (act.type === 'SET_MATRIX_LAYOUT') {
+        setCurrentView('dashboard');
+      } else if (act.type === 'SIMULATE_INTRUSION') {
+        handleSimulateIntrusion();
+      } else if (act.type === 'MUTE_AUDIO') {
+        setIsAudioMuted(act.muted);
+        audioAlertEngine.setMuted(act.muted);
+      } else if (act.type === 'OPEN_DEMO_GUIDE') {
+        setIsDemoGuideOpen(true);
+      } else if (act.type === 'OPEN_REPORTS') {
+        setIsReportsModalOpen(true);
+      } else if (act.type === 'REFRESH') {
+        handleRefresh();
+      }
+    });
+    return unsub;
+  }, []);
 
   // Simulate Anomaly Intrusion
   const handleSimulateIntrusion = (cam?: MatrixCameraFeed) => {
@@ -700,7 +747,7 @@ function SeemadrishtiMainApp() {
       <SihDemoGuideModal
         isOpen={isDemoGuideOpen}
         onClose={() => setIsDemoGuideOpen(false)}
-        onNavigate={(v) => setCurrentView(v)}
+        onNavigateToView={(v) => setCurrentView(v)}
       />
     </div>
   );

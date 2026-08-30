@@ -24,6 +24,7 @@ import {
   Flame,
 } from 'lucide-react';
 import { recordingEngine } from '../utils/recordingManager';
+import { voiceCommandService } from '../services/voiceCommandService';
 
 export type MatrixLayoutMode = 'matrix-3x3' | 'quad-2x2' | 'spotlight';
 
@@ -98,6 +99,18 @@ export const TacticalMatrixView: React.FC<TacticalMatrixViewProps> = ({
       if (intervalId) clearInterval(intervalId);
     };
   }, [isPatrolMode, patrolInterval, cameras]);
+
+  // Voice Command integration for Tactical Matrix layouts
+  useEffect(() => {
+    const unsub = voiceCommandService.onCommand((match) => {
+      if (match.action.type === 'SET_MATRIX_LAYOUT') {
+        setLayoutMode(match.action.layout);
+      } else if (match.action.type === 'TOGGLE_PATROL') {
+        setIsPatrolMode((p) => !p);
+      }
+    });
+    return unsub;
+  }, []);
 
   // Real-time live timestamp clock updater
   useEffect(() => {

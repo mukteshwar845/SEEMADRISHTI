@@ -95,16 +95,22 @@ export function seedDemoData(): void {
   );
 
   // 5. Seed Forensic Incidents (INC-000001 through INC-000005)
-  const countIncidents: any = db.prepare('SELECT COUNT(*) as count FROM incidents').get();
-  if (!countIncidents || countIncidents.count === 0) {
-    const insertIncident = db.prepare(`
-      INSERT INTO incidents (
-        id, camera_id, track_id, event_id, event_type, risk_score, risk_level, zone_name,
-        started_at, ended_at, evidence_path, pre_event_seconds, post_event_seconds,
-        evidence_status, metadata, acknowledged, created_at
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-      ON CONFLICT(id) DO NOTHING
-    `);
+  const insertIncident = db.prepare(`
+    INSERT INTO incidents (
+      id, camera_id, track_id, event_id, event_type, risk_score, risk_level, zone_name,
+      started_at, ended_at, evidence_path, pre_event_seconds, post_event_seconds,
+      evidence_status, metadata, acknowledged, created_at
+    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    ON CONFLICT(id) DO UPDATE SET
+      camera_id=excluded.camera_id,
+      risk_score=excluded.risk_score,
+      risk_level=excluded.risk_level,
+      event_type=excluded.event_type,
+      zone_name=excluded.zone_name,
+      evidence_path=excluded.evidence_path,
+      metadata=excluded.metadata,
+      evidence_status=excluded.evidence_status
+  `);
 
     const demoIncidents = [
       {
@@ -277,5 +283,4 @@ export function seedDemoData(): void {
         inc.created_at
       );
     }
-  }
 }

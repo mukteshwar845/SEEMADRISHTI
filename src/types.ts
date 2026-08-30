@@ -65,6 +65,7 @@ export interface RecordedClip {
   resolution: string;
   fps: number;
   thumbnailUrl: string;
+  videoUrl?: string;
   tags: string[];
   triggerType: 'manual' | 'anomaly_auto';
   videoBlobUrl?: string;

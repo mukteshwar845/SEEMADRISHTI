@@ -696,8 +696,8 @@ def main():
                         in_group = any(tid in g.get("track_ids", []) for g in active_groups)
 
                         # Phase 19: Real Behavior Intelligence
-                        recent_intrus_event = next((e for e in intrusion_events if e.track_id == tid), None)
-                        recent_trip_event = next((t for t in tripwire_events if t.track_id == tid), None)
+                        recent_intrus_event = next((e for e in (events or []) if getattr(e, "track_id", None) == tid and getattr(e, "event_type", "") != "TRIPWIRE_CROSSING"), None)
+                        recent_trip_event = next((t for t in (events or []) if getattr(t, "track_id", None) == tid and (getattr(t, "event_type", "") == "TRIPWIRE_CROSSING" or getattr(t, "direction", "") in ("IN", "OUT"))), None)
                         track_behaviors = []
                         if behavior_engine:
                             t_cent = trk.get("centroid", (0.0, 0.0))

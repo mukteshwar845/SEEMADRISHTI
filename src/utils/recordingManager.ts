@@ -17,13 +17,13 @@ export interface ActiveRecording {
 
 type RecordingListener = (activeRecordings: Map<string, ActiveRecording>, savedClips: RecordedClip[]) => void;
 
-const SESSION_STORAGE_KEY = 'seemadrishti_session_recorded_clips_v1';
+const SESSION_STORAGE_KEY = 'seemadrishti_session_recorded_clips_v3';
 
-// Initial baseline mock recordings for the session
+// Initial verified recordings for the session using real VisDrone and Forensic clips
 const INITIAL_SESSION_CLIPS: RecordedClip[] = [
   {
     id: 'clip-rec-20260824-001',
-    cameraId: 'cam-2',
+    cameraId: 'cam-02',
     cameraCode: 'CAM-02',
     cameraName: 'PERIMETER_NW_04',
     location: 'Perimeter Sector Alpha-North',
@@ -33,10 +33,11 @@ const INITIAL_SESSION_CLIPS: RecordedClip[] = [
     startTimestamp: Date.now() - 42 * 60 * 1000,
     endTimestamp: Date.now() - 41 * 60 * 1000,
     durationSeconds: 46,
-    fileSizeMb: 18.4,
-    resolution: '3840x2160 (4K)',
+    fileSizeMb: 7.1,
+    resolution: '1344x756 (HD)',
     fps: 30,
-    thumbnailUrl: 'https://images.unsplash.com/photo-1557597774-9d273605dfa9?auto=format&fit=crop&w=800&q=80',
+    thumbnailUrl: '/fixtures/visdrone/CAM-02.mp4',
+    videoUrl: '/fixtures/visdrone/CAM-02.mp4',
     tags: ['INTRUSION', 'PERIMETER BREACH', 'NIGHT IR'],
     triggerType: 'anomaly_auto',
     eventsDetectedCount: 3,
@@ -44,7 +45,7 @@ const INITIAL_SESSION_CLIPS: RecordedClip[] = [
   },
   {
     id: 'clip-rec-20260824-002',
-    cameraId: 'cam-1',
+    cameraId: 'cam-01',
     cameraCode: 'CAM-01',
     cameraName: 'MAIN_GATE_ALPHA_01',
     location: 'Vehicle Checkpoint Alpha',
@@ -54,10 +55,11 @@ const INITIAL_SESSION_CLIPS: RecordedClip[] = [
     startTimestamp: Date.now() - 85 * 60 * 1000,
     endTimestamp: Date.now() - 83 * 60 * 1000,
     durationSeconds: 80,
-    fileSizeMb: 24.2,
-    resolution: '1920x1080 (FHD)',
-    fps: 60,
-    thumbnailUrl: 'https://images.unsplash.com/photo-1508974239320-0a029497e820?auto=format&fit=crop&w=800&q=80',
+    fileSizeMb: 7.1,
+    resolution: '1344x756 (HD)',
+    fps: 30,
+    thumbnailUrl: '/fixtures/visdrone/CAM-01.mp4',
+    videoUrl: '/fixtures/visdrone/CAM-01.mp4',
     tags: ['VEHICLE ANPR', 'BARRIER CROSSING', 'ROUTINE CHECK'],
     triggerType: 'manual',
     eventsDetectedCount: 5,
@@ -65,7 +67,7 @@ const INITIAL_SESSION_CLIPS: RecordedClip[] = [
   },
   {
     id: 'clip-rec-20260824-003',
-    cameraId: 'cam-3',
+    cameraId: 'cam-03',
     cameraCode: 'CAM-03',
     cameraName: 'ARMORY_BAY_A_02',
     location: 'Munitions Storage Airlock',
@@ -75,14 +77,37 @@ const INITIAL_SESSION_CLIPS: RecordedClip[] = [
     startTimestamp: Date.now() - 140 * 60 * 1000,
     endTimestamp: Date.now() - 138 * 60 * 1000,
     durationSeconds: 72,
-    fileSizeMb: 21.8,
-    resolution: '2560x1440 (2K)',
+    fileSizeMb: 7.1,
+    resolution: '1344x756 (HD)',
     fps: 30,
-    thumbnailUrl: 'https://images.unsplash.com/photo-1541888946425-d0fbb186156f?auto=format&fit=crop&w=800&q=80',
+    thumbnailUrl: '/fixtures/visdrone/CAM-03.mp4',
+    videoUrl: '/fixtures/visdrone/CAM-03.mp4',
     tags: ['AIRLOCK SEAL', 'THERMAL SCAN', 'AUTHORIZED PATROL'],
     triggerType: 'manual',
     eventsDetectedCount: 2,
     dangerZoneBreach: false,
+  },
+  {
+    id: 'clip-inc-20260824-004',
+    cameraId: 'cam-01',
+    cameraCode: 'CAM-01',
+    cameraName: 'INCIDENT_EVIDENCE_01',
+    location: 'Sector Alpha Boundary Gate',
+    rtspUrl: 'rtsp://192.168.1.101:554/live/ch0',
+    startTime: '07:22:10 AM',
+    endTime: '07:22:45 AM',
+    startTimestamp: Date.now() - 210 * 60 * 1000,
+    endTimestamp: Date.now() - 209 * 60 * 1000,
+    durationSeconds: 35,
+    fileSizeMb: 2.5,
+    resolution: '1344x756 (HD)',
+    fps: 30,
+    thumbnailUrl: '/evidence/INC-000001.mp4',
+    videoUrl: '/evidence/INC-000001.mp4',
+    tags: ['INTRUSION', 'CRITICAL RISK', 'SHA-256 SEALED'],
+    triggerType: 'anomaly_auto',
+    eventsDetectedCount: 4,
+    dangerZoneBreach: true,
   },
 ];
 
@@ -219,15 +244,9 @@ class RecordingSessionEngine {
     const bitrateMbps = active.resolution.includes('4K') ? 16 : active.resolution.includes('2K') ? 8 : 4;
     const fileSizeMb = Number(((durationSeconds * (bitrateMbps / 8)) * 0.85).toFixed(1));
 
-    // Thumbnail selection based on camera ID
-    let thumbnail = 'https://images.unsplash.com/photo-1557597774-9d273605dfa9?auto=format&fit=crop&w=800&q=80';
-    if (cameraId === 'cam-1') {
-      thumbnail = 'https://images.unsplash.com/photo-1508974239320-0a029497e820?auto=format&fit=crop&w=800&q=80';
-    } else if (cameraId === 'cam-3') {
-      thumbnail = 'https://images.unsplash.com/photo-1541888946425-d0fbb186156f?auto=format&fit=crop&w=800&q=80';
-    } else if (cameraId === 'cam-4') {
-      thumbnail = 'https://images.unsplash.com/photo-1518709268805-4e9042af9f23?auto=format&fit=crop&w=800&q=80';
-    }
+    // Real video URL matching camera source
+    const normId = (active.cameraId || 'cam-01').toLowerCase().replace(/^cam-0?/, 'cam-0');
+    const realVideoUrl = `/api/cameras/${normId}/video`;
 
     const newClip: RecordedClip = {
       id: `clip-rec-${Date.now()}-${active.cameraCode.toLowerCase()}`,
@@ -244,7 +263,8 @@ class RecordingSessionEngine {
       fileSizeMb: Math.max(0.5, fileSizeMb),
       resolution: active.resolution,
       fps: active.fps,
-      thumbnailUrl: thumbnail,
+      thumbnailUrl: realVideoUrl,
+      videoUrl: realVideoUrl,
       tags: active.tags,
       triggerType: active.triggerType,
       eventsDetectedCount: active.triggerType === 'anomaly_auto' ? 2 : 1,

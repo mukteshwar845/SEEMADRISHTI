@@ -324,6 +324,9 @@ export const SihDemoGuideModal: React.FC<SihDemoGuideModalProps> = ({
   const isFirst = currentStepIdx === 0;
   const isLast = currentStepIdx === SIH_MISSION_DEMO_STEPS.length - 1;
 
+  const [isResetting, setIsResetting] = useState<boolean>(false);
+  const [resetMessage, setResetMessage] = useState<string | null>(null);
+
   const handleNext = () => {
     if (!isLast) {
       setCurrentStepIdx((prev) => prev + 1);
@@ -345,94 +348,123 @@ export const SihDemoGuideModal: React.FC<SihDemoGuideModalProps> = ({
     onClose();
   };
 
+  const handleResetDemo = async () => {
+    try {
+      setIsResetting(true);
+      const res = await fetch('/api/demo/reset', { method: 'POST' });
+      if (res.ok) {
+        setResetMessage('DEMO SESSION RESET EXECUTED');
+        setTimeout(() => setResetMessage(null), 3000);
+      }
+    } catch {
+      setResetMessage('RESET FAILED');
+      setTimeout(() => setResetMessage(null), 3000);
+    } finally {
+      setIsResetting(false);
+    }
+  };
+
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/85 backdrop-blur-md">
-      <div className="w-full max-w-3xl max-h-[90vh] bg-[#030816] border border-cyan-500/40 rounded-2xl shadow-[0_10px_60px_rgba(0,240,255,0.2)] overflow-hidden flex flex-col font-mono text-slate-200">
-        {/* Header */}
+      <div
+        id="sih-demo-guide-modal"
+        className="w-full max-w-4xl max-h-[92vh] bg-[#030816] border border-cyan-500/40 rounded-2xl shadow-[0_0_50px_rgba(0,240,255,0.2)] overflow-hidden flex flex-col font-mono text-slate-200 animate-in fade-in zoom-in-95 duration-200"
+      >
+        {/* Modal Header */}
         <div className="px-6 py-4 bg-[#0a1226] border-b border-cyan-500/20 flex items-center justify-between">
           <div className="flex items-center gap-3">
             <div className="p-2 rounded-xl bg-cyan-950/80 border border-cyan-500/40 text-cyan-400">
-              <Compass size={20} />
+              <Compass size={20} className="animate-spin-slow" />
             </div>
             <div>
-              <h2 className="text-sm font-bold tracking-wider text-white">
-                SIH JUDGE DEMONSTRATION WORKFLOW
-              </h2>
-              <p className="text-[11px] text-cyan-400">
-                SIH26187 // TEAM IQ100 // 21-STEP OPERATIONAL SEQUENCE
+              <div className="flex items-center gap-2">
+                <h3 className="text-sm font-black text-white tracking-widest uppercase">
+                  SEEMADRISHTI AI // SIH JUDGE DEMONSTRATION WORKFLOW
+                </h3>
+                <span className="text-[10px] bg-cyan-950 text-cyan-400 px-2 py-0.5 rounded border border-cyan-500/30">
+                  IQ100 // SIH26187
+                </span>
+              </div>
+              <p className="text-xs text-slate-400">
+                Deterministic 21-Step Verification Protocol from Video Ingestion to Cryptographic Evidence
               </p>
             </div>
           </div>
+
           <button
             onClick={onClose}
-            className="p-1.5 rounded-lg text-slate-400 hover:text-white hover:bg-white/10 transition-colors"
+            className="p-1.5 rounded-xl text-slate-400 hover:text-white hover:bg-white/[0.06] transition-colors cursor-pointer"
           >
-            <X size={18} />
+            <X size={20} />
           </button>
         </div>
 
-        {/* Stepper Progress Bar */}
-        <div className="px-6 py-2 bg-slate-950 border-b border-slate-800 flex items-center justify-between text-xs text-slate-400 overflow-x-auto gap-1">
-          {SIH_MISSION_DEMO_STEPS.map((step, idx) => (
-            <button
-              key={step.stepNumber}
-              onClick={() => handleJumpToStep(idx)}
-              className={`px-2 py-1 rounded text-[10px] font-bold transition-all cursor-pointer whitespace-nowrap ${
-                idx === currentStepIdx
-                  ? 'bg-cyan-500 text-black shadow-[0_0_10px_#00f0ff]'
-                  : idx < currentStepIdx
-                  ? 'bg-cyan-950/60 text-cyan-300 border border-cyan-500/30'
-                  : 'bg-slate-900 text-slate-500'
-              }`}
-            >
-              {step.stepNumber < 10 ? `0${step.stepNumber}` : step.stepNumber}
-            </button>
-          ))}
+        {/* Modal Body */}
+        <div className="p-6 space-y-4 overflow-y-auto">
+          {/* Step Sequence Bar */}
+          <div className="flex items-center gap-1.5 overflow-x-auto pb-2 scrollbar-thin">
+            {SIH_MISSION_DEMO_STEPS.map((step, idx) => {
+              const isSelected = idx === currentStepIdx;
+              return (
+                <button
+                  key={step.stepNumber}
+                  onClick={() => handleJumpToStep(idx)}
+                  className={`px-2.5 py-1 rounded text-[10px] font-bold shrink-0 transition-all cursor-pointer ${
+                    isSelected
+                      ? 'bg-cyan-500 text-black border border-cyan-400 shadow-[0_0_10px_rgba(0,240,255,0.4)]'
+                      : 'bg-slate-900 text-slate-400 hover:text-white hover:bg-slate-800 border border-slate-800'
+                  }`}
+                >
+                  {step.stepNumber.toString().padStart(2, '0')}
+                </button>
+              );
+            })}
+          </div>
+
+          {/* Current Step Detailed Card */}
+          <div className="p-4 rounded-xl bg-slate-950 border border-cyan-500/30 space-y-3">
+            <div className="flex items-center justify-between">
+              <span className="text-xs text-cyan-400 font-bold tracking-wider">
+                [{currentStep.category.toUpperCase()}]
+              </span>
+              <span className="text-xs text-slate-400">
+                STEP {currentStep.stepNumber} OF {SIH_MISSION_DEMO_STEPS.length}
+              </span>
+            </div>
+
+            <h4 className="text-base font-black text-white">
+              {currentStep.title}
+            </h4>
+
+            <p className="text-xs text-slate-300 leading-relaxed font-sans">
+              {currentStep.description}
+            </p>
+
+            <div className="p-4 rounded-xl bg-slate-900/80 border border-slate-800 space-y-2">
+              <span className="text-xs font-bold text-cyan-400 block uppercase">
+                VERIFICATION OBJECTIVES:
+              </span>
+              <ul className="space-y-1.5 text-xs text-slate-300">
+                {currentStep.bulletPoints.map((point, i) => (
+                  <li key={i} className="flex items-start gap-2">
+                    <CheckCircle2 size={14} className="text-emerald-400 shrink-0 mt-0.5" />
+                    <span>{point}</span>
+                  </li>
+                ))}
+              </ul>
+            </div>
+
+            <div className="p-3 rounded-lg bg-cyan-950/40 border border-cyan-500/30 flex items-center justify-between text-xs">
+              <span className="text-cyan-300 font-bold">TARGET DASHBOARD VIEW:</span>
+              <span className="text-white uppercase font-bold px-2 py-0.5 rounded bg-cyan-900/60 border border-cyan-400/30">
+                {currentStep.targetView}
+              </span>
+            </div>
+          </div>
         </div>
 
-        {/* Content Body */}
-        <div className="p-6 space-y-4 overflow-y-auto flex-1">
-          <div className="flex items-center justify-between">
-            <span className="text-xs px-2.5 py-1 rounded bg-cyan-950 text-cyan-300 border border-cyan-500/30 font-bold uppercase">
-              {currentStep.category}
-            </span>
-            <span className="text-xs text-slate-400">
-              STEP {currentStep.stepNumber} OF {SIH_MISSION_DEMO_STEPS.length}
-            </span>
-          </div>
-
-          <h3 className="text-lg font-bold text-white tracking-wide">
-            {currentStep.title}
-          </h3>
-
-          <p className="text-xs text-slate-300 leading-relaxed font-sans">
-            {currentStep.description}
-          </p>
-
-          <div className="p-4 rounded-xl bg-slate-900/80 border border-slate-800 space-y-2">
-            <span className="text-xs font-bold text-cyan-400 block uppercase">
-              VERIFICATION OBJECTIVES:
-            </span>
-            <ul className="space-y-1.5 text-xs text-slate-300">
-              {currentStep.bulletPoints.map((point, i) => (
-                <li key={i} className="flex items-start gap-2">
-                  <CheckCircle2 size={14} className="text-emerald-400 shrink-0 mt-0.5" />
-                  <span>{point}</span>
-                </li>
-              ))}
-            </ul>
-          </div>
-
-          <div className="p-3 rounded-lg bg-cyan-950/40 border border-cyan-500/30 flex items-center justify-between text-xs">
-            <span className="text-cyan-300 font-bold">TARGET DASHBOARD VIEW:</span>
-            <span className="text-white uppercase font-bold px-2 py-0.5 rounded bg-cyan-900/60 border border-cyan-400/30">
-              {currentStep.targetView}
-            </span>
-          </div>
-        </div>
-
-        {/* Footer Navigation */}
-        <div className="px-6 py-4 bg-[#0a1226] border-t border-cyan-500/20 flex items-center justify-between">
+        {/* Footer Navigation with Reset Demo Session Button */}
+        <div className="px-6 py-4 bg-[#0a1226] border-t border-cyan-500/20 flex flex-wrap items-center justify-between gap-3">
           <div className="flex items-center gap-2">
             <button
               onClick={handlePrev}
@@ -447,6 +479,16 @@ export const SihDemoGuideModal: React.FC<SihDemoGuideModalProps> = ({
               className="px-3 py-1.5 rounded-lg bg-slate-900 border border-slate-700 text-slate-300 hover:text-white disabled:opacity-30 flex items-center gap-1 text-xs cursor-pointer"
             >
               NEXT <ChevronRight size={14} />
+            </button>
+
+            {/* Reset Demo Session Button */}
+            <button
+              onClick={handleResetDemo}
+              disabled={isResetting}
+              className="px-3 py-1.5 rounded-lg bg-rose-950/60 hover:bg-rose-900/80 border border-rose-500/50 text-rose-300 hover:text-white font-bold text-xs flex items-center gap-1.5 transition-all cursor-pointer disabled:opacity-50"
+              title="Reset transient session state while preserving configuration and evidence"
+            >
+              <span>{resetMessage || (isResetting ? 'RESETTING...' : 'RESET DEMO SESSION')}</span>
             </button>
           </div>
 

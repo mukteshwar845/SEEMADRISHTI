@@ -357,6 +357,7 @@ class IncidentManager:
             "status": incident.status,
             "evidence_path": incident.evidence_path,
             "sha256": incident.sha256,
+            "verification_status": getattr(incident, "verification_status", "VERIFIED"),
             "timeline": incident.timeline,
         }
         self.finalized_incidents.append(summary)

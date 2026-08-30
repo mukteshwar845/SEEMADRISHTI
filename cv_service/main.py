@@ -30,6 +30,10 @@ from cv_service.evidence.evidence_writer import EvidenceWriter
 from cv_service.evidence.incident_manager import IncidentManager
 from cv_service.correlation.camera_topology import CameraTopology
 from cv_service.correlation.correlation_engine import CorrelationEngine
+from cv_service.correlation.cross_camera import CrossCameraCorrelator
+from cv_service.behavior.behavior_engine import BehaviorIntelligenceEngine
+from cv_service.incidents.incident_fusion import IncidentFusionEngine
+from cv_service.health.system_health import SystemHealthTracker
 from cv_service.environment.environment_analyzer import EnvironmentAnalyzer
 from cv_service.environment.enhancement import LowLightEnhancer
 from cv_service.environment.night_movement import NightMovementDetector
@@ -383,6 +387,14 @@ def main():
         publisher = DetectionPublisher(config)
         publisher.start()
 
+    # 10. Initialize Phase 19 Multi-Camera Intelligence, Behavior & Fusion Engines
+    corr_topo = CameraTopology(getattr(config, "correlation_topology_path", None))
+    cross_camera_correlator = CrossCameraCorrelator(corr_topo)
+    behavior_engine = BehaviorIntelligenceEngine()
+    incident_fusion_engine = IncidentFusionEngine()
+    health_tracker = SystemHealthTracker()
+    print(f"[CV-Service] Initialized Phase 19 Intelligence, Behavior & Fusion Engines for {config.camera_id}")
+
     # 6. Processing Loop
     frame_counter = 0
     processed_counter = 0
@@ -448,6 +460,14 @@ def main():
                     analytics_engine.active_tracks.clear()
                 if night_movement_detector and hasattr(night_movement_detector, "track_histories"):
                     night_movement_detector.track_histories.clear()
+                if cross_camera_correlator:
+                    cross_camera_correlator.reset_session()
+                if behavior_engine:
+                    behavior_engine.reset_session()
+                if incident_fusion_engine:
+                    incident_fusion_engine.reset_session()
+                if health_tracker:
+                    health_tracker.reset_session()
 
             frame_counter += 1
 
@@ -675,6 +695,29 @@ def main():
                         anom_reason = next((a.get("reason") for a in active_anomalies if a.get("track_id") == tid), None)
                         in_group = any(tid in g.get("track_ids", []) for g in active_groups)
 
+                        # Phase 19: Real Behavior Intelligence
+                        recent_intrus_event = next((e for e in intrusion_events if e.track_id == tid), None)
+                        recent_trip_event = next((t for t in tripwire_events if t.track_id == tid), None)
+                        track_behaviors = []
+                        if behavior_engine:
+                            t_cent = trk.get("centroid", (0.0, 0.0))
+                            track_behaviors = behavior_engine.process_signals(
+                                camera_id=config.camera_id,
+                                track_id=tid,
+                                class_name=cls,
+                                centroid=t_cent,
+                                is_inside_zone=is_in_zone,
+                                dwell_seconds=active_dwell,
+                                reentry_count=reentry_ct,
+                                zone_breach_event=recent_intrus_event.to_dict() if recent_intrus_event else None,
+                                tripwire_event=recent_trip_event.to_dict() if recent_trip_event else None,
+                                current_time=current_frame_time,
+                            )
+                        has_wrong_dir = any(b.behavior_type == "WRONG_DIRECTION_CROSSING" for b in track_behaviors)
+                        has_exc_dwell = any(b.behavior_type == "EXCESSIVE_DWELL" for b in track_behaviors)
+                        has_rep_perim = any(b.behavior_type == "REPEATED_PERIMETER_INTERACTION" for b in track_behaviors)
+                        has_multi_esc = any(b.behavior_type == "MULTI_EVENT_ESCALATION" for b in track_behaviors)
+
                         assessment, alert_trig = risk_engine.evaluate_track(
                             camera_id=config.camera_id,
                             track=trk,
@@ -689,6 +732,10 @@ def main():
                             has_movement_anomaly=has_anom,
                             movement_anomaly_reason=anom_reason,
                             has_group_movement=in_group,
+                            has_wrong_direction=has_wrong_dir,
+                            has_excessive_dwell=has_exc_dwell,
+                            has_repeated_perimeter=has_rep_perim,
+                            has_multi_event_escalation=has_multi_esc,
                         )
 
                         trk["risk_score"] = assessment.score
@@ -698,7 +745,9 @@ def main():
                             total_risk_alerts_count += 1
 
                         # Step E: Phase 7 Forensic Incident Trigger
-                        if incident_manager and assessment.level in ("HIGH", "CRITICAL"):
+                        inc = None
+                        track_len = len(trk.get("trajectory", []))
+                        if incident_manager and assessment.level in ("HIGH", "CRITICAL") and track_len >= 2:
                             t_trig0 = time.perf_counter()
                             active_zone = "Sector Alpha Restricted Perimeter"
                             if intrusion_detector.zones:
@@ -721,9 +770,24 @@ def main():
                                 total_incidents_count += 1
                             total_evidence_time_ms += (time.perf_counter() - t_trig0) * 1000.0
 
-                        # Step F: Phase 8 Multi-Camera Threat Correlation
+                        # Step F: Phase 8 & 19 Multi-Camera Handover & Threat Correlation
+                        handover = None
+                        if cross_camera_correlator:
+                            handover = cross_camera_correlator.evaluate_track_entry(
+                                camera_id=config.camera_id,
+                                track_id=tid,
+                                class_name=cls,
+                                entry_time=current_frame_time,
+                                direction="IN",
+                                publisher=publisher,
+                            )
+
                         if correlation_engine and assessment.level in ("HIGH", "CRITICAL"):
                             t_corr0 = time.perf_counter()
+                            active_zone = "Sector Alpha Restricted Perimeter"
+                            if intrusion_detector.zones:
+                                first_zone = next(iter(intrusion_detector.zones.values()))
+                                active_zone = getattr(first_zone, "name", active_zone)
                             corr = correlation_engine.ingest_event(
                                 camera_id=config.camera_id,
                                 track_id=str(tid),
@@ -740,6 +804,27 @@ def main():
                                 total_correlations_count += 1
                             total_correlation_time_ms += (time.perf_counter() - t_corr0) * 1000.0
 
+                        # Step G: Phase 19 Multi-Event Incident Fusion
+                        if incident_fusion_engine and (has_intrus or is_loit or assessment.level in ("HIGH", "CRITICAL")):
+                            active_zone = "Sector Alpha Restricted Perimeter"
+                            if intrusion_detector.zones:
+                                first_zone = next(iter(intrusion_detector.zones.values()))
+                                active_zone = getattr(first_zone, "name", active_zone)
+                            ev_name = "RESTRICTED_ZONE_ENTRY" if has_intrus else ("LOITERING" if is_loit else "RISK_ASSESSMENT")
+                            fused_inc, is_new_inc = incident_fusion_engine.fuse_or_create_incident(
+                                camera_id=config.camera_id,
+                                track_id=tid,
+                                class_name=cls,
+                                event_type=ev_name,
+                                risk_score=assessment.score,
+                                risk_level=assessment.level,
+                                zone_name=active_zone,
+                                correlation_id=handover.correlation_id if handover else None,
+                                timestamp=current_frame_time,
+                                evidence_id=(inc.id if inc else None),
+                                details=f"{ev_name.replace('_', ' ')} verified on {config.camera_id.upper()} #{tid}",
+                            )
+
                     total_risk_time_ms += (time.perf_counter() - t_risk0) * 1000.0
                     risk_engine.cleanup_inactive_tracks(
                         config.camera_id, {t["track_id"] for t in output["tracks"]}
@@ -752,6 +837,35 @@ def main():
                 output["frame_sequence"] = frame_counter
                 output["measured_fps"] = source.measured_fps
                 output["source_type"] = source.source_type.upper()
+
+                # Phase 19: Record real performance measurements and system health
+                if health_tracker:
+                    health_tracker.record_frame_metrics(
+                        yolo_ms=output.get("inference_time_ms", 0.0),
+                        tracking_ms=output.get("tracking_time_ms", 0.0),
+                        geometry_ms=total_geom_time_ms / max(1, processed_counter),
+                        risk_ms=total_risk_time_ms / max(1, processed_counter),
+                        pipeline_ms=frame_latency_ms,
+                        current_fps=source.measured_fps,
+                        capture_fps=source.nominal_fps or 25.0,
+                    )
+                    health_tracker.update_camera_telemetry(
+                        camera_id=config.camera_id,
+                        source_type=source.source_type,
+                        frame_id=frame_counter,
+                        fps=source.measured_fps,
+                        detections_count=len(detections),
+                        tracks_count=len(output["tracks"]),
+                    )
+                    output["system_health"] = health_tracker.get_health_summary()
+                    output["performance"] = health_tracker.get_performance_metrics().to_dict()
+
+                if cross_camera_correlator:
+                    output["correlations"] = cross_camera_correlator.get_all_handovers()
+                if behavior_engine:
+                    output["behaviors"] = [b.to_dict() for b in behavior_engine.active_behavior_events[-10:]]
+                if incident_fusion_engine:
+                    output["incident_fusion"] = incident_fusion_engine.get_all_incidents()[-10:]
 
                 # Publish tracking telemetry packet over WebSocket
                 if publisher:
@@ -801,6 +915,11 @@ def main():
                             "max_score": max((t.get("risk_score", 0) for t in output.get("tracks", [])), default=0),
                             "level": max((t.get("risk_level", "LOW") for t in output.get("tracks", [])), default="LOW"),
                         },
+                        "correlations": output.get("correlations", []),
+                        "behaviors": output.get("behaviors", []),
+                        "incident_fusion": output.get("incident_fusion", []),
+                        "system_health": output.get("system_health", {}),
+                        "performance": output.get("performance", {}),
                     }
                     publisher.publish(frame_state, message_type="frame_state")
 

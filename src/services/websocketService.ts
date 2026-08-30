@@ -311,6 +311,7 @@ class WebSocketService {
   private lastEventTimestamp: number = Date.now();
   private cameraFrameTracking: Map<string, { lastSeen: number; fps: number; count: number; windowStart: number }> = new Map();
   private pingTimestamp: number = 0;
+  private genericListeners: Map<string, Set<(data: any) => void>> = new Map();
 
   constructor() {
     try {
@@ -507,6 +508,16 @@ class WebSocketService {
     this.alertListeners.forEach((listener) => listener(uiAlert));
   }
 
+  public subscribe(eventType: string, listener: (data: any) => void): () => void {
+    if (!this.genericListeners.has(eventType)) {
+      this.genericListeners.set(eventType, new Set());
+    }
+    this.genericListeners.get(eventType)!.add(listener);
+    return () => {
+      this.genericListeners.get(eventType)?.delete(listener);
+    };
+  }
+
   public toggleEmulation(enabled: boolean) {
     this.isEmulationEnabled = enabled;
     this.notifyState();
@@ -623,6 +634,16 @@ class WebSocketService {
   }
 
   private handleIncomingMessage(msg: WebSocketMessage) {
+    if (this.genericListeners.has(msg.type)) {
+      this.genericListeners.get(msg.type)?.forEach((l) => {
+        try {
+          l(msg.payload || (msg as any).data);
+        } catch (e) {
+          console.warn('[WS] Error in generic listener for', msg.type, e);
+        }
+      });
+    }
+
     switch (msg.type) {
       case 'ALERT_TRIGGER':
         if (msg.payload) {

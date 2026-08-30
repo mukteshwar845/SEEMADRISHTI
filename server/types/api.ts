@@ -349,6 +349,8 @@ export type WebSocketMessageType =
   | 'ping'
   | 'pong'
   | 'connection_ack'
+  | 'frame_state'
+  | 'demo_reset'
   | 'broadcast_test';
 
 export interface WebSocketMessage<T = any> {

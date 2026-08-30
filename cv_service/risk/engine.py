@@ -83,6 +83,14 @@ class TrackRiskContext:
         self.has_group_movement: bool = False
         self.has_abnormal_activity: bool = False
 
+        # Phase 19 Multi-factor extensions
+        self.has_wrong_direction: bool = False
+        self.has_excessive_dwell: bool = False
+        self.has_repeated_perimeter: bool = False
+        self.has_cross_camera_continuation: bool = False
+        self.has_multi_event_escalation: bool = False
+        self.risk_history: List[Dict[str, Any]] = []
+
         # State tracking for alerts
         self.last_score: int = 0
         self.last_level: str = "LOW"
@@ -106,6 +114,11 @@ class RiskEngine:
         movement_anomaly_points: int = 8,
         group_movement_points: int = 5,
         abnormal_activity_points: int = 7,
+        wrong_direction_points: int = 8,
+        excessive_dwell_points: int = 10,
+        repeated_perimeter_points: int = 10,
+        cross_camera_continuation_points: int = 10,
+        multi_event_escalation_points: int = 8,
         max_score: int = 100,
         target_classes: Optional[List[str]] = None,
         api_base_url: str = "http://127.0.0.1:8000/api",
@@ -120,6 +133,11 @@ class RiskEngine:
         self.movement_anomaly_points: int = int(movement_anomaly_points)
         self.group_movement_points: int = int(group_movement_points)
         self.abnormal_activity_points: int = int(abnormal_activity_points)
+        self.wrong_direction_points: int = int(wrong_direction_points)
+        self.excessive_dwell_points: int = int(excessive_dwell_points)
+        self.repeated_perimeter_points: int = int(repeated_perimeter_points)
+        self.cross_camera_continuation_points: int = int(cross_camera_continuation_points)
+        self.multi_event_escalation_points: int = int(multi_event_escalation_points)
         self.max_score: int = int(max_score)
         self.target_classes: List[str] = [c.lower() for c in (target_classes or ["person"])]
         self.api_base_url: str = api_base_url
@@ -303,9 +321,78 @@ class RiskEngine:
                 )
             )
 
+        # 9. Wrong Direction Crossing Condition (+8 points)
+        if ctx.has_wrong_direction:
+            pts = self.wrong_direction_points
+            score += pts
+            reasons.append(
+                RiskReason(
+                    code="WRONG_DIRECTION",
+                    points=pts,
+                    description="Wrong-direction boundary crossing opposite to designated authorized flow",
+                )
+            )
+
+        # 10. Excessive Dwell Condition (+10 points)
+        if ctx.has_excessive_dwell:
+            pts = self.excessive_dwell_points
+            score += pts
+            reasons.append(
+                RiskReason(
+                    code="EXCESSIVE_DWELL",
+                    points=pts,
+                    description=f"Prolonged stationary dwell presence in sector ({ctx.dwell_seconds:.1f}s)",
+                )
+            )
+
+        # 11. Repeated Perimeter Interaction Condition (+10 points)
+        if ctx.has_repeated_perimeter:
+            pts = self.repeated_perimeter_points
+            score += pts
+            reasons.append(
+                RiskReason(
+                    code="REPEATED_PERIMETER_BREACH",
+                    points=pts,
+                    description="Repeated perimeter interactions observed across monitoring session",
+                )
+            )
+
+        # 12. Cross-Camera Continuation Condition (+10 points)
+        if ctx.has_cross_camera_continuation:
+            pts = self.cross_camera_continuation_points
+            score += pts
+            reasons.append(
+                RiskReason(
+                    code="CROSS_CAMERA_CONTINUATION",
+                    points=pts,
+                    description="Cross-camera verified trajectory continuation across multiple surveillance sectors",
+                )
+            )
+
+        # 13. Multi-Event Compound Escalation Condition (+8 points)
+        if ctx.has_multi_event_escalation:
+            pts = self.multi_event_escalation_points
+            score += pts
+            reasons.append(
+                RiskReason(
+                    code="MULTI_EVENT_ESCALATION",
+                    points=pts,
+                    description="Multiple compound security violations verified for target",
+                )
+            )
+
         # Cap score at configured max (100)
         score = min(score, self.max_score)
         level = self.classify_score(score)
+
+        # Record chronological risk history sample if score changed or initial
+        if not ctx.risk_history or ctx.last_score != score:
+            ctx.risk_history.append({
+                "timestamp": iso_time,
+                "score": score,
+                "level": level,
+                "reasons": [r.code for r in reasons],
+            })
 
         ctx.last_score = score
         ctx.last_level = level
@@ -336,6 +423,11 @@ class RiskEngine:
         movement_anomaly_reason: Optional[str] = None,
         has_group_movement: bool = False,
         has_abnormal_activity: bool = False,
+        has_wrong_direction: bool = False,
+        has_excessive_dwell: bool = False,
+        has_repeated_perimeter: bool = False,
+        has_cross_camera_continuation: bool = False,
+        has_multi_event_escalation: bool = False,
     ) -> Tuple[RiskAssessment, bool]:
         """
         Updates track state and assesses risk.
@@ -357,6 +449,11 @@ class RiskEngine:
         ctx.movement_anomaly_reason = movement_anomaly_reason
         ctx.has_group_movement = bool(has_group_movement)
         ctx.has_abnormal_activity = bool(has_abnormal_activity)
+        ctx.has_wrong_direction = bool(has_wrong_direction)
+        ctx.has_excessive_dwell = bool(has_excessive_dwell)
+        ctx.has_repeated_perimeter = bool(has_repeated_perimeter)
+        ctx.has_cross_camera_continuation = bool(has_cross_camera_continuation)
+        ctx.has_multi_event_escalation = bool(has_multi_event_escalation)
 
         assessment = self.calculate_risk(camera_id, tid, current_time=now)
 
@@ -451,8 +548,19 @@ class RiskEngine:
                     keys_to_remove.append((cam, tid))
 
         for k in keys_to_remove:
-            del self.track_contexts[k]
+            self.track_contexts.pop(k, None)
+
         return len(keys_to_remove)
+
+    def get_track_risk_history(self, camera_id: str, track_id: int) -> List[Dict[str, Any]]:
+        key = (camera_id.strip().lower(), int(track_id))
+        ctx = self.track_contexts.get(key)
+        if ctx:
+            return list(ctx.risk_history)
+        return []
+
+    def reset_session(self) -> None:
+        self.track_contexts.clear()
 
     def _log_risk_assessment(self, assessment: RiskAssessment) -> None:
         """Structured console logging upon meaningful risk escalation."""

@@ -20,6 +20,9 @@ import {
   Loader2,
   Activity,
   ShieldCheck,
+  TrendingUp,
+  Layers,
+  ArrowRight,
 } from 'lucide-react';
 import { audioAlertEngine } from '../utils/audioAlert';
 import { generateAlertPdfReport } from '../utils/pdfReportGenerator';
@@ -43,7 +46,6 @@ export const AlertDetailModal: React.FC<AlertDetailModalProps> = ({
     alert.status === 'response_initiated' ? 'RESPONSE INITIATED' : 'READY TO DISPATCH'
   );
   const [operatorState, setOperatorState] = useState<'PENDING' | 'ACKNOWLEDGED' | 'DISPATCHED' | 'INVESTIGATING' | 'RESOLVED'>('PENDING');
-  const [sirenActive, setSirenActive] = useState(false);
   const [isPlayingAudioPing, setIsPlayingAudioPing] = useState(false);
   const [isGeneratingPdf, setIsGeneratingPdf] = useState(false);
   const [notes, setNotes] = useState('');
@@ -51,12 +53,19 @@ export const AlertDetailModal: React.FC<AlertDetailModalProps> = ({
   const [sha256, setSha256] = useState<string | null>(null);
   const [evidenceStatus, setEvidenceStatus] = useState<'READY' | 'PROCESSING' | 'UNAVAILABLE'>('PROCESSING');
 
+  // Phase 19: Behavior, Risk Progression & Cross-Camera States
+  const [behaviors, setBehaviors] = useState<any[]>([]);
+  const [riskHistory, setRiskHistory] = useState<any[]>([]);
+  const [cameraHistory, setCameraHistory] = useState<string[]>([alert.camera]);
+  const [correlationId, setCorrelationId] = useState<string | null>(alert.correlationId || null);
+
   const incId = alert.incidentId || alert.id;
 
-  // Fetch live incident timeline and cryptographic status from backend
+  // Fetch live incident timeline, behaviors, risk history & cross-camera progression
   useEffect(() => {
     let isMounted = true;
     async function fetchIncidentData() {
+      // 1. Fetch Timeline
       try {
         const res = await fetch(`/api/incidents/${incId}/timeline`);
         if (res.ok) {
@@ -65,10 +74,47 @@ export const AlertDetailModal: React.FC<AlertDetailModalProps> = ({
             setTimeline(json.timeline);
           }
         }
-      } catch {
-        // Fallback default timeline
-      }
+      } catch {}
 
+      // 2. Fetch Behaviors
+      try {
+        const resBeh = await fetch(`/api/incidents/${incId}/behaviors`);
+        if (resBeh.ok) {
+          const jsonBeh = await resBeh.json();
+          if (isMounted && jsonBeh.success && Array.isArray(jsonBeh.behaviors)) {
+            setBehaviors(jsonBeh.behaviors);
+          }
+        }
+      } catch {}
+
+      // 3. Fetch Risk Progression History
+      try {
+        const resRisk = await fetch(`/api/incidents/${incId}/risk-history`);
+        if (resRisk.ok) {
+          const jsonRisk = await resRisk.json();
+          if (isMounted && jsonRisk.success && Array.isArray(jsonRisk.history)) {
+            setRiskHistory(jsonRisk.history);
+          }
+        }
+      } catch {}
+
+      // 4. Fetch Camera Corridor History
+      try {
+        const resCam = await fetch(`/api/incidents/${incId}/camera-history`);
+        if (resCam.ok) {
+          const jsonCam = await resCam.json();
+          if (isMounted && jsonCam.success) {
+            if (Array.isArray(jsonCam.camera_sequence) && jsonCam.camera_sequence.length > 0) {
+              setCameraHistory(jsonCam.camera_sequence);
+            }
+            if (jsonCam.correlation_id) {
+              setCorrelationId(jsonCam.correlation_id);
+            }
+          }
+        }
+      } catch {}
+
+      // 5. Fetch Incident Record
       try {
         const resInc = await fetch(`/api/incidents/${incId}`);
         if (resInc.ok) {
@@ -97,7 +143,7 @@ export const AlertDetailModal: React.FC<AlertDetailModalProps> = ({
     return () => {
       isMounted = false;
     };
-  }, [incId, alert.hasEvidence]);
+  }, [incId, alert.hasEvidence, alert.camera]);
 
   const handleAcknowledge = async () => {
     try {
@@ -178,7 +224,7 @@ export const AlertDetailModal: React.FC<AlertDetailModalProps> = ({
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/85 backdrop-blur-md">
       <div
         id="alert-detail-modal"
-        className="w-full max-w-2xl max-h-[90vh] bg-[#0a0f1d] border border-white/[0.12] rounded-2xl shadow-[0_10px_50px_rgba(0,0,0,0.9)] overflow-hidden flex flex-col animate-in fade-in zoom-in-95 duration-200"
+        className="w-full max-w-3xl max-h-[92vh] bg-[#0a0f1d] border border-white/[0.12] rounded-2xl shadow-[0_10px_50px_rgba(0,0,0,0.9)] overflow-hidden flex flex-col animate-in fade-in zoom-in-95 duration-200"
       >
         {/* Modal Header */}
         <div className="px-5 py-4 bg-[#0d1424] border-b border-white/[0.08] flex items-center justify-between">
@@ -196,9 +242,11 @@ export const AlertDetailModal: React.FC<AlertDetailModalProps> = ({
             </div>
             <div>
               <h3 className="text-xs sm:text-sm font-black text-white uppercase tracking-[0.15em] font-mono">
-                OPERATIONAL INCIDENT DOSSIER
+                OPERATIONAL INCIDENT DOSSIER // MULTI-EVENT FUSION
               </h3>
-              <p className="text-[11px] text-slate-400 font-mono">INCIDENT UUID: #{incId}</p>
+              <p className="text-[11px] text-slate-400 font-mono">
+                INCIDENT ID: #{incId} {correlationId ? `// CORRELATION: ${correlationId}` : ''}
+              </p>
             </div>
           </div>
 
@@ -238,7 +286,7 @@ export const AlertDetailModal: React.FC<AlertDetailModalProps> = ({
             </div>
 
             <p className="text-slate-300 text-xs leading-relaxed mb-3 font-sans">
-              {alert.description || 'Anomalous movement pattern detected across perimeter zone.'}
+              {alert.description || 'Verified multi-stage anomalous movement detected across perimeter zone.'}
             </p>
 
             {/* Target & Zone Details */}
@@ -249,7 +297,7 @@ export const AlertDetailModal: React.FC<AlertDetailModalProps> = ({
               </div>
               <div>
                 <span className="text-slate-500 block text-[9px]">TARGET ID</span>
-                <span className="text-cyan-400 font-bold">#{alert.trackId || 'TRK-104'}</span>
+                <span className="text-cyan-400 font-bold">#{alert.trackId || '17'}</span>
               </div>
               <div>
                 <span className="text-slate-500 block text-[9px]">CLASS</span>
@@ -294,7 +342,92 @@ export const AlertDetailModal: React.FC<AlertDetailModalProps> = ({
             )}
           </div>
 
-          {/* Section 8: Chronological Incident Timeline */}
+          {/* Phase 19: Cross-Camera Handover & Corridor History */}
+          <div className="p-3.5 rounded-xl bg-slate-950 border border-cyan-500/30 space-y-2">
+            <div className="flex items-center justify-between pb-1 border-b border-slate-800">
+              <span className="text-xs uppercase font-bold text-cyan-400 tracking-wider flex items-center gap-1.5 font-mono">
+                <Layers size={14} className="text-cyan-400" />
+                CROSS-CAMERA INTELLIGENCE & CORRIDOR HISTORY:
+              </span>
+              <span className="text-[10px] text-slate-500 font-mono">
+                {correlationId ? `ID: ${correlationId}` : 'SINGLE-SECTOR INTRUSION'}
+              </span>
+            </div>
+
+            <div className="flex items-center gap-2 text-xs pt-1 overflow-x-auto py-1">
+              {cameraHistory.map((cam, idx) => (
+                <React.Fragment key={cam}>
+                  <div className="flex items-center gap-1.5 bg-slate-900 px-3 py-1.5 rounded-lg border border-cyan-500/30 text-white font-bold shrink-0">
+                    <span className="w-2 h-2 rounded-full bg-cyan-400 animate-pulse" />
+                    <span>{cam.toUpperCase()}</span>
+                  </div>
+                  {idx < cameraHistory.length - 1 && (
+                    <ArrowRight size={14} className="text-cyan-400 shrink-0 animate-pulse" />
+                  )}
+                </React.Fragment>
+              ))}
+            </div>
+          </div>
+
+          {/* Phase 19: Behavior Intelligence Summary */}
+          <div className="p-3.5 rounded-xl bg-slate-950 border border-white/[0.08] space-y-2">
+            <span className="text-xs uppercase font-bold text-slate-300 tracking-wider block font-mono">
+              BEHAVIOR INTELLIGENCE SIGNALS ({behaviors.length}):
+            </span>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+              {behaviors.length > 0 ? (
+                behaviors.map((b, idx) => (
+                  <div key={idx} className="p-2 rounded bg-black/60 border border-slate-800 text-[11px] font-mono flex items-center justify-between">
+                    <span className="text-cyan-300 font-bold">✓ {b.behavior_type.replace(/_/g, ' ')}</span>
+                    <span className="text-[9px] px-1.5 py-0.5 rounded bg-cyan-950 text-cyan-400 border border-cyan-500/40">
+                      {b.severity || 'HIGH'}
+                    </span>
+                  </div>
+                ))
+              ) : (
+                <div className="col-span-2 text-slate-500 text-[10px] font-mono">
+                  INSUFFICIENT DATA // Single-stage transition observed.
+                </div>
+              )}
+            </div>
+          </div>
+
+          {/* Phase 19: Risk Evolution Graph */}
+          <div className="p-3.5 rounded-xl bg-slate-950 border border-white/[0.08] space-y-2">
+            <div className="flex items-center justify-between pb-1 border-b border-slate-800">
+              <span className="text-xs uppercase font-bold text-slate-300 tracking-wider flex items-center gap-1.5 font-mono">
+                <TrendingUp size={14} className="text-rose-400" />
+                RISK EVOLUTION PROGRESSION:
+              </span>
+              <span className="text-[10px] text-slate-500 font-mono">AUTHENTIC SAMPLES</span>
+            </div>
+
+            {riskHistory.length >= 2 ? (
+              <div className="space-y-1.5 pt-1">
+                {riskHistory.map((item, idx) => (
+                  <div key={idx} className="flex items-center justify-between text-[11px] font-mono p-1.5 rounded bg-black/40 border border-slate-800/80">
+                    <span className="text-slate-400 text-[10px]">
+                      {item.timestamp ? item.timestamp.slice(11, 19) : `T+${idx * 4}s`}
+                    </span>
+                    <span className={`font-bold ${
+                      item.level === 'CRITICAL' ? 'text-rose-500' : item.level === 'HIGH' ? 'text-rose-400' : 'text-amber-400'
+                    }`}>
+                      {item.score} / 100 [{item.level}]
+                    </span>
+                    <span className="text-[9px] text-slate-400">
+                      {(item.reasons || []).join(' + ')}
+                    </span>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <div className="p-2.5 text-center text-slate-500 text-[10px] font-mono">
+                INSUFFICIENT DATA FOR TREND
+              </div>
+            )}
+          </div>
+
+          {/* Section: Chronological Incident Timeline */}
           <div className="p-4 rounded-xl bg-slate-950 border border-cyan-500/20 space-y-2">
             <div className="flex items-center justify-between pb-1 border-b border-slate-800">
               <span className="text-xs uppercase font-bold text-cyan-400 tracking-wider flex items-center gap-1.5 font-mono">
@@ -319,63 +452,14 @@ export const AlertDetailModal: React.FC<AlertDetailModalProps> = ({
                   </div>
                 ))
               ) : (
-                <div className="space-y-1.5 text-[11px] font-mono text-slate-300">
-                  <div className="flex items-center gap-2">
-                    <span className="text-slate-400 text-[10px]">02:14:32</span>
-                    <div className="w-1.5 h-1.5 rounded-full bg-cyan-400" />
-                    <span>PERSON #17 DETECTED BY YOLOv8</span>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <span className="text-slate-400 text-[10px]">02:14:35</span>
-                    <div className="w-1.5 h-1.5 rounded-full bg-cyan-400" />
-                    <span>BYTETRACK PERSISTENT TRACK ESTABLISHED</span>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <span className="text-slate-400 text-[10px]">02:14:38</span>
-                    <div className="w-1.5 h-1.5 rounded-full bg-cyan-400" />
-                    <span>CENTROID TRAJECTORY VECTOR RECORDED</span>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <span className="text-slate-400 text-[10px]">02:14:41</span>
-                    <div className="w-1.5 h-1.5 rounded-full bg-rose-400" />
-                    <span className="text-rose-300 font-bold">ENTERED RESTRICTED SECTOR ALPHA ZONE</span>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <span className="text-slate-400 text-[10px]">02:14:42</span>
-                    <div className="w-1.5 h-1.5 rounded-full bg-amber-400" />
-                    <span className="text-amber-300 font-bold">VIRTUAL TRIPWIRE CROSSED — INBOUND</span>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <span className="text-slate-400 text-[10px]">02:14:43</span>
-                    <div className="w-1.5 h-1.5 rounded-full bg-rose-400" />
-                    <span className="text-rose-300">RISK ESCALATED → HIGH (80/100)</span>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <span className="text-slate-400 text-[10px]">02:14:45</span>
-                    <div className="w-1.5 h-1.5 rounded-full bg-cyan-400" />
-                    <span>ALERT DISPATCHED TO COMMAND DASHBOARD</span>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <span className="text-slate-400 text-[10px]">02:14:46</span>
-                    <div className="w-1.5 h-1.5 rounded-full bg-cyan-400" />
-                    <span>INCIDENT RECORD CREATED IN DATABASE</span>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <span className="text-slate-400 text-[10px]">02:14:56</span>
-                    <div className="w-1.5 h-1.5 rounded-full bg-emerald-400" />
-                    <span className="text-emerald-300">FORENSIC EVIDENCE MP4 FINALIZED</span>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <span className="text-slate-400 text-[10px]">02:14:56</span>
-                    <div className="w-1.5 h-1.5 rounded-full bg-emerald-400" />
-                    <span className="text-emerald-300 font-bold">SHA-256 HASH VERIFIED & SEALED</span>
-                  </div>
+                <div className="text-slate-500 text-[10px] font-mono">
+                  INSUFFICIENT DATA // Timeline points being synchronized.
                 </div>
               )}
             </div>
           </div>
 
-          {/* Section 10 & 11: Forensic Evidence & SHA-256 Validation */}
+          {/* Section: Forensic Evidence & SHA-256 Validation */}
           <div className="p-4 rounded-xl bg-slate-950 border border-white/[0.08] space-y-3">
             <div className="flex items-center justify-between">
               <span className="text-xs uppercase font-bold text-slate-300 tracking-wider flex items-center gap-1.5 font-mono">
@@ -433,7 +517,7 @@ export const AlertDetailModal: React.FC<AlertDetailModalProps> = ({
             )}
           </div>
 
-          {/* Section 18: Operator Actions */}
+          {/* Operator Actions */}
           <div className="p-3.5 rounded-xl bg-slate-950 border border-slate-800 space-y-2">
             <span className="text-[10px] uppercase font-bold text-slate-400 tracking-wider block font-mono">
               OPERATOR COMMAND ACTIONS (AUDITED):

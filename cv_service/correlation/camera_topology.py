@@ -151,6 +151,18 @@ class CameraTopology:
             return sorted(list(self._adjacency[cid].keys()))
         return []
 
+    def get_adjacent_cameras(self, camera_id: str) -> List[str]:
+        return self.get_connected_cameras(camera_id)
+
+    def get_neighbors(self, camera_id: str) -> List[str]:
+        return self.get_connected_cameras(camera_id)
+
+    def get_edge(self, from_camera_id: str, to_camera_id: str) -> Optional[CameraEdge]:
+        return self.get_relationship(from_camera_id, to_camera_id)
+
+    def get_corridor(self, from_camera_id: str, to_camera_id: str) -> Optional[CameraEdge]:
+        return self.get_relationship(from_camera_id, to_camera_id)
+
     def get_all_edges(self) -> List[CameraEdge]:
         edges: List[CameraEdge] = []
         for c1, dests in self._adjacency.items():

@@ -22,6 +22,7 @@ import {
   Crosshair,
   Download,
   Share2,
+  Footprints,
   FileText,
   AlertCircle,
   Siren,
@@ -42,6 +43,8 @@ import {
 import { AlertItem } from '../types';
 import { fetchIncidents, acknowledgeIncident, IncidentRecord } from '../services/api';
 import { webSocketService } from '../services/websocketService';
+import { ThreatBehaviorChain } from './ThreatBehaviorChain';
+import { IncidentIntelligenceSummary } from './IncidentIntelligenceSummary';
 
 export interface DecisionTraceStep {
   step: number;
@@ -764,7 +767,15 @@ function mapRecordToEvidence(rec: IncidentRecord): IncidentEvidence {
   };
 }
 
-export const IncidentInspectorView: React.FC = () => {
+interface IncidentInspectorViewProps {
+  onOpenThreatMap?: (cameraId: string) => void;
+  onOpenTargetJourney?: (trackId?: number) => void;
+}
+
+export const IncidentInspectorView: React.FC<IncidentInspectorViewProps> = ({
+  onOpenThreatMap,
+  onOpenTargetJourney,
+}) => {
   const [incidentsList, setIncidentsList] = useState<IncidentEvidence[]>(INCIDENTS_DATA);
   const [selectedIncidentIndex, setSelectedIncidentIndex] = useState(0);
   const [isPlaying, setIsPlaying] = useState(true);
@@ -779,8 +790,8 @@ export const IncidentInspectorView: React.FC = () => {
   const [toastMessage, setToastMessage] = useState<string | null>(null);
   const [qrtCountdown, setQrtCountdown] = useState(180);
 
-  // Explainable AI tab selection: 'attribution' | 'trace' | 'whatif' | 'brief'
-  const [xaiTab, setXaiTab] = useState<'attribution' | 'trace' | 'whatif' | 'brief'>('attribution');
+  // Explainable AI tab selection: 'chain' | 'attribution' | 'trace' | 'whatif' | 'brief'
+  const [xaiTab, setXaiTab] = useState<'chain' | 'attribution' | 'trace' | 'whatif' | 'brief'>('chain');
 
   // Interactive Counterfactual Simulator states
   const [simulatedDwell, setSimulatedDwell] = useState<number>(42);
@@ -1069,6 +1080,33 @@ export const IncidentInspectorView: React.FC = () => {
                 <span>GRAD-CAM HEATMAP</span>
               </button>
 
+              {/* Show on Threat Heatmap Button */}
+              {onOpenThreatMap && (
+                <button
+                  onClick={() => onOpenThreatMap(currentIncident.cameraCode)}
+                  className="px-2.5 py-1 rounded-lg text-[10px] font-mono font-bold flex items-center gap-1.5 border border-rose-500/50 bg-rose-950/40 text-rose-300 hover:bg-rose-900/60 cursor-pointer transition-all"
+                  title="View this camera node on Dynamic Threat Heatmap"
+                >
+                  <Flame size={12} className="text-rose-400" />
+                  <span>SHOW ON THREAT MAP</span>
+                </button>
+              )}
+
+              {/* View Target Journey Button */}
+              {onOpenTargetJourney && (
+                <button
+                  onClick={() => {
+                    const tid = parseInt(currentIncident.targetId.replace(/\D/g, '') || '1', 10);
+                    onOpenTargetJourney(tid);
+                  }}
+                  className="px-2.5 py-1 rounded-lg text-[10px] font-mono font-bold flex items-center gap-1.5 border border-cyan-500/50 bg-cyan-950/40 text-cyan-300 hover:bg-cyan-900/60 cursor-pointer transition-all"
+                  title="View Target Cross-Camera Journey"
+                >
+                  <Footprints size={12} className="text-cyan-400" />
+                  <span>VIEW TARGET JOURNEY</span>
+                </button>
+              )}
+
               <div className="flex items-center gap-2">
                 <span className={`px-2 py-0.5 rounded text-[10px] font-mono font-black border ${
                   currentIncident.verificationStatus === 'VERIFIED'
@@ -1293,8 +1331,18 @@ export const IncidentInspectorView: React.FC = () => {
               </span>
             </div>
 
-            {/* Sub Tabs: Attribution | Decision Trace | What-If | Tactical Brief */}
-            <div className="grid grid-cols-4 gap-1 p-1 rounded-lg bg-[#070d1f] border border-[#3d494c]/40 font-mono text-[10px]">
+            {/* Sub Tabs: Chain | Attribution | Decision Trace | What-If | Tactical Brief */}
+            <div className="grid grid-cols-5 gap-1 p-1 rounded-lg bg-[#070d1f] border border-[#3d494c]/40 font-mono text-[10px]">
+              <button
+                onClick={() => setXaiTab('chain')}
+                className={`py-1 rounded font-bold cursor-pointer transition-all ${
+                  xaiTab === 'chain'
+                    ? 'bg-rose-500/20 text-rose-300 border border-rose-500/50 shadow-sm'
+                    : 'text-slate-400 hover:text-white'
+                }`}
+              >
+                CHAIN
+              </button>
               <button
                 onClick={() => setXaiTab('attribution')}
                 className={`py-1 rounded font-bold cursor-pointer transition-all ${
@@ -1342,6 +1390,16 @@ export const IncidentInspectorView: React.FC = () => {
           <div className="hud-trim border border-[#ffb4ab]/50 bg-[#0a0f1d] backdrop-blur-md relative h-[560px] flex flex-col justify-between p-4 rounded-xl shadow-2xl overflow-hidden">
             {/* Scrollable Tab Content */}
             <div className="flex-1 overflow-y-auto pr-1 space-y-3.5 scrollbar-thin">
+              {/* TAB 0: THREAT BEHAVIOR CHAIN (Phase 19 Signature Intelligence) */}
+              {xaiTab === 'chain' && (
+                <ThreatBehaviorChain
+                  incidentId={currentIncident.id}
+                  trackId={parseInt(currentIncident.targetId.replace(/\D/g, '') || '1', 10)}
+                  cameraId={currentIncident.cameraCode}
+                  compact={true}
+                />
+              )}
+
               {/* TAB 1: ATTRIBUTION & MATHEMATICAL FORMULA */}
               {xaiTab === 'attribution' && (
                 <div className="space-y-3">
@@ -1543,9 +1601,12 @@ export const IncidentInspectorView: React.FC = () => {
                 </div>
               )}
 
-              {/* TAB 4: TACTICAL BRIEF & UNCERTAINTY */}
+              {/* TAB 4: TACTICAL BRIEF & INTELLIGENCE SUMMARY */}
               {xaiTab === 'brief' && (
                 <div className="space-y-3">
+                  {/* Automatic Incident Intelligence Summary (Phase 20) */}
+                  <IncidentIntelligenceSummary incidentId={currentIncident.id} compact={true} />
+
                   {/* Natural Language Operational Narrative */}
                   <div className="p-3 bg-[#070d1f] border border-[#3d494c]/50 rounded-lg font-mono text-[10px] text-[#bcc9cd] space-y-1.5">
                     <span className="text-[#4cd7f6] font-bold block flex items-center gap-1.5 text-[11px]">

@@ -15,6 +15,8 @@ export type ViewMode =
   | 'livestream' 
   | 'stitching' 
   | 'calibration'
+  | 'target-journey'
+  | 'threat-map'
   | 'settings' 
   | 'users';
 

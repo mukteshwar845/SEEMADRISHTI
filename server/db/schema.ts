@@ -284,5 +284,62 @@ export function initializeSchema(): void {
       metadata TEXT,
       updated_at TEXT NOT NULL
     );
+
+    -- Personnel & Operators table (Priority 2 reality wiring & per-operator auth)
+    CREATE TABLE IF NOT EXISTS users (
+      id TEXT PRIMARY KEY,
+      username TEXT UNIQUE,
+      password_hash TEXT,
+      name TEXT NOT NULL,
+      role TEXT NOT NULL,
+      email TEXT NOT NULL,
+      shift TEXT NOT NULL,
+      status TEXT NOT NULL DEFAULT 'active' CHECK(status IN ('active', 'on_duty', 'off_duty')),
+      assigned_sector TEXT NOT NULL,
+      created_at TEXT NOT NULL,
+      updated_at TEXT NOT NULL
+    );
+
+    CREATE INDEX IF NOT EXISTS idx_users_status ON users(status);
+    CREATE INDEX IF NOT EXISTS idx_users_role ON users(role);
+
+    -- Threat Behavior Chains table (Phase 19 Signature Feature)
+    CREATE TABLE IF NOT EXISTS behavior_chains (
+      id TEXT PRIMARY KEY,
+      chain_id TEXT NOT NULL UNIQUE,
+      track_id INTEGER NOT NULL,
+      correlation_id TEXT,
+      camera_id TEXT NOT NULL,
+      camera_ids TEXT NOT NULL,
+      status TEXT NOT NULL DEFAULT 'ACTIVE' CHECK(status IN ('ACTIVE', 'ESCALATING', 'CRITICAL', 'INCIDENT_CREATED', 'RESOLVED', 'EXPIRED')),
+      started_at REAL NOT NULL,
+      updated_at REAL NOT NULL,
+      events TEXT NOT NULL,
+      risk_score INTEGER NOT NULL DEFAULT 0,
+      risk_level TEXT NOT NULL DEFAULT 'LOW',
+      behavior_pattern TEXT NOT NULL,
+      confidence REAL NOT NULL DEFAULT 0.0,
+      confidence_label TEXT NOT NULL DEFAULT 'INSUFFICIENT DATA',
+      evidence TEXT NOT NULL,
+      explanation TEXT,
+      risk_contributions TEXT,
+      incident_id TEXT,
+      created_at TEXT NOT NULL
+    );
+
+    CREATE INDEX IF NOT EXISTS idx_behavior_chains_track ON behavior_chains(camera_id, track_id);
+    CREATE INDEX IF NOT EXISTS idx_behavior_chains_pattern ON behavior_chains(behavior_pattern);
+    CREATE INDEX IF NOT EXISTS idx_behavior_chains_incident ON behavior_chains(incident_id);
   `);
+
+  // Migrations for existing database instances
+  try {
+    db.exec(`ALTER TABLE users ADD COLUMN username TEXT;`);
+  } catch {}
+  try {
+    db.exec(`ALTER TABLE users ADD COLUMN password_hash TEXT;`);
+  } catch {}
+  try {
+    db.exec(`CREATE UNIQUE INDEX IF NOT EXISTS idx_users_username ON users(username);`);
+  } catch {}
 }

@@ -32,6 +32,7 @@ from cv_service.correlation.camera_topology import CameraTopology
 from cv_service.correlation.correlation_engine import CorrelationEngine
 from cv_service.correlation.cross_camera import CrossCameraCorrelator
 from cv_service.behavior.behavior_engine import BehaviorIntelligenceEngine
+from cv_service.behavior.behavior_chain import BehaviorChainEngine
 from cv_service.incidents.incident_fusion import IncidentFusionEngine
 from cv_service.health.system_health import SystemHealthTracker
 from cv_service.environment.environment_analyzer import EnvironmentAnalyzer
@@ -391,6 +392,7 @@ def main():
     corr_topo = CameraTopology(getattr(config, "correlation_topology_path", None))
     cross_camera_correlator = CrossCameraCorrelator(corr_topo)
     behavior_engine = BehaviorIntelligenceEngine()
+    behavior_chain_engine = BehaviorChainEngine()
     incident_fusion_engine = IncidentFusionEngine()
     health_tracker = SystemHealthTracker()
     print(f"[CV-Service] Initialized Phase 19 Intelligence, Behavior & Fusion Engines for {config.camera_id}")
@@ -464,6 +466,8 @@ def main():
                     cross_camera_correlator.reset_session()
                 if behavior_engine:
                     behavior_engine.reset_session()
+                if behavior_chain_engine:
+                    behavior_chain_engine.reset_session()
                 if incident_fusion_engine:
                     incident_fusion_engine.reset_session()
                 if health_tracker:
@@ -552,6 +556,16 @@ def main():
                     class_frequency[cls] = class_frequency.get(cls, 0) + 1
                     current_class_counts[cls] = current_class_counts.get(cls, 0) + 1
 
+                    if behavior_chain_engine:
+                        behavior_chain_engine.ingest_detection(
+                            camera_id=config.camera_id,
+                            track_id=tid,
+                            class_name=cls,
+                            centroid=trk.get("centroid", (0.0, 0.0)),
+                            bbox=trk.get("bbox", {}),
+                            timestamp=current_frame_time,
+                        )
+
                 # Package Phase 17 live & cumulative counting telemetry
                 counts_payload = {
                     "visible": {
@@ -587,8 +601,25 @@ def main():
                     for ev in events:
                         if ev.event_type == "TRIPWIRE_CROSSING" or ev.direction in ("IN", "OUT", "CROSSING"):
                             total_tripwire_crossings_count += 1
+                            if behavior_chain_engine:
+                                behavior_chain_engine.ingest_tripwire_crossing(
+                                    camera_id=config.camera_id,
+                                    track_id=ev.track_id,
+                                    tripwire_name=getattr(ev, "zone_name", "Perimeter Tripwire"),
+                                    direction=ev.direction or "IN",
+                                    timestamp=current_frame_time,
+                                    crossing_point=getattr(ev, "centroid", None),
+                                )
                         elif ev.direction == "ENTERING" or ev.event_type == "RESTRICTED_ZONE_ENTRY":
                             total_intrusions_count += 1
+                            if behavior_chain_engine:
+                                behavior_chain_engine.ingest_zone_entry(
+                                    camera_id=config.camera_id,
+                                    track_id=ev.track_id,
+                                    zone_name=getattr(ev, "zone_name", "Restricted Area"),
+                                    timestamp=current_frame_time,
+                                    position=getattr(ev, "centroid", None),
+                                )
 
                 # Step C: Loitering Detection & Dwell Accumulation
                 if loitering_detector:
@@ -610,6 +641,14 @@ def main():
                             if st and st.inside and st.dwell_seconds > 0:
                                 trk["dwell_seconds"] = round(st.dwell_seconds, 1)
                                 trk["is_loitering"] = st.loitering_alerted
+                                if behavior_chain_engine and st.dwell_seconds >= 10.0:
+                                    behavior_chain_engine.ingest_loitering(
+                                        camera_id=config.camera_id,
+                                        track_id=tid,
+                                        zone_name=getattr(st, "zone_name", "Restricted Zone"),
+                                        dwell_seconds=st.dwell_seconds,
+                                        timestamp=current_frame_time,
+                                    )
 
                 # Step D: Phase 10 Advanced Movement & Traffic Flow Analytics
                 active_anomalies = []
@@ -657,6 +696,13 @@ def main():
                                 has_intrus = True
                                 if hasattr(st, "entry_count") and st.entry_count > 1:
                                     reentry_ct = max(reentry_ct, st.entry_count - 1)
+                                    if behavior_chain_engine:
+                                        behavior_chain_engine.ingest_reentry(
+                                            camera_id=config.camera_id,
+                                            track_id=tid,
+                                            reentry_count=reentry_ct,
+                                            timestamp=current_frame_time,
+                                        )
                                 break
 
                         # Check loitering state
@@ -741,6 +787,16 @@ def main():
                         trk["risk_score"] = assessment.score
                         trk["risk_level"] = assessment.level
                         trk["risk_reasons"] = [r.to_dict() for r in assessment.reasons]
+                        if behavior_chain_engine:
+                            chain_obj = behavior_chain_engine.ingest_risk_assessment(
+                                camera_id=config.camera_id,
+                                track_id=tid,
+                                risk_score=assessment.score,
+                                risk_level=assessment.level,
+                                reasons=[r.to_dict() for r in assessment.reasons],
+                                timestamp=current_frame_time,
+                            )
+                            trk["behavior_chain"] = chain_obj.to_dict()
                         if alert_trig:
                             total_risk_alerts_count += 1
 
@@ -768,6 +824,13 @@ def main():
                             )
                             if inc:
                                 total_incidents_count += 1
+                                if behavior_chain_engine:
+                                    behavior_chain_engine.ingest_incident(
+                                        camera_id=config.camera_id,
+                                        track_id=tid,
+                                        incident_id=inc.id,
+                                        timestamp=current_frame_time,
+                                    )
                             total_evidence_time_ms += (time.perf_counter() - t_trig0) * 1000.0
 
                         # Step F: Phase 8 & 19 Multi-Camera Handover & Threat Correlation
@@ -781,6 +844,14 @@ def main():
                                 direction="IN",
                                 publisher=publisher,
                             )
+                            if handover and behavior_chain_engine:
+                                behavior_chain_engine.ingest_cross_camera_handover(
+                                    from_camera=handover.from_camera,
+                                    to_camera=handover.to_camera,
+                                    track_id=tid,
+                                    correlation_id=handover.correlation_id,
+                                    timestamp=current_frame_time,
+                                )
 
                         if correlation_engine and assessment.level in ("HIGH", "CRITICAL"):
                             t_corr0 = time.perf_counter()
@@ -843,19 +914,19 @@ def main():
                     health_tracker.record_frame_metrics(
                         yolo_ms=output.get("inference_time_ms", 0.0),
                         tracking_ms=output.get("tracking_time_ms", 0.0),
-                        geometry_ms=total_geom_time_ms / max(1, processed_counter),
+                        geometry_ms=total_geometry_time_ms / max(1, processed_counter),
                         risk_ms=total_risk_time_ms / max(1, processed_counter),
                         pipeline_ms=frame_latency_ms,
-                        current_fps=source.measured_fps,
-                        capture_fps=source.nominal_fps or 25.0,
+                        current_fps=getattr(source, 'measured_fps', 25.0),
+                        capture_fps=getattr(source, 'nominal_fps', None) or getattr(source, 'fps', 25.0),
                     )
                     health_tracker.update_camera_telemetry(
                         camera_id=config.camera_id,
                         source_type=source.source_type,
                         frame_id=frame_counter,
                         fps=source.measured_fps,
-                        detections_count=len(detections),
-                        tracks_count=len(output["tracks"]),
+                        detections_count=len(output.get("detections", [])),
+                        tracks_count=len(output.get("tracks", [])),
                     )
                     output["system_health"] = health_tracker.get_health_summary()
                     output["performance"] = health_tracker.get_performance_metrics().to_dict()
@@ -864,12 +935,19 @@ def main():
                     output["correlations"] = cross_camera_correlator.get_all_handovers()
                 if behavior_engine:
                     output["behaviors"] = [b.to_dict() for b in behavior_engine.active_behavior_events[-10:]]
+                if behavior_chain_engine:
+                    output["behavior_chains"] = [c.to_dict() for c in behavior_chain_engine.get_active_chains()]
+                    output["behavior_chain_kpis"] = behavior_chain_engine.get_kpis()
                 if incident_fusion_engine:
                     output["incident_fusion"] = incident_fusion_engine.get_all_incidents()[-10:]
 
                 # Publish tracking telemetry packet over WebSocket
                 if publisher:
                     publisher.publish(output, message_type="tracking")
+                    if behavior_chain_engine:
+                        for ch in behavior_chain_engine.get_active_chains():
+                            if len(ch.events) >= 2 or ch.risk_score >= 40:
+                                publisher.publish(ch.to_dict(), message_type="behavior_chain_update")
 
                     # Phase 14 & 17: Unified frame_state packet with counts and stream synchronization
                     person_cnt = counts_payload["visible"].get("person", 0)
@@ -918,6 +996,8 @@ def main():
                         "correlations": output.get("correlations", []),
                         "behaviors": output.get("behaviors", []),
                         "incident_fusion": output.get("incident_fusion", []),
+                        "behavior_chains": output.get("behavior_chains", []),
+                        "behavior_chain_kpis": output.get("behavior_chain_kpis", {}),
                         "system_health": output.get("system_health", {}),
                         "performance": output.get("performance", {}),
                     }

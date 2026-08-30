@@ -11,7 +11,13 @@ import { analyticsRouter } from './routes/analytics';
 import { telemetryRouter } from './routes/telemetry';
 import { systemRouter } from './routes/system';
 import { devRouter } from './routes/dev';
+import { usersRouter } from './routes/users';
+import { authRouter } from './routes/auth';
+import { behaviorChainsRouter } from './routes/behavior_chains';
+import { searchRouter } from './routes/search';
+import { intelligenceRouter } from './routes/intelligence';
 import { errorHandler, notFoundHandler } from './middleware/errorHandler';
+import { requireAuth } from './middleware/auth';
 
 export function createApp(): express.Application {
   const app = express();
@@ -23,8 +29,8 @@ export function createApp(): express.Application {
   const allowedOrigin = process.env.CORS_ORIGIN || '*';
   app.use((req: Request, res: Response, next: NextFunction) => {
     res.header('Access-Control-Allow-Origin', allowedOrigin);
-    res.header('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
-    res.header('Access-Control-Allow-Headers', 'Origin, X-Requested-With, Content-Type, Accept, Authorization');
+    res.header('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, PATCH, OPTIONS');
+    res.header('Access-Control-Allow-Headers', 'Origin, X-Requested-With, Content-Type, Accept, Authorization, x-api-key');
     if (req.method === 'OPTIONS') {
       res.sendStatus(200);
       return;
@@ -53,6 +59,18 @@ export function createApp(): express.Application {
   app.use('/evidence', express.static(path.resolve(process.cwd(), 'evidence')));
   app.use('/fixtures', express.static(path.resolve(process.cwd(), 'cv_service/tests/fixtures')));
 
+  // Priority 1 Security: Enforce authentication on all mutating API routes (POST, PUT, DELETE, PATCH)
+  app.use('/api', (req: Request, res: Response, next: NextFunction) => {
+    // Whitelist login endpoint from requiring a pre-existing token
+    if (req.path === '/auth/login' || req.path === '/v1/auth/login') {
+      return next();
+    }
+    if (['POST', 'PUT', 'DELETE', 'PATCH'].includes(req.method)) {
+      return requireAuth(req, res, next);
+    }
+    next();
+  });
+
   // Mount API Sub-Routers
   app.use('/api/cameras', camerasRouter);
   app.use('/api/zones', zonesRouter);
@@ -65,6 +83,11 @@ export function createApp(): express.Application {
   app.use('/api/telemetry', telemetryRouter);
   app.use('/api/system', systemRouter);
   app.use('/api/dev', devRouter);
+  app.use('/api/users', usersRouter);
+  app.use('/api/auth', authRouter);
+  app.use('/api/behavior-chains', behaviorChainsRouter);
+  app.use('/api/intelligence', intelligenceRouter);
+  app.use('/api/intelligence/search', searchRouter);
 
   // V1 Alias Sub-Routers
   app.use('/api/v1/cameras', camerasRouter);
@@ -77,6 +100,10 @@ export function createApp(): express.Application {
   app.use('/api/v1/analytics', analyticsRouter);
   app.use('/api/v1/telemetry', telemetryRouter);
   app.use('/api/v1/system', systemRouter);
+  app.use('/api/v1/auth', authRouter);
+  app.use('/api/v1/behavior-chains', behaviorChainsRouter);
+  app.use('/api/v1/intelligence', intelligenceRouter);
+  app.use('/api/v1/intelligence/search', searchRouter);
 
   // 404 for unhandled API routes only
   app.use('/api', notFoundHandler);

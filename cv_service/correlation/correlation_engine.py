@@ -312,7 +312,7 @@ class CorrelationEngine:
 
         try:
             url = f"{self.backend_http_url}/api/correlations"
-            requests.post(url, json=payload, timeout=2.0)
+            requests.post(url, json=payload, timeout=0.2)
         except Exception as e:
             logger.warning("Failed to sync correlation %s to backend: %s", corr.id, e)
 

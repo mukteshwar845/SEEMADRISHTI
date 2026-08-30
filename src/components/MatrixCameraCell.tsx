@@ -38,6 +38,9 @@ import {
 import { recordingEngine } from '../utils/recordingManager';
 import { webSocketService, RealYoloDetection, TrackItem, ObjectCountsPayload } from '../services/websocketService';
 import { fetchZones } from '../services/api';
+import { CameraHudHeader } from './matrix/CameraHudHeader';
+import { CameraControlsBar } from './matrix/CameraControlsBar';
+import { CameraCanvasOverlay } from './matrix/CameraCanvasOverlay';
 
 interface MatrixCameraCellProps {
   camera: MatrixCameraFeed;
@@ -1275,133 +1278,22 @@ export const MatrixCameraCell: React.FC<MatrixCameraCellProps> = ({
           : 'hover:border-cyan-500/50'
       } ${isSpotlight ? 'h-full' : ''}`}
     >
-      {/* 1. Header Bar with Camera Tag, Name, Mode Selector & Spotlight */}
-      <div className="px-2.5 py-1.5 bg-slate-950/95 border-b border-slate-800/80 flex items-center justify-between gap-1.5 z-20">
-        <div className="flex items-center gap-1.5 min-w-0 flex-1">
-          {/* Camera Tag Badge */}
-          <span
-            className={`px-1.5 py-0.5 rounded text-[10px] font-mono font-black tracking-wider shrink-0 ${
-              camera.risk === 'High' || camera.risk === 'CRITICAL'
-                ? 'bg-rose-950 text-rose-300 border border-rose-600/50 shadow-[0_0_8px_rgba(244,63,94,0.3)]'
-                : camera.risk === 'Medium'
-                ? 'bg-amber-950 text-amber-300 border border-amber-600/40'
-                : 'bg-cyan-950 text-cyan-300 border border-cyan-500/40'
-            }`}
-          >
-            {camera.tag}
-          </span>
-
-          {/* Editable Camera Location Name */}
-          {isEditingName ? (
-            <form onSubmit={handleSaveName} className="flex items-center gap-1 flex-1 min-w-0">
-              <input
-                type="text"
-                value={editedName}
-                onChange={(e) => setEditedName(e.target.value)}
-                autoFocus
-                className="w-full bg-slate-950 text-cyan-300 text-xs font-mono px-2 py-0.5 rounded border border-cyan-500/70 focus:outline-none"
-              />
-              <button
-                type="submit"
-                title="Save Camera Label"
-                className="p-1 bg-emerald-600 text-white rounded hover:bg-emerald-500 cursor-pointer shrink-0"
-              >
-                <Check size={12} />
-              </button>
-              <button
-                type="button"
-                onClick={handleCancelEdit}
-                title="Cancel"
-                className="p-1 bg-slate-800 text-slate-400 rounded hover:bg-slate-700 cursor-pointer shrink-0"
-              >
-                <X size={12} />
-              </button>
-            </form>
-          ) : (
-            <div className="flex items-center gap-1 min-w-0 flex-1 overflow-hidden group/title">
-              <span className="text-[11px] sm:text-xs font-mono font-bold text-slate-100 truncate flex-1 min-w-0" title={camera.name}>
-                {camera.name}
-              </span>
-              <button
-                onClick={() => setIsEditingName(true)}
-                title="Edit Camera Location Label"
-                className="p-1 text-slate-400 hover:text-cyan-300 hover:bg-slate-800/80 rounded transition-colors cursor-pointer shrink-0 opacity-70 group-hover/title:opacity-100"
-              >
-                <Edit3 size={11} />
-              </button>
-            </div>
-          )}
-        </div>
-
-        {/* Live vs Recorded Toggle & Spotlight */}
-        <div className="flex items-center gap-1 shrink-0">
-          <button
-            onClick={() => setPlaybackMode((m) => (m === 'LIVE' ? 'RECORDED' : 'LIVE'))}
-            title={playbackMode === 'LIVE' ? 'Switch to Recorded Playback' : 'Switch to Live RTSP Feed'}
-            className={`px-1.5 py-0.5 rounded text-[8.5px] font-mono font-bold border transition-all cursor-pointer flex items-center gap-1 whitespace-nowrap ${
-              playbackMode === 'LIVE'
-                ? 'bg-emerald-950/80 text-emerald-400 border-emerald-500/40 shadow-[0_0_8px_rgba(16,185,129,0.2)]'
-                : 'bg-amber-950/90 text-amber-300 border-amber-500/50'
-            }`}
-          >
-            <span
-              className={`w-1.5 h-1.5 rounded-full shrink-0 ${
-                playbackMode === 'LIVE' ? 'bg-emerald-400 animate-pulse' : 'bg-amber-400'
-              }`}
-            ></span>
-            <span>{playbackMode}</span>
-          </button>
-
-          {onSelectSpotlight && (
-            <button
-              onClick={() => onSelectSpotlight(camera)}
-              title="Spotlight View"
-              className="p-1 text-slate-400 hover:text-cyan-300 hover:bg-slate-800 rounded transition-colors cursor-pointer shrink-0"
-            >
-              <Maximize2 size={12} />
-            </button>
-          )}
-        </div>
-      </div>
-
-      {/* Phase 17: Compact Intelligence & Real-Time Counting Strip */}
-      <div className="px-2.5 py-1 bg-slate-950 border-b border-slate-800/80 flex items-center justify-between text-[8.5px] font-mono select-none">
-        <div className="flex items-center gap-2.5">
-          <span className="text-cyan-400 font-bold tracking-wider">OBJECTS</span>
-          <span className="text-slate-400">
-            P:<span className="text-emerald-400 font-bold ml-0.5">
-              {String(liveCounts?.visible?.person ?? realTracksRef.current?.tracks?.filter((t) => t.class_name.toLowerCase() === 'person').length ?? 0).padStart(2, '0')}
-            </span>
-          </span>
-          <span className="text-slate-400">
-            C:<span className="text-sky-400 font-bold ml-0.5">
-              {String(liveCounts?.visible?.car ?? realTracksRef.current?.tracks?.filter((t) => t.class_name.toLowerCase() === 'car').length ?? 0).padStart(2, '0')}
-            </span>
-          </span>
-          <span className="text-slate-400">
-            T:<span className="text-amber-400 font-bold ml-0.5">
-              {String(liveCounts?.visible?.truck ?? realTracksRef.current?.tracks?.filter((t) => t.class_name.toLowerCase() === 'truck').length ?? 0).padStart(2, '0')}
-            </span>
-          </span>
-          <span className="text-slate-400">
-            B:<span className="text-purple-400 font-bold ml-0.5">
-              {String(liveCounts?.visible?.bus ?? realTracksRef.current?.tracks?.filter((t) => t.class_name.toLowerCase() === 'bus').length ?? 0).padStart(2, '0')}
-            </span>
-          </span>
-        </div>
-
-        <div className="flex items-center gap-2">
-          <span className="text-slate-500 font-bold">TRACKS</span>
-          <span className="text-cyan-300 font-bold">
-            {(realTracksRef.current?.tracks?.length ?? liveCounts?.visible?.total ?? 0)} ACTIVE
-          </span>
-          {liveCounts?.unique_session?.total !== undefined && liveCounts.unique_session.total > 0 && (
-            <span className="text-slate-500 text-[7.5px]">
-              ({liveCounts.unique_session.total} TOT)
-            </span>
-          )}
-        </div>
-      </div>
+      {/* 1. Header Bar with Camera Tag, Name, Mode Selector & Spotlight (Modular Sub-component) */}
+      <CameraHudHeader
+        camera={camera}
+        playbackMode={playbackMode}
+        setPlaybackMode={setPlaybackMode}
+        onSelectSpotlight={onSelectSpotlight}
+        isEditingName={isEditingName}
+        setIsEditingName={setIsEditingName}
+        editedName={editedName}
+        setEditedName={setEditedName}
+        handleSaveEdit={handleSaveName}
+        handleCancelEdit={handleCancelEdit}
+        freshness={freshness}
+        liveCounts={liveCounts}
+        tracksCount={realTracksRef.current?.tracks?.length ?? liveCounts?.visible?.total ?? 0}
+      />
 
       {/* 2. Video Player & 60 FPS Photorealistic Canvas AI Overlay Container */}
       <div
@@ -1436,12 +1328,8 @@ export const MatrixCameraCell: React.FC<MatrixCameraCellProps> = ({
           className="absolute inset-0 w-full h-full object-cover pointer-events-none transition-transform duration-200"
         />
 
-        {/* 60 FPS Photorealistic CCTV Stream Canvas & AI Overlays */}
-        <canvas
-          ref={canvasRef}
-          style={{ transform: `scale(${zoomLevel})` }}
-          className="absolute inset-0 w-full h-full pointer-events-none z-10 transition-transform duration-200"
-        />
+        {/* 60 FPS Photorealistic CCTV Stream Canvas & AI Overlays (Modular Sub-component) */}
+        <CameraCanvasOverlay canvasRef={canvasRef} zoomLevel={zoomLevel} />
 
         {/* Blackout Mode Overlay */}
         {isBlackout && (
@@ -1562,176 +1450,33 @@ export const MatrixCameraCell: React.FC<MatrixCameraCellProps> = ({
           </div>
         </div>
 
-        {/* 4. Bottom Recorded Timeline Scrubber (When in RECORDED Mode) */}
-        {playbackMode === 'RECORDED' && (
-          <div className="absolute bottom-10 inset-x-2 px-2.5 py-1.5 bg-slate-950/90 border border-amber-500/40 rounded-lg backdrop-blur-md z-30 flex items-center gap-2 text-xs font-mono">
-            <button
-              onClick={() => setIsPlayingRecorded(!isPlayingRecorded)}
-              className="p-1 text-amber-300 hover:text-white bg-amber-950 rounded cursor-pointer"
-            >
-              {isPlayingRecorded ? <Pause size={11} /> : <Play size={11} />}
-            </button>
-
-            <input
-              type="range"
-              min={0}
-              max={60}
-              step={0.5}
-              value={playbackTimeOffset}
-              onChange={(e) => setPlaybackTimeOffset(parseFloat(e.target.value))}
-              className="flex-1 accent-amber-400 cursor-pointer h-1.5 bg-slate-800 rounded"
-            />
-
-            <button
-              onClick={() => setPlaybackSpeed((s) => (s === 1 ? 2 : s === 2 ? 4 : 1))}
-              className="px-1.5 py-0.5 bg-slate-800 text-amber-300 text-[9px] font-bold rounded hover:bg-slate-700 cursor-pointer"
-            >
-              {playbackSpeed}x
-            </button>
-          </div>
-        )}
-
-        {/* Bottom Floating Tactical Action Bar (Appears on Hover) */}
-        <div className="absolute bottom-2 inset-x-2 flex items-center justify-between px-2 py-1 bg-slate-950/90 border border-slate-700/60 rounded-lg backdrop-blur-md opacity-0 group-hover:opacity-100 transition-opacity z-20">
-          <div className="flex items-center gap-1">
-            {/* Blackout Mode Toggle */}
-            <button
-              onClick={() => setIsBlackout(!isBlackout)}
-              title="Toggle Blackout (Mask Signal)"
-              className={`px-1.5 py-0.5 rounded text-[9px] font-mono font-bold transition-all cursor-pointer flex items-center gap-1 ${
-                isBlackout
-                  ? 'bg-emerald-600 text-white animate-pulse'
-                  : 'bg-slate-800 text-slate-300 hover:text-white hover:bg-slate-700'
-              }`}
-            >
-              <EyeOff size={9} />
-              MASK
-            </button>
-
-            {/* Night Vision */}
-            <button
-              onClick={() => {
-                setNightVision(!nightVision);
-                if (thermalMode) setThermalMode(false);
-              }}
-              title="Toggle Night Vision IR Mode"
-              className={`px-1.5 py-0.5 rounded text-[9px] font-mono font-bold transition-all cursor-pointer ${
-                nightVision
-                  ? 'bg-emerald-600 text-white'
-                  : 'bg-slate-800 text-slate-300 hover:text-white hover:bg-slate-700'
-              }`}
-            >
-              NV-IR
-            </button>
-
-            {/* Thermal Mode */}
-            <button
-              onClick={() => {
-                setThermalMode(!thermalMode);
-                if (nightVision) setNightVision(false);
-              }}
-              title="Toggle Thermal Imaging Mode"
-              className={`px-1.5 py-0.5 rounded text-[9px] font-mono font-bold transition-all cursor-pointer ${
-                thermalMode
-                  ? 'bg-purple-600 text-white'
-                  : 'bg-slate-800 text-slate-300 hover:text-white hover:bg-slate-700'
-              }`}
-            >
-              THERMAL
-            </button>
-
-            {/* AI HUD Overlay Toggle */}
-            <button
-              onClick={() => setShowAiHud(!showAiHud)}
-              title="Toggle 60FPS AI Bounding Box HUD"
-              className={`px-1.5 py-0.5 rounded text-[9px] font-mono font-bold transition-all cursor-pointer ${
-                showAiHud
-                  ? 'bg-cyan-600 text-white'
-                  : 'bg-slate-800 text-slate-400'
-              }`}
-            >
-              HUD: {showAiHud ? 'ON' : 'OFF'}
-            </button>
-
-            {/* Individual Camera Confidence Threshold Slider */}
-            <div
-              className="flex items-center gap-1 bg-slate-900 border border-slate-700/80 px-1.5 py-0.5 rounded"
-              title={`Camera Zone Confidence Sensitivity: ${confidenceThreshold}% (Filters out detections below this threshold)`}
-            >
-              <Sliders size={9} className="text-cyan-400" />
-              <span className="text-[8px] font-mono text-cyan-300 font-bold whitespace-nowrap">
-                CONF:{confidenceThreshold}%
-              </span>
-              <input
-                type="range"
-                min="30"
-                max="95"
-                step="5"
-                value={confidenceThreshold}
-                onChange={(e) => setConfidenceThreshold(Number(e.target.value))}
-                className="w-10 sm:w-12 h-1 accent-cyan-400 bg-slate-800 rounded cursor-pointer"
-              />
-            </div>
-          </div>
-
-          <div className="flex items-center gap-1">
-            {/* PTZ Auto Rotate Toggle */}
-            <button
-              onClick={() => setIsAutoRotate(!isAutoRotate)}
-              title={isAutoRotate ? 'Stop PTZ Auto-Rotate' : 'Start PTZ Auto-Rotate'}
-              className={`p-1 rounded cursor-pointer transition-all ${
-                isAutoRotate
-                  ? 'bg-amber-600 text-white'
-                  : 'bg-slate-800 text-slate-300 hover:text-white hover:bg-slate-700'
-              }`}
-            >
-              <Move size={11} className={isAutoRotate ? 'animate-[pulse_2s_ease-in-out_infinite]' : ''} />
-            </button>
-
-            {/* Digital Zoom Controls */}
-            <button
-              onClick={() => setZoomLevel((prev) => Math.max(1, prev - 0.25))}
-              disabled={zoomLevel <= 1}
-              title="Zoom Out"
-              className="p-1 bg-slate-800 text-slate-300 hover:text-white rounded disabled:opacity-30 cursor-pointer"
-            >
-              <ZoomOut size={11} />
-            </button>
-            <span className="text-[8px] font-mono text-cyan-400 font-bold px-1">
-              {zoomLevel.toFixed(1)}x
-            </span>
-            <button
-              onClick={() => setZoomLevel((prev) => Math.min(3, prev + 0.25))}
-              disabled={zoomLevel >= 3}
-              title="Zoom In"
-              className="p-1 bg-slate-800 text-slate-300 hover:text-white rounded disabled:opacity-30 cursor-pointer"
-            >
-              <ZoomIn size={11} />
-            </button>
-
-            {/* Record RTSP Toggle */}
-            <button
-              onClick={handleToggleRecord}
-              title={isRecording ? 'Stop Recording RTSP Stream' : 'Record RTSP Stream'}
-              className={`p-1 rounded cursor-pointer transition-all ${
-                isRecording
-                  ? 'bg-rose-600 text-white animate-pulse'
-                  : 'bg-slate-800 text-rose-400 hover:bg-rose-950 hover:text-white'
-              }`}
-            >
-              <Disc size={11} />
-            </button>
-
-            {/* Snapshot */}
-            <button
-              onClick={handleCaptureSnapshot}
-              title="Capture High-Res Snapshot"
-              className="p-1 bg-slate-800 text-slate-300 hover:text-white hover:bg-slate-700 rounded cursor-pointer"
-            >
-              <Camera size={11} />
-            </button>
-          </div>
-        </div>
+        {/* 4. Modular Bottom Controls & Timeline Scrubber Sub-component */}
+        <CameraControlsBar
+          isBlackout={isBlackout}
+          setIsBlackout={setIsBlackout}
+          nightVision={nightVision}
+          setNightVision={setNightVision}
+          thermalMode={thermalMode}
+          setThermalMode={setThermalMode}
+          showAiHud={showAiHud}
+          setShowAiHud={setShowAiHud}
+          confidenceThreshold={confidenceThreshold}
+          setConfidenceThreshold={setConfidenceThreshold}
+          isAutoRotate={isAutoRotate}
+          setIsAutoRotate={setIsAutoRotate}
+          zoomLevel={zoomLevel}
+          setZoomLevel={setZoomLevel}
+          isRecording={isRecording}
+          handleToggleRecord={handleToggleRecord}
+          handleCaptureSnapshot={handleCaptureSnapshot}
+          playbackMode={playbackMode}
+          isPlayingRecorded={isPlayingRecorded}
+          setIsPlayingRecorded={setIsPlayingRecorded}
+          playbackTimeOffset={playbackTimeOffset}
+          setPlaybackTimeOffset={setPlaybackTimeOffset}
+          playbackSpeed={playbackSpeed}
+          setPlaybackSpeed={setPlaybackSpeed}
+        />
       </div>
 
       {/* 5. Bottom Metadata Strip */}

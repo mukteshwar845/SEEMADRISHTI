@@ -16,11 +16,30 @@ export interface ApiResponse<T = any> {
   timestamp: string;
 }
 
+// Dynamic per-operator session token stored in memory/localStorage (never hardcoded)
+let authToken: string | null = typeof window !== 'undefined' ? localStorage.getItem('seemadrishti_auth_token') : null;
+
+export function setAuthToken(token: string | null): void {
+  authToken = token;
+  if (typeof window !== 'undefined') {
+    if (token) {
+      localStorage.setItem('seemadrishti_auth_token', token);
+    } else {
+      localStorage.removeItem('seemadrishti_auth_token');
+    }
+  }
+}
+
+export function getAuthToken(): string | null {
+  return authToken;
+}
+
 async function request<T>(endpoint: string, options: RequestInit = {}): Promise<T> {
   const url = `${API_BASE}${endpoint}`;
-  const headers = {
+  const headers: Record<string, string> = {
     'Content-Type': 'application/json',
-    ...(options.headers || {}),
+    ...(authToken ? { Authorization: `Bearer ${authToken}` } : {}),
+    ...(options.headers as Record<string, string> || {}),
   };
 
   const response = await fetch(url, { ...options, headers });
@@ -31,6 +50,45 @@ async function request<T>(endpoint: string, options: RequestInit = {}): Promise<
   }
 
   return data;
+}
+
+// ----------------------------------------------------------------------------
+// Authentication Endpoints
+// ----------------------------------------------------------------------------
+
+export interface LoginResponse {
+  success: boolean;
+  token: string;
+  user: {
+    id: string;
+    username: string;
+    name: string;
+    role: string;
+    email: string;
+    shift: string;
+    status: string;
+    assigned_sector: string;
+  };
+}
+
+export async function loginOperator(username: string, password: string): Promise<LoginResponse> {
+  const res = await request<LoginResponse>('/auth/login', {
+    method: 'POST',
+    body: JSON.stringify({ username, password }),
+  });
+  if (res.token) {
+    setAuthToken(res.token);
+  }
+  return res;
+}
+
+export async function getCurrentOperator(): Promise<{ success: boolean; user: any }> {
+  return request<any>('/auth/me');
+}
+
+export async function logoutOperator(): Promise<{ success: boolean }> {
+  setAuthToken(null);
+  return request<any>('/auth/logout', { method: 'POST' });
 }
 
 // ----------------------------------------------------------------------------
@@ -691,5 +749,409 @@ export async function resolveIncident(
     body: JSON.stringify({ operator, disposition, notes }),
   });
 }
+
+// ----------------------------------------------------------------------------
+// Personnel & User Management Endpoints (Priority 2)
+// ----------------------------------------------------------------------------
+
+export interface UserRecord {
+  id: string;
+  username?: string;
+  name: string;
+  role: string;
+  email: string;
+  shift: string;
+  status: 'active' | 'on_duty' | 'off_duty';
+  assigned_sector: string;
+  created_at: string;
+  updated_at: string;
+}
+
+export async function fetchUsers(): Promise<ApiResponse<UserRecord[]>> {
+  return request<ApiResponse<UserRecord[]>>('/users');
+}
+
+export async function createUser(user: {
+  name: string;
+  role: string;
+  email: string;
+  username?: string;
+  password?: string;
+  shift?: string;
+  status?: 'active' | 'on_duty' | 'off_duty';
+  assigned_sector?: string;
+}): Promise<ApiResponse<UserRecord>> {
+  return request<ApiResponse<UserRecord>>('/users', {
+    method: 'POST',
+    body: JSON.stringify(user),
+  });
+}
+
+export async function updateUser(
+  id: string,
+  updates: Partial<UserRecord>
+): Promise<ApiResponse<UserRecord>> {
+  return request<ApiResponse<UserRecord>>(`/users/${id}`, {
+    method: 'PUT',
+    body: JSON.stringify(updates),
+  });
+}
+
+export async function deleteUser(id: string): Promise<ApiResponse<any>> {
+  return request<ApiResponse<any>>(`/users/${id}`, {
+    method: 'DELETE',
+  });
+}
+
+// Phase 19: Threat Behavior Chain APIs
+export interface ChainEventRecord {
+  sequence: number;
+  event_type: string;
+  timestamp: number;
+  camera_id: string;
+  track_id: number;
+  metadata?: Record<string, any>;
+  iso_time?: string;
+}
+
+export interface BehaviorChainRecord {
+  id: string;
+  chain_id: string;
+  track_id: number;
+  class_name: string;
+  correlation_id?: string | null;
+  camera_id: string;
+  camera_ids: string[];
+  status: 'ACTIVE' | 'ESCALATING' | 'CRITICAL' | 'INCIDENT_CREATED' | 'RESOLVED' | 'EXPIRED';
+  started_at: number;
+  updated_at: number;
+  duration_seconds: number;
+  events: ChainEventRecord[];
+  event_count: number;
+  risk_score: number;
+  risk_level: string;
+  behavior_pattern: string;
+  confidence: number;
+  confidence_label: string;
+  evidence: string[];
+  explanation: string;
+  risk_contributions: Array<{ factor: string; points: number; description?: string }>;
+  incident_id?: string | null;
+  created_at: string;
+}
+
+export async function fetchBehaviorChains(params?: {
+  camera_id?: string;
+  status?: string;
+  track_id?: number;
+  pattern?: string;
+}): Promise<ApiResponse<BehaviorChainRecord[]> & { kpis?: { active_chains: number; suspicious_patterns: number; critical_chains: number } }> {
+  const query = new URLSearchParams();
+  if (params?.camera_id) query.set('camera_id', params.camera_id);
+  if (params?.status) query.set('status', params.status);
+  if (params?.track_id !== undefined) query.set('track_id', String(params.track_id));
+  if (params?.pattern) query.set('pattern', params.pattern);
+
+  const qs = query.toString();
+  return request<any>(`/behavior-chains${qs ? `?${qs}` : ''}`);
+}
+
+export async function fetchBehaviorChainById(id: string): Promise<ApiResponse<BehaviorChainRecord>> {
+  return request<any>(`/behavior-chains/${id}`);
+}
+
+export async function fetchIncidentBehaviorChain(incidentId: string): Promise<ApiResponse<BehaviorChainRecord>> {
+  return request<any>(`/incidents/${incidentId}/behavior-chain`);
+}
+
+// Phase 20: Surveillance Intelligence Search & Incident Intelligence Summary APIs
+export interface SearchQueryFilters {
+  query: string;
+  entity: string;
+  event_type?: string | null;
+  camera_ids?: string[];
+  track_id?: number | null;
+  incident_id?: string | null;
+  risk_level?: string | null;
+  time_range?: { value: number; unit: string } | null;
+  status?: string | null;
+  class_name?: string | null;
+  direction?: string | null;
+  behavior_pattern?: string | null;
+  chips: string[];
+}
+
+export interface SearchResultItem {
+  type: 'incident' | 'event' | 'behavior_chain' | 'journey' | 'camera_stat';
+  incident_id?: string;
+  event_id?: string;
+  chain_id?: string;
+  camera_id?: string;
+  camera_name?: string;
+  camera_ids?: string[];
+  track_id?: number;
+  class_name?: string;
+  event_type?: string;
+  risk_level?: string;
+  risk_score?: number;
+  zone_name?: string;
+  timestamp?: string;
+  timestamp_epoch?: number;
+  acknowledged?: boolean;
+  evidence_path?: string;
+  evidence_status?: string;
+  behavior_pattern?: string;
+  breach_count?: number;
+  has_activity?: boolean;
+  description?: string;
+}
+
+export interface JourneyStep {
+  timestamp: number;
+  camera_id: string;
+  event_type: string;
+  description: string;
+  metadata?: Record<string, any>;
+}
+
+export interface TrackJourneyResult {
+  type: 'journey';
+  track_id: number;
+  class_name: string;
+  camera_path: string[];
+  steps: JourneyStep[];
+  step_count: number;
+  correlation_id?: string | null;
+  is_complete: boolean;
+  status_note: string;
+}
+
+export interface IntelligenceSearchResponse {
+  success: boolean;
+  query: string;
+  filters: SearchQueryFilters;
+  chips: string[];
+  result_count: number;
+  results: SearchResultItem[];
+  journey?: TrackJourneyResult | null;
+  insufficient_data: boolean;
+  message: string;
+}
+
+export interface IncidentIntelligenceSummary {
+  incident_id: string;
+  classification: string;
+  target: {
+    track_id: number;
+    class: string;
+    label: string;
+  };
+  camera_path: string[];
+  camera_path_raw: string[];
+  observed_behaviors: string[];
+  behavior_pattern: string;
+  risk_score: number;
+  risk_level: string;
+  risk_reasons: Array<{ factor: string; points: number }>;
+  forensic_evidence: {
+    status: string;
+    path?: string;
+    sha256?: string;
+    verified: boolean;
+  };
+  timestamp?: string;
+  zone_name?: string;
+}
+
+export async function searchIntelligence(query: string): Promise<IntelligenceSearchResponse> {
+  return request<IntelligenceSearchResponse>('/intelligence/search', {
+    method: 'POST',
+    body: JSON.stringify({ query }),
+  });
+}
+
+export async function fetchSearchHistory(): Promise<ApiResponse<Array<{ id: string; query: string; timestamp: string; result_count: number }>>> {
+  return request<any>('/intelligence/search/history');
+}
+
+export async function clearSearchHistory(): Promise<ApiResponse<any>> {
+  return request<any>('/intelligence/search/history', {
+    method: 'DELETE',
+  });
+}
+
+export async function fetchIncidentSummary(incidentId: string): Promise<ApiResponse<IncidentIntelligenceSummary>> {
+  return request<any>(`/incidents/${incidentId}/summary`);
+}
+
+// ============================================================================
+// Phase 21: Cross-Camera Target Journey & Dynamic Threat Heatmap APIs
+// ============================================================================
+
+export interface JourneyHandover {
+  from_camera: string;
+  to_camera: string;
+  timestamp: string;
+  temporal_gap_seconds: number;
+  confidence: number | null;
+  confidence_percent: number | null;
+  confidence_display: string;
+  verified: boolean;
+  reason: string;
+}
+
+export interface TargetJourneyDetail {
+  track_id: number;
+  class: string;
+  first_seen: string | null;
+  last_seen: string | null;
+  duration_seconds: number;
+  risk_score: number;
+  risk_level: string;
+  camera_path: Array<{
+    camera_id: string;
+    camera_name: string;
+    timestamp: string;
+    event: string;
+    description: string;
+  }>;
+  unique_cameras: string[];
+  handovers: JourneyHandover[];
+  observed_events: Array<{
+    camera_id: string;
+    camera_name: string;
+    timestamp: string;
+    event: string;
+    description: string;
+    metadata?: Record<string, any>;
+  }>;
+  correlation_id?: string | null;
+  is_complete: boolean;
+  insufficient_data: boolean;
+  status_note: string;
+}
+
+export interface TrackedTargetItem {
+  track_id: number;
+  class_name: string;
+  latest_camera: string;
+  risk_score: number;
+  risk_level: string;
+  behavior_pattern?: string;
+  last_seen: string;
+  event_count: number;
+}
+
+export interface HeatmapCameraStat {
+  camera_id: string;
+  camera_name: string;
+  sector: string;
+  threat_index: number;
+  threat_level: 'CRITICAL' | 'HIGH' | 'MEDIUM' | 'LOW';
+  event_counts: {
+    restricted_breaches: number;
+    tripwire_crossings: number;
+    loitering: number;
+    anomalies: number;
+    critical_incidents: number;
+    high_incidents: number;
+    reentry_count: number;
+  };
+  trend: string;
+  has_activity: boolean;
+}
+
+export interface HeatmapSectorStat {
+  sector_name: string;
+  cameras: string[];
+  threat_index: number;
+  threat_level: 'CRITICAL' | 'HIGH' | 'MEDIUM' | 'LOW';
+  total_events: number;
+  event_counts: Record<string, number>;
+}
+
+export interface ThreatHotspot {
+  camera_id: string;
+  camera_name: string;
+  sector: string;
+  threat_index: number;
+  threat_level: 'CRITICAL' | 'HIGH' | 'MEDIUM' | 'LOW';
+  primary_contributors: Record<string, number>;
+  trend: string;
+}
+
+export interface ThreatCorridorItem {
+  corridor_id: string;
+  from_camera: string;
+  to_camera: string;
+  path: string[];
+  correlated_incidents: number;
+  restricted_breaches: number;
+  tripwire_crossings: number;
+  loitering: number;
+  threat_score: number;
+  event_density: 'HIGH' | 'MEDIUM' | 'LOW';
+}
+
+export interface ThreatHeatmapResponse {
+  success: boolean;
+  time_window: string;
+  window_seconds: number;
+  hotspot: ThreatHotspot | null;
+  cameras: HeatmapCameraStat[];
+  sectors: HeatmapSectorStat[];
+  corridors: ThreatCorridorItem[];
+  weights: Record<string, number>;
+  timestamp: string;
+}
+
+export interface CameraThreatProfile {
+  success: boolean;
+  camera_id: string;
+  camera_name: string;
+  sector: string;
+  threat_index: number;
+  threat_level: string;
+  event_counts: Record<string, number>;
+  total_events: number;
+  total_incidents: number;
+  recent_incidents: any[];
+}
+
+export async function fetchTargetJourney(trackId: number): Promise<ApiResponse<TargetJourneyDetail>> {
+  return request<any>(`/intelligence/journey/${trackId}`);
+}
+
+export async function fetchTrackedTargets(params?: {
+  class_name?: string;
+  risk_level?: string;
+  camera_id?: string;
+  time_window?: string;
+}): Promise<ApiResponse<TrackedTargetItem[]>> {
+  const query = new URLSearchParams();
+  if (params?.class_name) query.set('class_name', params.class_name);
+  if (params?.risk_level) query.set('risk_level', params.risk_level);
+  if (params?.camera_id) query.set('camera_id', params.camera_id);
+  if (params?.time_window) query.set('time_window', params.time_window);
+  const qs = query.toString();
+  return request<any>(`/intelligence/targets${qs ? `?${qs}` : ''}`);
+}
+
+export async function fetchThreatHeatmap(windowStr?: string): Promise<ApiResponse<ThreatHeatmapResponse>> {
+  const qs = windowStr ? `?window=${windowStr}` : '';
+  return request<any>(`/intelligence/threat-heatmap${qs}`);
+}
+
+export async function fetchCameraThreatProfile(cameraId: string, windowStr?: string): Promise<ApiResponse<CameraThreatProfile>> {
+  const qs = windowStr ? `?window=${windowStr}` : '';
+  return request<any>(`/intelligence/cameras/${cameraId}/threat-profile${qs}`);
+}
+
+export async function fetchThreatCorridors(): Promise<ApiResponse<ThreatCorridorItem[]>> {
+  return request<any>('/intelligence/threat-corridors');
+}
+
+
+
 
 

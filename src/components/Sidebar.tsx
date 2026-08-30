@@ -19,6 +19,8 @@ import {
   Activity,
   HeartPulse,
   Sliders,
+  Footprints,
+  Flame,
 } from 'lucide-react';
 import { ViewMode } from '../types';
 import { SeemadrishtiLogo } from './SeemadrishtiLogo';
@@ -62,6 +64,8 @@ export const Sidebar: React.FC<SidebarProps> = ({
     { id: 'inspector' as ViewMode, label: 'Incident Inspector', icon: ShieldAlert, badge: 'CRITICAL', isAlert: true, code: '[FORENSIC]' },
     { id: 'historical-logs' as ViewMode, label: 'Historical Logs', icon: Film, isRecTab: true, badge: activeRecCount > 0 ? `${activeRecCount} REC` : `${savedClipsCount} CLIPS`, code: '[NVR_VAULT]' },
     { id: 'analytics' as ViewMode, label: 'Analytics Engine', icon: BarChart3, badge: '24H AI', code: '[TELEMETRY]' },
+    { id: 'target-journey' as ViewMode, label: 'Target Journey', icon: Footprints, badge: 'MULTI-CAM', code: '[JOURNEY]' },
+    { id: 'threat-map' as ViewMode, label: 'Threat Heatmap', icon: Flame, badge: 'DYNAMIC', isAlert: true, code: '[HEATMAP]' },
     { id: 'cameras' as ViewMode, label: 'Camera Nodes', icon: Video, badge: '4 CH', code: '[RTSP_4K]' },
     { id: 'detections' as ViewMode, label: 'Neural Detections', icon: ScanEye, code: '[YOLOv8]' },
     { id: 'alerts' as ViewMode, label: 'Threat Alerts', icon: TriangleAlert, alertBadge: unreadAlertsCount, isAlert: true, code: '[DEFCON]' },

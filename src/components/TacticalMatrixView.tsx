@@ -37,6 +37,7 @@ interface TacticalMatrixViewProps {
   onTriggerAlert?: (cam: MatrixCameraFeed) => void;
   confidenceThreshold?: number;
   onConfidenceThresholdChange?: (val: number) => void;
+  highlightedCameraIds?: string[];
 }
 
 export const TacticalMatrixView: React.FC<TacticalMatrixViewProps> = ({
@@ -47,6 +48,7 @@ export const TacticalMatrixView: React.FC<TacticalMatrixViewProps> = ({
   onTriggerAlert,
   confidenceThreshold = 85,
   onConfidenceThresholdChange,
+  highlightedCameraIds = [],
 }) => {
   const [layoutMode, setLayoutMode] = useState<MatrixLayoutMode>('matrix-3x3');
   const [spotlightCameraId, setSpotlightCameraId] = useState<number>(1);
@@ -388,20 +390,26 @@ export const TacticalMatrixView: React.FC<TacticalMatrixViewProps> = ({
           id="tactical-grid-3x3-container"
           className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4"
         >
-          {filteredCameras.map((cam) => (
-            <MatrixCameraCell
-              key={cam.id}
-              camera={cam}
-              liveTimestamp={liveTimestamp}
-              onUpdateCameraName={onUpdateCameraName}
-              onSelectSpotlight={(c) => {
-                setSpotlightCameraId(c.id);
-                setLayoutMode('spotlight');
-              }}
-              onTriggerAlert={onTriggerAlert}
-              heatmapIntensity={isHeatmapActive ? heatmapData[cam.tag] || 0 : undefined}
-            />
-          ))}
+          {filteredCameras.map((cam) => {
+            const isHighlighted = highlightedCameraIds?.some(
+              (cid) => cid.toLowerCase() === cam.tag.toLowerCase() || cid.toLowerCase() === `cam-0${cam.id}` || cid.toLowerCase() === `cam-${cam.id}`
+            );
+            return (
+              <div key={cam.id} className={isHighlighted ? 'ring-2 ring-rose-500 rounded-xl shadow-[0_0_20px_rgba(244,63,94,0.6)] animate-pulse' : ''}>
+                <MatrixCameraCell
+                  camera={cam}
+                  liveTimestamp={liveTimestamp}
+                  onUpdateCameraName={onUpdateCameraName}
+                  onSelectSpotlight={(c) => {
+                    setSpotlightCameraId(c.id);
+                    setLayoutMode('spotlight');
+                  }}
+                  onTriggerAlert={onTriggerAlert}
+                  heatmapIntensity={isHeatmapActive ? heatmapData[cam.tag] || 0 : undefined}
+                />
+              </div>
+            );
+          })}
         </div>
       )}
 

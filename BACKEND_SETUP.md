@@ -38,13 +38,53 @@ Copy-Item .env.example .env
 ```
 
 Configuration variables in `.env`:
-| Variable | Default Value | Description |
+| Variable | Default / Example | Description |
 | :--- | :--- | :--- |
 | `PORT` | `8000` | HTTP and WebSocket port |
 | `HOST` | `0.0.0.0` | Bind network interface |
 | `DATABASE_PATH` | `./data/seemadrishti.sqlite` | SQLite database file location |
 | `CORS_ORIGIN` | `*` | Allowed CORS origins for frontend access |
-| `NODE_ENV` | `development` | Runtime mode (`development` or `production`) |
+| `NODE_ENV` | `development` | Runtime mode (`development`, `production`, or `test`) |
+| `API_KEY` | *(Set via .env)* | Cryptographic secret for CV service M2M REST API authentication |
+| `CV_SERVICE_TOKEN` | *(Set via .env)* | Cryptographic secret for CV service WebSocket telemetry publishing |
+| `JWT_SECRET` | *(Set via .env)* | Secret key used to sign and verify operator session JWTs |
+
+---
+
+## 3.1 Security & Authentication Architecture
+
+All mutating REST routes (`POST`, `PUT`, `DELETE`, `PATCH`) are secured with `requireAuth` middleware (`server/middleware/auth.ts`).
+
+### Generating Secrets
+Generate strong random 256-bit secrets for your `.env` file (which is gitignored):
+```bash
+# Generate API_KEY / CV_SERVICE_TOKEN / JWT_SECRET
+openssl rand -hex 32
+```
+
+### Authentication Schemes
+1. **Per-Operator JWT Session Authentication (Browser Dashboard)**:
+   - Operators authenticate via `POST /api/auth/login`.
+   - On valid credentials, a signed JWT session token is returned.
+   - All subsequent browser requests send `Authorization: Bearer <jwt_token>`.
+   - No static API key is ever shipped or embedded in the client bundle.
+
+2. **Machine-to-Machine Service Authentication (CV Pipeline -> Backend)**:
+   - The Python CV service authenticates via `x-api-key: <API_KEY>` or `Authorization: Bearer <API_KEY>`.
+   - Configured securely on the server via `process.env.API_KEY`.
+
+### Hackathon Demo Credentials (For Judges)
+The SQLite database is seeded with the following demo operators in `server/db/seed.ts` (passwords are securely hashed with `bcrypt`):
+| Username | Password | Operator Name | Role | Assigned Sector |
+| :--- | :--- | :--- | :--- | :--- |
+| `admin` | `Admin@123` | Major Vikram Sen | Commander | All Border Sectors |
+| `operator` | `Operator@123` | Officer Rajesh Kumar | Surveillance Operator | Gate Alpha & Checkpoint 1 |
+| `patrol` | `Patrol@123` | Havaldar Amit Patel | Patrol Officer | East Perimeter Border Fence |
+| `analyst` | `Analyst@123` | Dr. Ananya Sharma | AI Analyst | Neural Net Model Training |
+
+### WebSocket Security Architecture
+- **Browser Clients**: Connect unauthenticated to `/ws` as receive-only consumers. Browser clients receive live alerts, telemetry, and heatmaps, but cannot publish fake detections.
+- **CV Service Publishers**: Authenticate via `ws://127.0.0.1:8000/ws?token=<CV_SERVICE_TOKEN>` or send an `{ "type": "auth", "token": "<CV_SERVICE_TOKEN>" }` handshake. Unauthenticated injection attempts are rejected.
 
 ---
 

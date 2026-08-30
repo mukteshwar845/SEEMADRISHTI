@@ -26,6 +26,7 @@ import {
 } from 'lucide-react';
 import { audioAlertEngine } from '../utils/audioAlert';
 import { generateAlertPdfReport } from '../utils/pdfReportGenerator';
+import { ThreatBehaviorChain } from './ThreatBehaviorChain';
 
 interface AlertDetailModalProps {
   alert: AlertItem | null;
@@ -58,6 +59,7 @@ export const AlertDetailModal: React.FC<AlertDetailModalProps> = ({
   const [riskHistory, setRiskHistory] = useState<any[]>([]);
   const [cameraHistory, setCameraHistory] = useState<string[]>([alert.camera]);
   const [correlationId, setCorrelationId] = useState<string | null>(alert.correlationId || null);
+  const [showBehaviorChain, setShowBehaviorChain] = useState(false);
 
   const incId = alert.incidentId || alert.id;
 
@@ -369,11 +371,31 @@ export const AlertDetailModal: React.FC<AlertDetailModalProps> = ({
             </div>
           </div>
 
-          {/* Phase 19: Behavior Intelligence Summary */}
+          {/* Phase 19: Behavior Intelligence & Threat Behavior Chain */}
           <div className="p-3.5 rounded-xl bg-slate-950 border border-white/[0.08] space-y-2">
-            <span className="text-xs uppercase font-bold text-slate-300 tracking-wider block font-mono">
-              BEHAVIOR INTELLIGENCE SIGNALS ({behaviors.length}):
-            </span>
+            <div className="flex items-center justify-between">
+              <span className="text-xs uppercase font-bold text-slate-300 tracking-wider block font-mono">
+                BEHAVIOR INTELLIGENCE SIGNALS ({behaviors.length}):
+              </span>
+              <button
+                onClick={() => setShowBehaviorChain(!showBehaviorChain)}
+                className="px-2.5 py-1 text-[10px] font-mono font-bold rounded bg-rose-950/60 text-rose-300 border border-rose-600/40 hover:bg-rose-900/60 transition-colors flex items-center gap-1 cursor-pointer"
+              >
+                <Layers size={11} />
+                {showBehaviorChain ? 'HIDE BEHAVIOR CHAIN' : 'VIEW THREAT BEHAVIOR CHAIN'}
+              </button>
+            </div>
+
+            {showBehaviorChain && (
+              <div className="pt-2">
+                <ThreatBehaviorChain
+                  incidentId={incId}
+                  trackId={alert.trackId}
+                  cameraId={alert.camera}
+                  compact={true}
+                />
+              </div>
+            )}
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
               {behaviors.length > 0 ? (
                 behaviors.map((b, idx) => (

@@ -24,6 +24,9 @@ import { CameraDetailModal } from './components/CameraDetailModal';
 import { SihDemoGuideModal } from './components/SihDemoGuideModal';
 import { AnalyticsDashboard } from './components/AnalyticsDashboard';
 import { IncidentInspectorView } from './components/IncidentInspectorView';
+import { IntelligenceSearch } from './components/IntelligenceSearch';
+import { TargetJourneyView } from './components/TargetJourneyView';
+import { ThreatHeatmapView } from './components/ThreatHeatmapView';
 import { HistoricalLogsView } from './components/HistoricalLogsView';
 import { NotificationHistory } from './components/NotificationHistory';
 import { CameraHealthDiagnosticsView } from './components/CameraHealthDiagnosticsView';
@@ -60,6 +63,9 @@ function SeemadrishtiMainApp() {
   const [selectedCameraForModal, setSelectedCameraForModal] = useState<CameraFeed | null>(null);
   const [telemetry, setTelemetry] = useState(initialTelemetry);
   const [confidenceThreshold, setConfidenceThreshold] = useState<number>(85);
+  const [highlightedCameras, setHighlightedCameras] = useState<string[]>([]);
+  const [selectedJourneyTrackId, setSelectedJourneyTrackId] = useState<number | null>(null);
+  const [heatmapHighlightCameras, setHeatmapHighlightCameras] = useState<string[]>([]);
 
   // Dynamic Camera Name Renaming Handler
   const handleUpdateCameraName = (id: number, newName: string) => {
@@ -177,6 +183,37 @@ function SeemadrishtiMainApp() {
         }
       })
       .catch(() => {});
+
+    // Priority 2: Hydrate matrix cameras from live SQLite backend REST API
+    fetchCameras()
+      .then((res) => {
+        if (res.success && res.data && res.data.length > 0) {
+          setMatrixCameras((prev) =>
+            prev.map((c) => {
+              const camCode = `cam-0${c.id}`;
+              const liveCam = res.data?.find(
+                (dbCam) =>
+                  dbCam.id.toLowerCase() === camCode ||
+                  dbCam.id.toLowerCase() === `cam-${c.id}` ||
+                  dbCam.name.toLowerCase() === c.name.toLowerCase()
+              );
+              if (liveCam) {
+                return {
+                  ...c,
+                  name: liveCam.name || c.name,
+                  location: liveCam.location || c.location,
+                  status: liveCam.status || c.status,
+                  src: liveCam.source_url ? `/api/cameras/${liveCam.id}/video` : c.src,
+                };
+              }
+              return c;
+            })
+          );
+        }
+      })
+      .catch((err) => {
+        console.warn('[CAMERAS] Live fetch failed, using fallback mockData:', err);
+      });
 
     // Ingest Live Stream Alerts from WebSocket Server
     const unsubAlerts = webSocketService.onAlert((incomingAlert) => {
@@ -401,6 +438,33 @@ function SeemadrishtiMainApp() {
         <main className="flex-1 p-3.5 sm:p-5 overflow-y-auto space-y-5">
           {currentView === 'dashboard' && (
             <>
+              {/* Surveillance Intelligence AI Search (Phase 20) */}
+              <IntelligenceSearch
+                onOpenIncident={(incId) => {
+                  setCurrentView('inspector');
+                }}
+                onSelectCamera={(cid) => {
+                  setSelectedCameraId(cid);
+                }}
+                onHighlightCameras={(cids) => {
+                  setHighlightedCameras(cids);
+                }}
+                onOpenBehaviorChain={() => {
+                  setCurrentView('inspector');
+                }}
+                onNavigateToTimeline={() => {
+                  setCurrentView('system-timeline');
+                }}
+                onOpenTargetJourney={(tid) => {
+                  if (tid) setSelectedJourneyTrackId(tid);
+                  setCurrentView('target-journey');
+                }}
+                onOpenThreatMap={(cid) => {
+                  if (cid) setSelectedCameraId(cid);
+                  setCurrentView('threat-map');
+                }}
+              />
+
               {/* 3. Top Metrics Row */}
               <KpiCards
                 totalCameras={(telemetry as any)?.database?.totalCameras ?? matrixCameras.length}
@@ -423,6 +487,7 @@ function SeemadrishtiMainApp() {
                     alerts={alerts}
                     onUpdateCameraName={handleUpdateCameraName}
                     onTriggerAlert={handleSimulateIntrusion}
+                    highlightedCameraIds={highlightedCameras}
                     onSelectCameraForDetails={(cam) => {
                       setSelectedCameraId(String(cam.id));
                       const match = cameras.find((c) => c.id === String(cam.id)) || {
@@ -499,7 +564,56 @@ function SeemadrishtiMainApp() {
             />
           )}
 
-          {currentView === 'inspector' && <IncidentInspectorView />}
+          {currentView === 'inspector' && (
+            <IncidentInspectorView
+              onOpenThreatMap={(camCode) => {
+                setSelectedCameraId(camCode.toLowerCase());
+                setCurrentView('threat-map');
+              }}
+              onOpenTargetJourney={(tid) => {
+                if (tid) setSelectedJourneyTrackId(tid);
+                setCurrentView('target-journey');
+              }}
+            />
+          )}
+
+          {currentView === 'target-journey' && (
+            <TargetJourneyView
+              initialTrackId={selectedJourneyTrackId}
+              onSelectCamera={(cid) => {
+                setSelectedCameraId(cid);
+                setCurrentView('dashboard');
+              }}
+              onOpenIncident={(incId) => {
+                setCurrentView('inspector');
+              }}
+              onOpenThreatMap={(cid) => {
+                if (cid) setSelectedCameraId(cid);
+                setCurrentView('threat-map');
+              }}
+            />
+          )}
+
+          {currentView === 'threat-map' && (
+            <ThreatHeatmapView
+              initialCameraId={selectedCameraId}
+              targetHighlightCameras={heatmapHighlightCameras}
+              onSelectCamera={(cid) => {
+                setSelectedCameraId(cid);
+                setCurrentView('dashboard');
+              }}
+              onOpenIncident={(incId) => {
+                setCurrentView('inspector');
+              }}
+              onOpenTargetJourney={(tid) => {
+                if (tid) setSelectedJourneyTrackId(tid);
+                setCurrentView('target-journey');
+              }}
+              onNavigateToAnalytics={() => {
+                setCurrentView('analytics');
+              }}
+            />
+          )}
 
           {currentView === 'historical-logs' && (
             <HistoricalLogsView

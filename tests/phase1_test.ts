@@ -26,6 +26,9 @@ import { seedDemoData } from '../server/db/seed';
 import { closeDatabase, getDatabase, getDatabasePath } from '../server/db/database';
 import { initializeWebSocketServer } from '../server/services/websocket';
 
+process.env.NODE_ENV = 'test';
+process.env.API_KEY = process.env.API_KEY || 'seemadrishti-test-key-suite';
+
 const TEST_PORT = 8001;
 const BASE_URL = `http://127.0.0.1:${TEST_PORT}`;
 const WS_URL = `ws://127.0.0.1:${TEST_PORT}/ws`;
@@ -55,6 +58,7 @@ async function request(path: string, options: RequestInit = {}): Promise<{ statu
   const url = `${BASE_URL}${path}`;
   const headers: Record<string, string> = {
     'Content-Type': 'application/json',
+    'x-api-key': process.env.API_KEY!,
     ...(options.headers as any),
   };
 
@@ -463,6 +467,46 @@ async function runTests() {
       recordPass(13, 'WebSocket Connection & Messaging (/ws)', 'Handshake, connection_ack, ping/pong, and broadcast verified');
     } catch (err) {
       recordFail(13, 'WebSocket Connection & Messaging (/ws)', err);
+    }
+
+    // -------------------------------------------------------------------------
+    // TEST 14: Security Authentication Enforcement
+    // -------------------------------------------------------------------------
+    try {
+      // 1. Mutating request with invalid key must be rejected with 403 Forbidden
+      const unauthRes = await fetch(`${BASE_URL}/api/cameras`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'x-api-key': 'malicious-attacker-fake-key-999',
+        },
+        body: JSON.stringify({ name: 'Spoofed Camera', source_type: 'webcam' }),
+      });
+      if (unauthRes.status !== 403) {
+        throw new Error(`Expected HTTP 403 Forbidden for invalid key, got ${unauthRes.status}`);
+      }
+
+      // 2. Mutating request with valid key must succeed
+      const authRes = await fetch(`${BASE_URL}/api/cameras`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'x-api-key': process.env.API_KEY!,
+        },
+        body: JSON.stringify({
+          name: 'Authorized Security Gate',
+          location: 'Gate Alpha Verification',
+          source_type: 'webcam',
+          source_url: 'http://localhost/stream',
+        }),
+      });
+      if (!authRes.ok) {
+        throw new Error(`Expected HTTP 200/201 for valid key, got ${authRes.status}`);
+      }
+
+      recordPass(14, 'API Key Security Middleware', 'Invalid tokens rejected with 403, valid tokens permitted');
+    } catch (err) {
+      recordFail(14, 'API Key Security Middleware', err);
     }
 
   } finally {

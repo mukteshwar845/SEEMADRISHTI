@@ -1,4 +1,5 @@
 import { getDatabase } from './database';
+import bcrypt from 'bcryptjs';
 
 export function seedDemoData(): void {
   const db = getDatabase();
@@ -283,4 +284,86 @@ export function seedDemoData(): void {
         inc.created_at
       );
     }
+
+  // 6. Seed Personnel & Operators (Users) with bcrypt hashed credentials
+  const insertUser = db.prepare(`
+    INSERT INTO users (
+      id, username, password_hash, name, role, email, shift, status, assigned_sector, created_at, updated_at
+    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    ON CONFLICT(id) DO UPDATE SET
+      username = excluded.username,
+      password_hash = excluded.password_hash
+  `);
+
+  const demoUsers = [
+    {
+      id: 'usr-1',
+      username: 'admin',
+      password: 'Admin@123',
+      name: 'Major Vikram Sen',
+      role: 'Commander',
+      email: 'v.sen@surveillance.seemadrishti.gov',
+      shift: 'Day Shift (0600 - 1800)',
+      status: 'on_duty',
+      assigned_sector: 'All Border Sectors',
+      created_at: new Date().toISOString(),
+      updated_at: new Date().toISOString(),
+    },
+    {
+      id: 'usr-2',
+      username: 'operator',
+      password: 'Operator@123',
+      name: 'Officer Rajesh Kumar',
+      role: 'Surveillance Operator',
+      email: 'r.kumar@surveillance.seemadrishti.gov',
+      shift: 'Day Shift (0600 - 1800)',
+      status: 'on_duty',
+      assigned_sector: 'Gate Alpha & Checkpoint 1',
+      created_at: new Date().toISOString(),
+      updated_at: new Date().toISOString(),
+    },
+    {
+      id: 'usr-3',
+      username: 'patrol',
+      password: 'Patrol@123',
+      name: 'Havaldar Amit Patel',
+      role: 'Patrol Officer',
+      email: 'a.patel@surveillance.seemadrishti.gov',
+      shift: 'Rotational 24/7',
+      status: 'active',
+      assigned_sector: 'East Perimeter Border Fence',
+      created_at: new Date().toISOString(),
+      updated_at: new Date().toISOString(),
+    },
+    {
+      id: 'usr-4',
+      username: 'analyst',
+      password: 'Analyst@123',
+      name: 'Dr. Ananya Sharma',
+      role: 'AI Analyst',
+      email: 'a.sharma@seemadrishti.ai',
+      shift: 'Standard (0900 - 1700)',
+      status: 'active',
+      assigned_sector: 'Neural Net Model Training',
+      created_at: new Date().toISOString(),
+      updated_at: new Date().toISOString(),
+    },
+  ];
+
+  for (const u of demoUsers) {
+    const passwordHash = bcrypt.hashSync(u.password, 10);
+    insertUser.run(
+      u.id,
+      u.username,
+      passwordHash,
+      u.name,
+      u.role,
+      u.email,
+      u.shift,
+      u.status,
+      u.assigned_sector,
+      u.created_at,
+      u.updated_at
+    );
+  }
 }

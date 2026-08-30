@@ -96,3 +96,21 @@ ehthumbs.db
 !.vscode/extensions.json
 *.sublime-project
 *.sublime-workspace
+
+# -----------------------------------------------------------------------------
+# 8. Temporary Test Artifacts, Heavy Evidence & Virtual Environments (Priority 3)
+# -----------------------------------------------------------------------------
+test_env/
+temp_evidence_test/
+test_evidence_diag/
+evidence_test/
+evidence_test_p17/
+evidence_frame_*.png
+new_evidence_frame.png
+old_evidence_frame.png
+evidence/*.mp4
+!evidence/INC-000001.mp4
+!evidence/INC-000002.mp4
+!evidence/INC-000003.mp4
+!evidence/.gitkeep
+scratch/

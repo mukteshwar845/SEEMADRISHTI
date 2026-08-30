@@ -300,6 +300,7 @@ class WebSocketService {
   private groupMovementListeners: Set<GroupMovementListener> = new Set();
   private frameStateListeners: Set<FrameStateListener> = new Set();
   private fleetCountsListeners: Set<FleetCountsListener> = new Set();
+  private behaviorChainListeners: Set<(chain: any) => void> = new Set();
   private latestFrameStates: Map<string, FrameStatePayload> = new Map();
   private latestEnvironmentStates: Map<string, EnvironmentUpdatePayload> = new Map();
   private latestOccupancyStates: Map<string, OccupancyUpdatePayload> = new Map();
@@ -645,6 +646,20 @@ class WebSocketService {
     }
 
     switch (msg.type) {
+      case 'behavior_chain_update' as any:
+      case 'BEHAVIOR_CHAIN_UPDATE' as any: {
+        const payload = (msg as any).data || msg.payload;
+        if (payload) {
+          this.behaviorChainListeners.forEach((listener) => {
+            try {
+              listener(payload);
+            } catch (e) {
+              console.warn('[WS] Error in behavior chain listener', e);
+            }
+          });
+        }
+        break;
+      }
       case 'ALERT_TRIGGER':
         if (msg.payload) {
           this.alertListeners.forEach((listener) => listener(msg.payload));
@@ -1269,6 +1284,11 @@ class WebSocketService {
   public onGroupMovement(listener: GroupMovementListener): () => void {
     this.groupMovementListeners.add(listener);
     return () => this.groupMovementListeners.delete(listener);
+  }
+
+  public onBehaviorChain(listener: (chain: any) => void): () => void {
+    this.behaviorChainListeners.add(listener);
+    return () => this.behaviorChainListeners.delete(listener);
   }
 
   public onFrameState(listener: FrameStateListener): () => void {

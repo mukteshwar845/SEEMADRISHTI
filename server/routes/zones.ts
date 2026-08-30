@@ -26,12 +26,20 @@ function syncZonesToFile(db: any) {
   try {
     const rawZones = db.prepare('SELECT * FROM zones ORDER BY created_at ASC').all();
     const formatted = rawZones.map(formatZone);
+    const grouped: Record<string, any[]> = {};
+    for (const z of formatted) {
+      const camId = (z.camera_id || 'cam-01').toLowerCase();
+      if (!grouped[camId]) {
+        grouped[camId] = [];
+      }
+      grouped[camId].push(z);
+    }
     const zonesPath = path.resolve(process.cwd(), 'config/camera_zones.json');
     const dir = path.dirname(zonesPath);
     if (!fs.existsSync(dir)) {
       fs.mkdirSync(dir, { recursive: true });
     }
-    fs.writeFileSync(zonesPath, JSON.stringify(formatted, null, 2), 'utf-8');
+    fs.writeFileSync(zonesPath, JSON.stringify(grouped, null, 2), 'utf-8');
   } catch (err) {
     console.error('[ZonesRouter] Failed to sync zones to config/camera_zones.json:', err);
   }

@@ -1,6 +1,8 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { SystemTelemetry } from '../types';
-import { Cpu, HardDrive, Network, Layers, Activity } from 'lucide-react';
+import { Cpu, HardDrive, Network, Layers, Activity, ShieldAlert, AlertTriangle } from 'lucide-react';
+import { fetchBehaviorChains } from '../services/api';
+import { webSocketService } from '../services/websocketService';
 
 interface SystemGaugesProps {
   telemetry?: SystemTelemetry;
@@ -19,6 +21,50 @@ export const SystemGauges: React.FC<SystemGaugesProps> = ({
     networkStatus: '(Stable 250Mbps)',
   },
 }) => {
+  const [chainKpis, setChainKpis] = useState<{
+    active_chains: number;
+    suspicious_patterns: number;
+    critical_chains: number;
+    insufficient_data: boolean;
+  }>({
+    active_chains: 0,
+    suspicious_patterns: 0,
+    critical_chains: 0,
+    insufficient_data: false,
+  });
+
+  useEffect(() => {
+    fetchBehaviorChains()
+      .then((res) => {
+        if (res.kpis) {
+          setChainKpis({
+            ...res.kpis,
+            insufficient_data: res.data?.length === 0,
+          });
+        }
+      })
+      .catch(() => {});
+
+    const unsub = webSocketService.onBehaviorChain((chain) => {
+      if (chain) {
+        setChainKpis((prev) => ({
+          active_chains: Math.max(prev.active_chains, 1),
+          suspicious_patterns:
+            chain.behavior_pattern && chain.behavior_pattern !== 'NORMAL_MOVEMENT'
+              ? Math.max(prev.suspicious_patterns, 1)
+              : prev.suspicious_patterns,
+          critical_chains:
+            chain.risk_level === 'CRITICAL' ? Math.max(prev.critical_chains, 1) : prev.critical_chains,
+          insufficient_data: false,
+        }));
+      }
+    });
+
+    return () => {
+      unsub();
+    };
+  }, []);
+
   const cpuPercent = Math.min(100, Math.max(0, Math.round(telemetry?.cpuUsage ?? 45)));
   const memUsed = telemetry?.memoryUsedGb ?? 6.2;
   const memTotal = telemetry?.memoryTotalGb ?? 16;
@@ -184,6 +230,39 @@ export const SystemGauges: React.FC<SystemGaugesProps> = ({
             <p className="text-[12px] font-mono text-purple-400 font-bold mt-0.5">
               {netMbps} Mbps (Active)
             </p>
+          </div>
+        </div>
+      </div>
+
+      {/* Phase 19: Threat Behavior Chain Operational Intelligence KPIs */}
+      <div className="mt-3 pt-3 border-t border-slate-800 flex flex-wrap items-center justify-between gap-2">
+        <div className="flex items-center gap-2">
+          <Layers size={14} className="text-rose-400" />
+          <span className="text-[10px] font-mono font-bold text-slate-300 uppercase tracking-wider">
+            THREAT BEHAVIOR CHAINS:
+          </span>
+        </div>
+
+        <div className="flex items-center gap-2 sm:gap-4 font-mono text-[11px]">
+          <div className="flex items-center gap-1.5 px-2 py-0.5 rounded bg-slate-950 border border-slate-800">
+            <span className="text-slate-500 text-[10px]">ACTIVE CHAINS:</span>
+            <span className="font-bold text-cyan-400">
+              {chainKpis.insufficient_data ? '0' : String(chainKpis.active_chains).padStart(2, '0')}
+            </span>
+          </div>
+
+          <div className="flex items-center gap-1.5 px-2 py-0.5 rounded bg-slate-950 border border-slate-800">
+            <span className="text-slate-500 text-[10px]">SUSPICIOUS:</span>
+            <span className="font-bold text-amber-400">
+              {chainKpis.insufficient_data ? '0' : String(chainKpis.suspicious_patterns).padStart(2, '0')}
+            </span>
+          </div>
+
+          <div className="flex items-center gap-1.5 px-2 py-0.5 rounded bg-slate-950 border border-slate-800">
+            <span className="text-slate-500 text-[10px]">CRITICAL:</span>
+            <span className="font-bold text-rose-400">
+              {chainKpis.insufficient_data ? '0' : String(chainKpis.critical_chains).padStart(2, '0')}
+            </span>
           </div>
         </div>
       </div>

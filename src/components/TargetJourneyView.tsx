@@ -60,11 +60,11 @@ const TACTICAL_NODES: Record<string, { x: number; y: number; name: string; secto
 
 // Preset high-threat demo targets for live demonstration
 const DEMO_PRESETS = [
-  { id: 992, label: 'TARGET #992', desc: 'High-Speed Sprint (CAM-01 ➔ CAM-02)', risk: 'CRITICAL', score: 98, badgeColor: 'bg-rose-500/20 text-rose-400 border-rose-500/40' },
-  { id: 13, label: 'TARGET #13', desc: 'Critical Perimeter Incursion (2 Hops)', risk: 'CRITICAL', score: 92, badgeColor: 'bg-rose-500/20 text-rose-400 border-rose-500/40' },
-  { id: 27, label: 'TARGET #27', desc: 'Loitering & Restricted Breach', risk: 'CRITICAL', score: 85, badgeColor: 'bg-rose-500/20 text-rose-400 border-rose-500/40' },
-  { id: 1, label: 'TARGET #1', desc: 'Multi-Sector Handover (3 Hops)', risk: 'HIGH', score: 88, badgeColor: 'bg-amber-500/20 text-amber-400 border-amber-500/40' },
-  { id: 5, label: 'TARGET #5', desc: 'Border Patrol Vehicle (Scrubland)', risk: 'MEDIUM', score: 68, badgeColor: 'bg-cyan-500/20 text-cyan-400 border-cyan-500/40' },
+  { id: 992, label: 'TARGET #992', incursionType: 'HIGH-SPEED SPRINT', desc: '12.2 km/h Infiltration (CAM-01 ➔ CAM-02)', risk: 'CRITICAL', score: 98, badgeColor: 'bg-rose-500/20 text-rose-400 border-rose-500/40', cls: 'person' },
+  { id: 13, label: 'TARGET #13', incursionType: 'RESTRICTED EXCLUSION BREACH', desc: 'Main Gate Polygon Breach (2 Hops)', risk: 'CRITICAL', score: 92, badgeColor: 'bg-rose-500/20 text-rose-400 border-rose-500/40', cls: 'person' },
+  { id: 27, label: 'TARGET #27', incursionType: 'LOITERING & TRIPWIRE CROSSING', desc: '120s Extended Dwell (Sector Alpha)', risk: 'CRITICAL', score: 85, badgeColor: 'bg-rose-500/20 text-rose-400 border-rose-500/40', cls: 'person' },
+  { id: 1, label: 'TARGET #1', incursionType: 'TRIPLE-SECTOR CORRIDOR HANDOVER', desc: 'Continuous 3-Node Handover (01 ➔ 02 ➔ 03)', risk: 'HIGH', score: 88, badgeColor: 'bg-amber-500/20 text-amber-400 border-amber-500/40', cls: 'person' },
+  { id: 5, label: 'TARGET #5', incursionType: 'RAPID VEHICLE PATROL RECON', desc: 'Light Utility Vehicle (Scrubland)', risk: 'MEDIUM', score: 68, badgeColor: 'bg-cyan-500/20 text-cyan-400 border-cyan-500/40', cls: 'vehicle' },
 ];
 
 export const TargetJourneyView: React.FC<TargetJourneyViewProps> = ({
@@ -90,18 +90,25 @@ export const TargetJourneyView: React.FC<TargetJourneyViewProps> = ({
   const [showDossierModal, setShowDossierModal] = useState<boolean>(false);
   const [hasCopiedDossier, setHasCopiedDossier] = useState<boolean>(false);
 
+  const handleSelectPreset = (preset: (typeof DEMO_PRESETS)[0]) => {
+    if (filterClass !== 'all' && filterClass !== preset.cls) {
+      setFilterClass('all');
+    }
+    setSelectedTrackId(preset.id);
+  };
+
   // Load target list
   const loadTargets = async () => {
     setIsLoadingTargets(true);
     try {
-      const res = await fetchTrackedTargets({
+      const res: any = await fetchTrackedTargets({
         class_name: filterClass !== 'all' ? filterClass : undefined,
         risk_level: filterRisk !== 'all' ? filterRisk : undefined,
         camera_id: filterCamera !== 'all' ? filterCamera : undefined,
         time_window: timeWindow,
       });
 
-      const list = res.data || [];
+      const list: TrackedTargetItem[] = res.targets || res.data || [];
       setTargets(list);
 
       // Auto-select first target if none currently selected or if previously selected is gone
@@ -126,9 +133,10 @@ export const TargetJourneyView: React.FC<TargetJourneyViewProps> = ({
     if (selectedTrackId !== null) {
       setIsLoadingJourney(true);
       fetchTargetJourney(selectedTrackId)
-        .then((res) => {
-          if (res.data) {
-            setJourney(res.data);
+        .then((res: any) => {
+          const jData = res?.data || (res?.track_id !== undefined ? res : null);
+          if (jData) {
+            setJourney(jData);
           }
         })
         .catch((err) => {
@@ -282,7 +290,7 @@ INTELLIGENCE GATEWAY: SEEMADRISHTI TACTICAL DEFENSE AI v2.0
             return (
               <button
                 key={preset.id}
-                onClick={() => setSelectedTrackId(preset.id)}
+                onClick={() => handleSelectPreset(preset)}
                 className={`px-3 py-1.5 rounded-lg border text-xs font-bold flex items-center gap-2 cursor-pointer transition-all ${
                   isSelected
                     ? 'bg-cyan-600 text-white border-cyan-400 shadow-md shadow-cyan-900/50 scale-105'
@@ -517,6 +525,24 @@ INTELLIGENCE GATEWAY: SEEMADRISHTI TACTICAL DEFENSE AI v2.0
                         {journey.risk_score}/100 [{journey.risk_level}]
                       </span>
                     </div>
+                  </div>
+                </div>
+
+                {/* Threat Classification & Incursion Type Indicator */}
+                <div className="p-3 rounded-lg bg-slate-950 border border-slate-800/90 flex flex-wrap items-center justify-between gap-2">
+                  <div className="flex items-center gap-2">
+                    <span className="text-[10px] text-slate-500 uppercase font-bold tracking-wider">
+                      INCURSION CLASSIFICATION:
+                    </span>
+                    <span className="text-xs font-bold text-cyan-300 px-2.5 py-0.5 rounded bg-cyan-950/80 border border-cyan-500/40 font-mono tracking-wide">
+                      {journey.incursion_type || journey.kinematics?.velocity_profile || 'MULTI-CAMERA CORRIDOR INVASION'}
+                    </span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <span className="text-[10px] text-emerald-400 font-mono font-bold flex items-center gap-1">
+                      <ShieldCheck className="w-3.5 h-3.5" />
+                      RE-ID ACTIVE // {journey.unique_cameras.length} NODES LINKED
+                    </span>
                   </div>
                 </div>
 

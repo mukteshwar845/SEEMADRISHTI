@@ -1003,6 +1003,7 @@ export interface JourneyHandover {
 export interface TargetJourneyDetail {
   track_id: number;
   class: string;
+  incursion_type?: string;
   first_seen: string | null;
   last_seen: string | null;
   duration_seconds: number;

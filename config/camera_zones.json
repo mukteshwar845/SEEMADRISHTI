@@ -11658,5 +11658,33 @@
       "created_at": "2026-08-30T16:55:45.744Z",
       "updated_at": "2026-08-30T16:55:45.744Z"
     }
+  ],
+  "cam-test-1788109565756": [
+    {
+      "id": "zone-test-1788109565824",
+      "camera_id": "cam-test-1788109565756",
+      "name": "Watchtower Sector J Geofence Perimeter",
+      "polygon": [
+        [
+          0.2,
+          0.2
+        ],
+        [
+          0.8,
+          0.2
+        ],
+        [
+          0.8,
+          0.8
+        ],
+        [
+          0.2,
+          0.8
+        ]
+      ],
+      "enabled": true,
+      "created_at": "2026-08-30T17:06:05.828Z",
+      "updated_at": "2026-08-30T17:06:05.828Z"
+    }
   ]
 }

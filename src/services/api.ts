@@ -1024,11 +1024,21 @@ export interface TargetJourneyDetail {
     event: string;
     description: string;
     metadata?: Record<string, any>;
+    incident_id?: string;
   }>;
   correlation_id?: string | null;
   is_complete: boolean;
   insufficient_data: boolean;
   status_note: string;
+  kinematics?: {
+    distance_meters: number;
+    average_speed_mps: number;
+    speed_kmh: number;
+    velocity_profile: string;
+    sectors_traversed: string[];
+    perimeter_handover_verified: boolean;
+    sha256_verification: string;
+  };
 }
 
 export interface TrackedTargetItem {
@@ -1040,6 +1050,8 @@ export interface TrackedTargetItem {
   behavior_pattern?: string;
   last_seen: string;
   event_count: number;
+  camera_path?: string[];
+  hops?: number;
 }
 
 export interface HeatmapCameraStat {

@@ -317,15 +317,14 @@ export const SihDemoGuideModal: React.FC<SihDemoGuideModalProps> = ({
   onNavigateToView,
 }) => {
   const [currentStepIdx, setCurrentStepIdx] = useState<number>(0);
+  const [isResetting, setIsResetting] = useState<boolean>(false);
+  const [resetMessage, setResetMessage] = useState<string | null>(null);
 
   if (!isOpen) return null;
 
   const currentStep = SIH_MISSION_DEMO_STEPS[currentStepIdx];
   const isFirst = currentStepIdx === 0;
   const isLast = currentStepIdx === SIH_MISSION_DEMO_STEPS.length - 1;
-
-  const [isResetting, setIsResetting] = useState<boolean>(false);
-  const [resetMessage, setResetMessage] = useState<string | null>(null);
 
   const handleNext = () => {
     if (!isLast) {
@@ -351,7 +350,7 @@ export const SihDemoGuideModal: React.FC<SihDemoGuideModalProps> = ({
   const handleResetDemo = async () => {
     try {
       setIsResetting(true);
-      const res = await fetch('/api/demo/reset', { method: 'POST' });
+      const res = await fetch('/api/system/demo/reset', { method: 'POST' });
       if (res.ok) {
         setResetMessage('DEMO SESSION RESET EXECUTED');
         setTimeout(() => setResetMessage(null), 3000);

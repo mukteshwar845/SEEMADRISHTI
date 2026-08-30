@@ -815,39 +815,26 @@ class TestPhase17IntelligentSurveillancePipeline(unittest.TestCase):
         os.makedirs(cls.evidence_dir, exist_ok=True)
 
     def _get_test_frames(self, count=30):
-        """Extracts real video frames or synthesizes high-contrast surveillance scene frames."""
         frames = []
         now_ts = time.time()
         if os.path.exists(self.cam01_path):
-            try:
-                cap = cv2.VideoCapture(self.cam01_path)
-                if cap.isOpened():
-                    for i in range(count):
-                        ret, frame = cap.read()
-                        if not ret or frame is None:
-                            break
-                        frames.append((now_ts + (i / 15.0), frame))
-                    cap.release()
-            except Exception:
-                pass
+            cap = cv2.VideoCapture(self.cam01_path)
+            for i in range(count):
+                ret, frame = cap.read()
+                if not ret or frame is None:
+                    break
+                frames.append((now_ts + (i / 15.0), frame))
+            cap.release()
 
-        # If video frames were fewer than count, generate clear synthetic tactical frames
+        # Fallback if fixture video missing or short: generate structured surveillance test frames
         if len(frames) < count:
             needed = count - len(frames)
             for i in range(needed):
-                idx = len(frames)
-                img = np.zeros((720, 1280, 3), dtype=np.uint8)
-                # Background gradient
-                img[:, :] = (35, 42, 38)
-                # Perimeter border
-                cv2.rectangle(img, (100, 100), (1180, 620), (0, 220, 255), 2)
-                # Moving simulated target
-                x_pos = int(200 + (idx * 25) % 800)
-                y_pos = int(300 + (idx * 10) % 250)
-                cv2.rectangle(img, (x_pos - 20, y_pos - 40), (x_pos + 20, y_pos + 40), (0, 0, 255), -1)
-                cv2.putText(img, f"SECTOR ALPHA - CAM-01 [TEST FRAME {idx:03d}]", (120, 140), cv2.FONT_HERSHEY_SIMPLEX, 0.8, (0, 255, 0), 2)
-                frames.append((now_ts + (idx / 15.0), img))
-
+                f = np.full((720, 1280, 3), 40 + (i % 20), dtype=np.uint8)
+                # Draw realistic surveillance context
+                cv2.rectangle(f, (100, 100), (400, 500), (0, 140, 255), 2)
+                cv2.putText(f, f"TEST FRAME {i}", (120, 140), cv2.FONT_HERSHEY_SIMPLEX, 0.8, (255, 255, 255), 2)
+                frames.append((now_ts + (len(frames) / 15.0), f))
         return frames
 
     # 1. Normalized polygon coordinates support in PolygonZone
@@ -1079,8 +1066,8 @@ class TestPhase17IntelligentSurveillancePipeline(unittest.TestCase):
 
         # Validate original integrity
         verification = EvidenceWriter.verify_evidence_file(file_path, original_hash)
-        self.assertTrue(verification["valid"])
-        self.assertEqual(verification["status"], "VERIFIED")
+        self.assertTrue(verification["verified"])
+        self.assertFalse(verification["tampered"])
 
         # Tamper with file (flip a byte)
         with open(file_path, "r+b") as f:
@@ -1092,8 +1079,8 @@ class TestPhase17IntelligentSurveillancePipeline(unittest.TestCase):
 
         # Verify tamper detection triggers
         tamper_check = EvidenceWriter.verify_evidence_file(file_path, original_hash)
-        self.assertFalse(tamper_check["valid"])
-        self.assertEqual(tamper_check["status"], "FAILED")
+        self.assertFalse(tamper_check["verified"])
+        self.assertTrue(tamper_check["tampered"])
 
     # 10. Frame state telemetry payload integrity
     def test_10_frame_state_telemetry_schema(self):

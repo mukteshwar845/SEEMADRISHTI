@@ -61,8 +61,15 @@ export function createApp(): express.Application {
 
   // Priority 1 Security: Enforce authentication on all mutating API routes (POST, PUT, DELETE, PATCH)
   app.use('/api', (req: Request, res: Response, next: NextFunction) => {
-    // Whitelist login endpoint from requiring a pre-existing token
-    if (req.path === '/auth/login' || req.path === '/v1/auth/login') {
+    // Whitelist login and read-only intelligence search queries from requiring a pre-existing token
+    if (
+      req.path === '/auth/login' ||
+      req.path === '/v1/auth/login' ||
+      req.path === '/intelligence/search' ||
+      req.path === '/v1/intelligence/search' ||
+      req.path.startsWith('/intelligence/search') ||
+      req.path.startsWith('/v1/intelligence/search')
+    ) {
       return next();
     }
     if (['POST', 'PUT', 'DELETE', 'PATCH'].includes(req.method)) {
@@ -72,6 +79,7 @@ export function createApp(): express.Application {
   });
 
   // Mount API Sub-Routers
+  app.use('/api/intelligence/search', searchRouter);
   app.use('/api/cameras', camerasRouter);
   app.use('/api/zones', zonesRouter);
   app.use('/api/events', eventsRouter);
@@ -87,9 +95,9 @@ export function createApp(): express.Application {
   app.use('/api/auth', authRouter);
   app.use('/api/behavior-chains', behaviorChainsRouter);
   app.use('/api/intelligence', intelligenceRouter);
-  app.use('/api/intelligence/search', searchRouter);
 
   // V1 Alias Sub-Routers
+  app.use('/api/v1/intelligence/search', searchRouter);
   app.use('/api/v1/cameras', camerasRouter);
   app.use('/api/v1/zones', zonesRouter);
   app.use('/api/v1/events', eventsRouter);
@@ -103,7 +111,6 @@ export function createApp(): express.Application {
   app.use('/api/v1/auth', authRouter);
   app.use('/api/v1/behavior-chains', behaviorChainsRouter);
   app.use('/api/v1/intelligence', intelligenceRouter);
-  app.use('/api/v1/intelligence/search', searchRouter);
 
   // 404 for unhandled API routes only
   app.use('/api', notFoundHandler);

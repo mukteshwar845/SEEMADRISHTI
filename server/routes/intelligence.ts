@@ -1,8 +1,10 @@
 import { Router, Request, Response, NextFunction } from 'express';
 import { getDatabase } from '../db/database';
 import { AppError } from '../middleware/errorHandler';
+import { searchRouter } from './search';
 
 export const intelligenceRouter = Router();
+intelligenceRouter.use('/search', searchRouter);
 
 // Deterministic Weights matching cv_service/analytics/threat_heatmap.py
 const HEATMAP_WEIGHTS = {

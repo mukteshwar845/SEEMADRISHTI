@@ -117,8 +117,17 @@ export const IntelligenceSearch: React.FC<IntelligenceSearchProps> = ({
           if (hRes.data) setHistory(hRes.data);
         })
         .catch(() => {});
-    } catch (err) {
+    } catch (err: any) {
       console.warn('[IntelligenceSearch] Search failed:', err);
+      setSearchResponse({
+        success: false,
+        query: q,
+        result_count: 0,
+        results: [],
+        chips: [q.toUpperCase()],
+        message: `Search query failed: ${err?.message || 'Server connection error'}`,
+        insufficient_data: true,
+      });
     } finally {
       setIsSearching(false);
     }

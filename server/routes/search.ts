@@ -217,11 +217,11 @@ function parseQuery(query: string) {
   return filters;
 }
 
-// POST /api/intelligence/search - Execute natural-language intelligence search
-searchRouter.post('/', (req: Request, res: Response, next: NextFunction) => {
+// Handler for natural-language intelligence search (supports POST body or GET query)
+export function handleSearch(req: Request, res: Response, next: NextFunction) {
   try {
     const db = getDatabase();
-    const queryStr = req.body?.query || req.query?.q || '';
+    const queryStr = (req.body?.query || req.query?.q || req.query?.query || '').toString().trim();
     if (!queryStr || typeof queryStr !== 'string') {
       return res.status(400).json({
         success: false,
@@ -544,13 +544,11 @@ searchRouter.post('/', (req: Request, res: Response, next: NextFunction) => {
   } catch (err) {
     next(err);
   }
-});
+}
 
-// GET /api/intelligence/search - Query via query string
-searchRouter.get('/', (req: Request, res: Response, next: NextFunction) => {
-  req.body = { query: req.query.q || req.query.query || '' };
-  (searchRouter as any).handle(req, res, next);
-});
+// POST & GET /api/intelligence/search - Execute natural-language intelligence search
+searchRouter.post('/', handleSearch);
+searchRouter.get('/', handleSearch);
 
 // GET /api/intelligence/search/history - Recent search queries
 searchRouter.get('/history', (req: Request, res: Response) => {

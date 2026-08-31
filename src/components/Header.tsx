@@ -237,40 +237,6 @@ export const Header: React.FC<HeaderProps> = ({
           )}
         </div>
 
-        {/* WebSocket Real-time Status Pill */}
-        <div
-          id="ws-status-hud-pill"
-          className={`hidden xl:flex items-center gap-1.5 px-2.5 py-1 rounded-md border font-mono text-[10px] font-bold transition-all ${
-            wsState.status === 'CONNECTED'
-              ? isDaylight
-                ? 'bg-emerald-50 border-emerald-300 text-emerald-800'
-                : 'bg-emerald-950/70 border-emerald-500/50 text-emerald-300 shadow-[0_0_8px_rgba(0,255,102,0.2)]'
-              : wsState.status === 'EMULATED'
-              ? isDaylight
-                ? 'bg-cyan-50 border-cyan-300 text-cyan-800'
-                : 'bg-cyan-950/60 border-cyan-500/40 text-cyan-300'
-              : isDaylight
-              ? 'bg-amber-50 border-amber-300 text-amber-800'
-              : 'bg-amber-950/60 border-amber-500/40 text-amber-300'
-          }`}
-        >
-          <Radio size={11} className={wsState.status === 'CONNECTED' ? 'animate-pulse text-emerald-400' : 'text-cyan-400'} />
-          <span>{wsState.status === 'CONNECTED' ? `WS: LIVE (${wsState.latencyMs}ms)` : `WS: ${wsState.status}`}</span>
-        </div>
-
-        {/* 9/9 Active Feeds Pill */}
-        <div
-          id="active-feeds-pill"
-          className={`hidden md:flex items-center gap-1.5 px-2.5 py-1 rounded-md border font-mono text-[10px] font-bold ${
-            isDaylight
-              ? 'bg-slate-100 border-slate-300 text-slate-800'
-              : 'border-cyan-500/40 bg-cyan-950/50 text-cyan-300 shadow-[0_0_10px_rgba(0,240,255,0.15)]'
-          }`}
-        >
-          <Radio size={12} className={isDaylight ? 'text-cyan-600' : 'text-cyan-400 animate-pulse'} />
-          <span>9/9 Active Feeds</span>
-        </div>
-
         {/* System Online Pill */}
         <div
           id="system-status-pill"
@@ -286,7 +252,7 @@ export const Header: React.FC<HeaderProps> = ({
               isDaylight ? 'text-emerald-800' : 'text-emerald-400'
             }`}
           >
-            ● ONLINE (14ms inference)
+            ● ONLINE (14ms)
           </span>
         </div>
 

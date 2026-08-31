@@ -5,6 +5,7 @@ import {
   Lock,
   Sun,
   Moon,
+  Zap,
 } from 'lucide-react';
 import { useTheme } from '../context/ThemeContext';
 import { useAuth } from '../context/AuthContext';
@@ -20,6 +21,7 @@ interface HeaderProps {
   onOpenDemoMode?: () => void;
   onOpenSettings?: () => void;
   onOpenAlerts?: () => void;
+  onOpenSwarmHelp?: () => void;
 }
 
 export const Header: React.FC<HeaderProps> = ({
@@ -30,6 +32,7 @@ export const Header: React.FC<HeaderProps> = ({
   onOpenDemoMode,
   onOpenSettings,
   onOpenAlerts,
+  onOpenSwarmHelp,
 }) => {
   const { theme, toggleTheme, isDaylight } = useTheme();
   const { user, logout, setPortal, setIsProfileModalOpen } = useAuth();
@@ -161,6 +164,23 @@ export const Header: React.FC<HeaderProps> = ({
             ● ONLINE (14ms)
           </span>
         </div>
+
+        {/* Multi-Agent Swarm Orchestrator & Work Distribution Help Button */}
+        {onOpenSwarmHelp && (
+          <button
+            id="btn-open-swarm-help"
+            onClick={onOpenSwarmHelp}
+            title="Open Multi-Agent Work Distribution & Task Orchestration Help"
+            className={`p-1.5 sm:px-3 rounded-lg border flex items-center gap-1.5 font-mono text-xs font-bold transition-all cursor-pointer active:scale-95 ${
+              isDaylight
+                ? 'bg-cyan-50 hover:bg-cyan-100 text-cyan-900 border-cyan-300 shadow-xs'
+                : 'bg-cyan-950/60 hover:bg-cyan-900/80 border-cyan-500/40 hover:border-cyan-400 text-cyan-300 shadow-[0_0_15px_rgba(0,240,255,0.2)]'
+            }`}
+          >
+            <Zap size={13} className="text-cyan-400 animate-pulse" />
+            <span className="hidden sm:inline text-[10px]">SWARM AI HELP</span>
+          </button>
+        )}
 
         {/* Theme Toggle Button (Military Matrix vs Daylight Field) */}
         <button

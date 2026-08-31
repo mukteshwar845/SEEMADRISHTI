@@ -56,6 +56,35 @@ agentsRouter.post('/execute', (req: Request, res: Response) => {
   }
 });
 
+// GET /api/v1/agents/jobs -> Get active and completed parallel jobs
+agentsRouter.get('/jobs', (req: Request, res: Response) => {
+  try {
+    const jobs = agentOrchestrator.getActiveJobs();
+    res.json({
+      success: true,
+      jobs,
+    });
+  } catch (err: any) {
+    res.status(500).json({ success: false, error: err.message });
+  }
+});
+
+// POST /api/v1/agents/jobs/dispatch -> Dispatch parallel orchestration job across 4 agents
+agentsRouter.post('/jobs/dispatch', (req: Request, res: Response) => {
+  try {
+    const { jobKey, query } = req.body;
+    const target = jobKey || query || 'perimeter_sweep_9cam';
+    const job = agentOrchestrator.orchestrateParallelJob(target);
+    res.json({
+      success: true,
+      job,
+      agents: agentOrchestrator.getAgents(),
+    });
+  } catch (err: any) {
+    res.status(500).json({ success: false, error: err.message });
+  }
+});
+
 // POST /api/v1/agents/copilot -> Multi-agent interactive tactical reasoning chat
 agentsRouter.post('/copilot', async (req: Request, res: Response) => {
   try {

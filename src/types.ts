@@ -70,6 +70,35 @@ export interface MultiAgentPlan {
   }[];
 }
 
+export interface ParallelSubTask {
+  id: string;
+  agentId: string;
+  agentName: string;
+  role: string;
+  color: string;
+  taskTitle: string;
+  details: string;
+  status: 'QUEUED' | 'RUNNING' | 'COMPLETED' | 'FAILED';
+  progressPercent: number;
+  durationMs: number;
+  outputSummary: string;
+  artifactsProduced: string[];
+}
+
+export interface ParallelOrchestrationJob {
+  id: string;
+  title: string;
+  category: 'PERIMETER_SWEEP' | 'TARGET_REID' | 'EMERGENCY_LOCKDOWN' | 'CALIBRATION' | 'CUSTOM_PIPELINE';
+  status: 'PENDING' | 'DISPATCHING' | 'PROCESSING_PARALLEL' | 'COMPLETED';
+  totalSerialEstMs: number;
+  actualParallelMs: number;
+  speedupFactor: number;
+  throughputPerSec: number;
+  subTasks: ParallelSubTask[];
+  consensusOutput: string;
+  timestamp: string;
+}
+
 export type AlertSeverity = 'High' | 'Medium' | 'Low';
 
 export interface CameraDiagnosticMetric {

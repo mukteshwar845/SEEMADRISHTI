@@ -29,10 +29,20 @@ import {
   Volume2,
   Car,
   Lock,
+  FastForward,
+  ArrowRight,
+  TrendingUp,
 } from 'lucide-react';
-import { TacticalAgentInfo, MultiAgentPlan, AgentDeliberationMessage } from '../../types';
+import {
+  TacticalAgentInfo,
+  MultiAgentPlan,
+  AgentDeliberationMessage,
+  ParallelOrchestrationJob,
+  ParallelSubTask,
+} from '../../types';
 import { useTheme } from '../../context/ThemeContext';
 import { audioAlertEngine } from '../../utils/audioAlert';
+import { PRESET_PARALLEL_JOBS, agentOrchestrator } from '../../../server/services/agentOrchestrator';
 
 // Default initial plan so the UI is immediately populated even before network load
 const DEFAULT_INITIAL_PLAN: MultiAgentPlan = {
@@ -220,7 +230,15 @@ export const MultiAgentOrchestratorView: React.FC = () => {
   const [currentPlan, setCurrentPlan] = useState<MultiAgentPlan>(DEFAULT_INITIAL_PLAN);
   const [selectedScenario, setSelectedScenario] = useState<string>('perimeter_scaling');
   const [isDeliberating, setIsDeliberating] = useState(false);
-  const [activeTab, setActiveTab] = useState<'deliberation' | 'matrix' | 'countermeasures'>('deliberation');
+  const [activeMainTab, setActiveMainTab] = useState<'parallel_hub' | 'deliberation' | 'copilot'>('parallel_hub');
+
+  // Parallel Workload Engine State
+  const [activeJob, setActiveJob] = useState<ParallelOrchestrationJob>(
+    PRESET_PARALLEL_JOBS.perimeter_sweep_9cam
+  );
+  const [isDispatchingParallel, setIsDispatchingParallel] = useState(false);
+  const [customTaskInput, setCustomTaskInput] = useState('');
+  const [activePresetJobKey, setActivePresetJobKey] = useState('perimeter_sweep_9cam');
 
   // Copilot Chat State
   const [copilotQuery, setCopilotQuery] = useState('');
@@ -236,7 +254,7 @@ export const MultiAgentOrchestratorView: React.FC = () => {
   >([
     {
       sender: 'orchestrator',
-      text: 'Lead Orchestrator (SEEMA-ORCHESTRATOR-v4) active. 4 Specialized AI Agents (Sentinel, Pathfinder, Commander, Lex Forensic) are continuously evaluating 9 border sectors in real-time consensus. Ask questions or trigger an autonomous tactical scenario below.',
+      text: 'Lead Orchestrator (SEEMA-ORCHESTRATOR-v4) active. 4 Specialized AI Agents (Sentinel, Pathfinder, Commander, Lex Forensic) execute tasks in parallel with 4.4x speedup. Ask questions or trigger an autonomous parallel workload below.',
       consensus: 98.6,
       timestamp: 'ONLINE',
       deliberations: [
@@ -272,6 +290,39 @@ export const MultiAgentOrchestratorView: React.FC = () => {
   useEffect(() => {
     chatEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [chatMessages, isCopilotThinking]);
+
+  // Dispatch a parallel workload across all 4 agents
+  const handleDispatchParallelJob = async (jobKeyOrQuery: string) => {
+    setIsDispatchingParallel(true);
+    audioAlertEngine.playTone('electronic_chirp', { force: true, volumeOverride: 0.7 });
+    try {
+      const res = await fetch('/api/v1/agents/jobs/dispatch', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ jobKey: jobKeyOrQuery, query: jobKeyOrQuery }),
+      });
+      const data = await res.json();
+      if (data.success && data.job) {
+        setActiveJob(data.job);
+        if (data.agents) setAgents(data.agents);
+      } else {
+        const localJob = agentOrchestrator.orchestrateParallelJob(jobKeyOrQuery);
+        setActiveJob(localJob);
+      }
+    } catch {
+      const localJob = agentOrchestrator.orchestrateParallelJob(jobKeyOrQuery);
+      setActiveJob(localJob);
+    } finally {
+      setTimeout(() => setIsDispatchingParallel(false), 450);
+    }
+  };
+
+  const handleCustomTaskSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!customTaskInput.trim()) return;
+    handleDispatchParallelJob(customTaskInput.trim());
+    setCustomTaskInput('');
+  };
 
   // Trigger Swarm Deliberation on a scenario
   const handleTriggerDeliberation = async (scenarioKey: string) => {
@@ -412,26 +463,28 @@ export const MultiAgentOrchestratorView: React.FC = () => {
                 </h1>
                 <span className="px-2 py-0.5 rounded bg-emerald-950/80 border border-emerald-500/40 text-[9px] font-bold text-emerald-400 flex items-center gap-1.5">
                   <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-ping" />
-                  4 ACTIVE AGENTS &bull; LEAD ORCHESTRATOR ONLINE
+                  4 ACTIVE AGENTS &bull; PARALLEL WORK DISTRIBUTION READY
                 </span>
               </div>
               <p className="text-xs text-slate-400 font-sans mt-0.5">
-                Centralized Autonomous Swarm Consensus: Spatial Threat Triage &bull; Cross-Camera Homography Handover &bull; Tactical ROE Dispatch &bull; Cryptographic Evidence Sealing
+                Centralized Autonomous Work Distribution: Heavy workloads are divided across 4 specialized AI agents executing concurrently in parallel for ultra-fast latency.
               </p>
             </div>
           </div>
 
           {/* Quick Metrics */}
           <div className="flex items-center gap-2.5 text-xs flex-wrap">
-            <div className="px-3.5 py-1.5 rounded-xl bg-black/60 border border-slate-800 text-slate-300">
-              <span className="text-slate-500 text-[10px]">CONSENSUS: </span>
+            <div className="px-3.5 py-1.5 rounded-xl bg-black/60 border border-emerald-500/40 text-emerald-300">
+              <span className="text-slate-500 text-[10px]">SPEEDUP: </span>
               <span className="text-emerald-400 font-bold font-mono">
-                {currentPlan ? `${currentPlan.consensusScore}%` : '98.6%'}
+                {activeJob.speedupFactor}x PARALLEL
               </span>
             </div>
             <div className="px-3.5 py-1.5 rounded-xl bg-black/60 border border-slate-800 text-slate-300">
-              <span className="text-slate-500 text-[10px]">AVG LATENCY: </span>
-              <span className="text-cyan-400 font-bold font-mono">11ms</span>
+              <span className="text-slate-500 text-[10px]">CONSENSUS: </span>
+              <span className="text-cyan-400 font-bold font-mono">
+                {currentPlan ? `${currentPlan.consensusScore}%` : '98.6%'}
+              </span>
             </div>
             <div className="px-3.5 py-1.5 rounded-xl bg-black/60 border border-slate-800 text-slate-300">
               <span className="text-slate-500 text-[10px]">THREAT POSTURE: </span>
@@ -447,7 +500,10 @@ export const MultiAgentOrchestratorView: React.FC = () => {
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         {agents.map((agent) => {
           const Icon = getAgentIcon(agent.id);
-          const isWorking = agent.status === 'ANALYZING' || agent.status === 'DELIBERATING' || agent.status === 'DISPATCHING';
+          const isWorking =
+            agent.status === 'ANALYZING' ||
+            agent.status === 'DELIBERATING' ||
+            agent.status === 'DISPATCHING';
 
           return (
             <div
@@ -527,292 +583,546 @@ export const MultiAgentOrchestratorView: React.FC = () => {
         })}
       </div>
 
-      {/* 3. Real-Time Swarm Deliberation Chamber & Consensus Engine */}
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
-        {/* Left Column: Deliberation Chamber (7 cols) */}
-        <div className="lg:col-span-7 space-y-4">
+      {/* 3. Main Navigation Subtabs: Workload Distribution vs Deliberation Chamber vs Copilot */}
+      <div className="flex items-center gap-2 border-b border-slate-800 pb-3 flex-wrap">
+        {[
+          {
+            id: 'parallel_hub',
+            label: '⚡ PARALLEL WORKLOAD DISTRIBUTION (FAST CONCURRENCY)',
+            icon: Zap,
+          },
+          {
+            id: 'deliberation',
+            label: '🛡️ ACTIVE DELIBERATION CHAMBER',
+            icon: Flame,
+          },
+          {
+            id: 'copilot',
+            label: '🤖 SWARM COPILOT & REAL-TIME REASONING',
+            icon: Bot,
+          },
+        ].map((tab) => {
+          const Icon = tab.icon;
+          const isActive = activeMainTab === tab.id;
+          return (
+            <button
+              key={tab.id}
+              onClick={() => setActiveMainTab(tab.id as any)}
+              className={`px-4 py-2 rounded-xl text-xs font-bold font-mono flex items-center gap-2 transition-all cursor-pointer ${
+                isActive
+                  ? 'bg-cyan-500 text-black shadow-[0_0_15px_rgba(0,240,255,0.4)]'
+                  : 'bg-black/50 text-slate-400 hover:text-white border border-slate-800'
+              }`}
+            >
+              <Icon size={14} />
+              <span>{tab.label}</span>
+            </button>
+          );
+        })}
+      </div>
+
+      {/* TAB 1: PARALLEL WORKLOAD DISTRIBUTION ENGINE */}
+      {activeMainTab === 'parallel_hub' && (
+        <div className="space-y-6">
+          {/* Telemetry Acceleration Banner */}
           <div
-            className={`p-5 rounded-2xl border backdrop-blur-md ${
+            className={`p-5 rounded-2xl border backdrop-blur-md flex flex-col md:flex-row md:items-center justify-between gap-5 ${
               isDaylight
                 ? 'bg-white border-slate-200 shadow-sm'
-                : 'bg-[#040813]/90 border-slate-800'
+                : 'bg-emerald-950/20 border-emerald-500/30 text-emerald-300'
             }`}
           >
-            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-slate-800 pb-4 mb-4">
-              <div>
-                <div className="flex items-center gap-2">
-                  <Flame size={16} className="text-rose-400" />
-                  <h2 className="text-sm font-black text-white tracking-wider uppercase">
-                    ACTIVE DELIBERATION CHAMBER
-                  </h2>
+            <div>
+              <div className="flex items-center gap-2 mb-1">
+                <Zap size={16} className="text-emerald-400" />
+                <span className="text-xs font-bold uppercase tracking-wider text-emerald-400 font-mono">
+                  PARALLEL WORK-DISTRIBUTION TELEMETRY
+                </span>
+              </div>
+              <h2 className="text-sm sm:text-base font-black text-white">
+                {activeJob.title}
+              </h2>
+              <p className="text-xs text-slate-300 font-sans mt-1">
+                Workload decomposed into 4 concurrent subtasks &rarr; Sent to 4 specialized worker agents simultaneously &rarr; Processed in parallel with zero bottlenecks.
+              </p>
+            </div>
+
+            <div className="flex items-center gap-3 shrink-0">
+              <div className="p-3 rounded-xl bg-black/70 border border-slate-800 text-center min-w-[95px]">
+                <div className="text-[9.5px] text-slate-500">SERIAL DURATION</div>
+                <div className="text-slate-400 font-bold line-through text-sm">
+                  {activeJob.totalSerialEstMs} ms
                 </div>
-                <p className="text-xs text-slate-400 mt-0.5 font-sans">
-                  Target Track: <span className="text-cyan-400 font-mono font-bold">{currentPlan?.targetTrackId || 'TRK-992'}</span> // Sector: <span className="text-slate-300">{currentPlan?.sector}</span>
-                </p>
               </div>
-
-              {/* Scenario Switchers */}
-              <div className="flex items-center gap-1.5 flex-wrap">
-                {[
-                  { key: 'perimeter_scaling', label: 'NW FENCE CLIMB' },
-                  { key: 'thermal_night', label: 'RIVERINE FOG' },
-                  { key: 'vehicle_checkpoint', label: 'HIGH-SPEED PROBE' },
-                ].map((sc) => (
-                  <button
-                    key={sc.key}
-                    onClick={() => handleTriggerDeliberation(sc.key)}
-                    className={`px-3 py-1.5 rounded-lg text-[10px] font-bold tracking-wider transition-all cursor-pointer ${
-                      selectedScenario === sc.key
-                        ? 'bg-cyan-500 text-black shadow-[0_0_10px_rgba(0,240,255,0.4)]'
-                        : 'bg-black/50 text-slate-400 hover:text-white border border-slate-800'
-                    }`}
-                  >
-                    {sc.label}
-                  </button>
-                ))}
+              <div className="p-3 rounded-xl bg-black/70 border border-emerald-500/40 text-center min-w-[95px]">
+                <div className="text-[9.5px] text-emerald-400 font-bold">PARALLEL</div>
+                <div className="text-emerald-400 font-bold text-base">
+                  {activeJob.actualParallelMs} ms
+                </div>
               </div>
-            </div>
-
-            {/* Deliberation Messages */}
-            <div className="space-y-3.5">
-              {currentPlan?.deliberationLog.map((msg, index) => {
-                const Icon = getAgentIcon(msg.agentId);
-                return (
-                  <div
-                    key={msg.id || index}
-                    className="p-4 rounded-xl border bg-black/40 text-xs transition-all relative overflow-hidden"
-                    style={{ borderColor: `${msg.color}35` }}
-                  >
-                    <div className="flex items-center justify-between mb-2">
-                      <div className="flex items-center gap-2">
-                        <div
-                          className="p-1.5 rounded-lg"
-                          style={{ backgroundColor: `${msg.color}20`, color: msg.color }}
-                        >
-                          <Icon size={14} />
-                        </div>
-                        <span className="font-bold text-white font-mono">{msg.agentName}</span>
-                        <span className="text-[10px] text-slate-500 font-mono">[{msg.role}]</span>
-                      </div>
-                      <div className="flex items-center gap-2">
-                        <span className="text-[10px] text-slate-400 font-mono">{msg.timestamp}</span>
-                        <span
-                          className="text-[9px] font-bold px-1.5 py-0.2 rounded font-mono"
-                          style={{ backgroundColor: `${msg.color}20`, color: msg.color }}
-                        >
-                          {msg.confidence}%
-                        </span>
-                      </div>
-                    </div>
-
-                    <p className="text-slate-300 font-sans leading-relaxed text-xs mb-2.5">
-                      {msg.thoughtTrace}
-                    </p>
-
-                    {/* Evidence Points */}
-                    <div className="space-y-1 bg-black/60 p-2.5 rounded-lg border border-white/5 font-mono text-[10.5px]">
-                      {msg.evidencePoints.map((ev, eIdx) => (
-                        <div key={eIdx} className="flex items-center gap-1.5 text-slate-300">
-                          <CheckCircle2 size={11} className="text-cyan-400 shrink-0" />
-                          <span>{ev}</span>
-                        </div>
-                      ))}
-                    </div>
-
-                    {/* Action Recommendation */}
-                    <div className="mt-2 text-[10px] text-cyan-400 font-bold flex items-center gap-1.5">
-                      <ChevronRight size={12} />
-                      <span>RECOMMENDED: {msg.recommendedAction}</span>
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
-          </div>
-        </div>
-
-        {/* Right Column: Consensus Synthesis & Autonomous Action Deck (5 cols) */}
-        <div className="lg:col-span-5 space-y-4">
-          {/* Swarm Consensus Card */}
-          <div
-            className={`p-5 rounded-2xl border backdrop-blur-md ${
-              isDaylight
-                ? 'bg-white border-slate-200 shadow-sm'
-                : 'bg-[#040813]/90 border-slate-800'
-            }`}
-          >
-            <div className="flex items-center justify-between border-b border-slate-800 pb-3 mb-3">
-              <span className="text-xs font-black text-white uppercase tracking-widest flex items-center gap-2">
-                <CheckCircle2 size={15} className="text-emerald-400" />
-                SWARM CONSENSUS SYNTHESIS
-              </span>
-              <span className="text-xs font-bold text-emerald-400 font-mono">
-                {currentPlan?.consensusScore}% AGREEMENT
-              </span>
-            </div>
-
-            <p className="text-xs text-slate-300 font-sans leading-relaxed mb-4">
-              {currentPlan?.summary}
-            </p>
-
-            {/* Autonomous Action Execution Deck */}
-            <div className="space-y-2.5 pt-2 border-t border-slate-800/80">
-              <div className="flex items-center justify-between text-[10px] text-slate-400 font-bold uppercase tracking-wider mb-1">
-                <span>AUTONOMOUS COUNTERMEASURES</span>
-                <span className="text-slate-500">1-CLICK EXECUTE</span>
+              <div className="p-3 rounded-xl bg-cyan-950/80 border border-cyan-500/50 text-center min-w-[105px]">
+                <div className="text-[9.5px] text-cyan-300 font-bold">SPEEDUP</div>
+                <div className="text-cyan-300 font-bold text-base">
+                  {activeJob.speedupFactor}x FASTER
+                </div>
               </div>
-
-              {currentPlan?.countermeasures.map((action) => {
-                const isExecuted = action.status === 'EXECUTED';
-                return (
-                  <div
-                    key={action.id}
-                    className="p-3 rounded-xl border border-slate-800 bg-black/50 flex items-center justify-between gap-3 text-xs"
-                  >
-                    <div>
-                      <div className="flex items-center gap-2">
-                        <span
-                          className={`text-[8px] font-bold px-1.5 py-0.2 rounded font-mono ${
-                            action.priority === 'CRITICAL'
-                              ? 'bg-rose-950 text-rose-400 border border-rose-500/40'
-                              : 'bg-cyan-950 text-cyan-400 border border-cyan-500/40'
-                          }`}
-                        >
-                          {action.priority}
-                        </span>
-                        <p className="font-bold text-white text-xs">{action.label}</p>
-                      </div>
-                      <p className="text-[10px] text-slate-400 font-mono mt-1">{action.actionPayload}</p>
-                    </div>
-
-                    <button
-                      onClick={() => handleExecuteCountermeasure(action.id)}
-                      disabled={isExecuted}
-                      className={`px-3 py-1.5 rounded-lg text-xs font-bold font-mono transition-all cursor-pointer shrink-0 active:scale-95 ${
-                        isExecuted
-                          ? 'bg-emerald-950 text-emerald-400 border border-emerald-500/40'
-                          : 'bg-cyan-500 hover:bg-cyan-400 text-black shadow-[0_0_12px_rgba(0,240,255,0.4)]'
-                      }`}
-                    >
-                      {isExecuted ? 'EXECUTED' : 'EXECUTE'}
-                    </button>
-                  </div>
-                );
-              })}
             </div>
           </div>
 
-          {/* Interactive Multi-Agent Copilot Chat Console */}
-          <div
-            className={`p-5 rounded-2xl border backdrop-blur-md flex flex-col justify-between ${
-              isDaylight
-                ? 'bg-white border-slate-200 shadow-sm'
-                : 'bg-[#040813]/90 border-slate-800'
-            }`}
-          >
-            <div className="flex items-center justify-between border-b border-slate-800 pb-3 mb-3">
-              <div className="flex items-center gap-2">
-                <Bot size={16} className="text-cyan-400" />
-                <h3 className="text-xs font-black text-white uppercase tracking-widest">
-                  SWARM COPILOT CONSOLE
-                </h3>
-              </div>
-              <span className="text-[9px] text-slate-500 font-mono">
-                NATURAL LANGUAGE INTERFACE
-              </span>
+          {/* 1-Click Parallel Job Preset Triggers */}
+          <div className="space-y-3">
+            <div className="flex items-center justify-between text-xs font-bold text-slate-400 uppercase tracking-wider">
+              <span>SELECT &amp; DISPATCH PARALLEL WORKLOAD:</span>
+              <span className="text-slate-500">1-CLICK CONCURRENT EXECUTION</span>
             </div>
 
-            {/* Chat message stream */}
-            <div className="space-y-3 min-h-[190px] max-h-[260px] overflow-y-auto pr-1 text-xs">
-              {chatMessages.map((m, idx) => (
-                <div
-                  key={idx}
-                  className={`p-3.5 rounded-xl transition-all ${
-                    m.sender === 'user'
-                      ? 'bg-cyan-950/50 border border-cyan-500/40 text-cyan-200 ml-6'
-                      : 'bg-black/60 border border-slate-800 text-slate-300 mr-2'
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+              {[
+                {
+                  key: 'perimeter_sweep_9cam',
+                  title: '9-Sector Perimeter Sweep',
+                  desc: 'Parallel 9-cam YOLOv8 inference + Homography blindspot scan + QRT proximity check',
+                },
+                {
+                  key: 'suspect_reid_multicam',
+                  title: 'Cross-Cam Suspect Re-ID',
+                  desc: 'Deep OSNet appearance embedding + spatio-temporal transit graph traversal',
+                },
+                {
+                  key: 'defcon1_lockdown',
+                  title: 'Defcon-1 Sector Lockdown',
+                  desc: 'Laser tripwire audit + hydraulic crash barrier & acoustic sirens arming',
+                },
+              ].map((job) => (
+                <button
+                  key={job.key}
+                  onClick={() => {
+                    setActivePresetJobKey(job.key);
+                    handleDispatchParallelJob(job.key);
+                  }}
+                  className={`p-4 rounded-2xl border text-left transition-all cursor-pointer flex flex-col justify-between ${
+                    activePresetJobKey === job.key
+                      ? 'bg-cyan-950/60 border-cyan-400 text-white shadow-[0_0_20px_rgba(0,240,255,0.25)]'
+                      : 'bg-[#040813]/85 border-slate-800 text-slate-300 hover:border-slate-700 hover:text-white'
                   }`}
                 >
-                  <div className="flex items-center justify-between text-[9px] text-slate-500 mb-1 font-mono">
-                    <span className="font-bold text-slate-400">
-                      {m.sender === 'user' ? 'OPERATOR' : 'LEAD ORCHESTRATOR // SWARM CONSENSUS'}
-                    </span>
-                    <span>{m.timestamp}</span>
+                  <div className="flex items-center justify-between mb-1.5">
+                    <span className="font-bold text-xs">{job.title}</span>
+                    <Play size={13} className="text-cyan-400 fill-current" />
                   </div>
-
-                  <p className="font-sans leading-relaxed text-xs">{m.text}</p>
-
-                  {/* Multi-agent deliberation cards if returned */}
-                  {m.deliberations && m.deliberations.length > 0 && (
-                    <div className="mt-2.5 pt-2 border-t border-slate-800/80 grid grid-cols-1 sm:grid-cols-2 gap-1.5 font-mono text-[9.5px]">
-                      {m.deliberations.map((d, dIdx) => (
-                        <div
-                          key={dIdx}
-                          className="p-1.5 rounded bg-black/50 border border-white/5 flex flex-col justify-between"
-                        >
-                          <div className="flex items-center justify-between text-cyan-400 font-bold mb-0.5">
-                            <span>{d.agent}</span>
-                            <span className="text-slate-400">{d.confidence}%</span>
-                          </div>
-                          <span className="text-slate-400 font-sans leading-tight line-clamp-2">
-                            {d.perspective}
-                          </span>
-                        </div>
-                      ))}
-                    </div>
-                  )}
-                </div>
-              ))}
-
-              {isCopilotThinking && (
-                <div className="p-3 rounded-xl bg-black/60 border border-slate-800 text-cyan-400 flex items-center gap-2 text-xs animate-pulse">
-                  <Activity size={13} className="animate-spin" />
-                  <span>Synthesizing cross-agent reasoning &amp; consensus...</span>
-                </div>
-              )}
-              <div ref={chatEndRef} />
-            </div>
-
-            {/* Quick Prompt Pill Shortcuts */}
-            <div className="flex items-center gap-1.5 mt-3 mb-2 overflow-x-auto text-[9.5px] pb-1">
-              {[
-                { label: 'Check fence breach at NW-04', query: 'Assess breach risk at NW-04' },
-                { label: 'Riverine fog scan', query: 'Check fog penetration in Sector Delta' },
-                { label: 'Vehicle checkpoint status', query: 'Check vehicle speed status at checkpoint' },
-              ].map((pill, pIdx) => (
-                <button
-                  key={pIdx}
-                  type="button"
-                  onClick={() => {
-                    setCopilotQuery(pill.query);
-                  }}
-                  className="px-2.5 py-1 rounded-lg bg-black/60 border border-slate-800 text-slate-400 hover:text-cyan-300 hover:border-cyan-500/40 whitespace-nowrap cursor-pointer transition-all"
-                >
-                  {pill.label}
+                  <p className="text-[10.5px] text-slate-400 font-sans leading-relaxed">{job.desc}</p>
                 </button>
               ))}
             </div>
+          </div>
 
-            {/* Query Input Box */}
-            <form onSubmit={handleSendCopilotQuery} className="flex items-center gap-2">
-              <input
-                type="text"
-                value={copilotQuery}
-                onChange={(e) => setCopilotQuery(e.target.value)}
-                placeholder="Ask swarm: 'Assess breach at NW-04' or 'Check fog penetration'..."
-                className="flex-1 px-3.5 py-2.5 rounded-xl bg-black/80 border border-slate-800 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-cyan-500/60"
-              />
-              <button
-                type="submit"
-                disabled={isCopilotThinking || !copilotQuery.trim()}
-                className="p-2.5 rounded-xl bg-cyan-500 hover:bg-cyan-400 text-black cursor-pointer transition-all disabled:opacity-50"
-              >
-                <Send size={15} />
-              </button>
-            </form>
+          {/* Subtask Worker Pipeline Cards (4 Agents Executing Concurrently) */}
+          <div className="space-y-3">
+            <div className="flex items-center justify-between text-xs font-bold text-slate-400 uppercase tracking-wider">
+              <span className="flex items-center gap-2">
+                <Layers size={14} className="text-cyan-400" />
+                CONCURRENT WORKER SUBTASK PIPELINES (EXECUTED SIMULTANEOUSLY)
+              </span>
+              <span className="text-emerald-400">4 / 4 WORKERS ACTIVE</span>
+            </div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              {activeJob.subTasks.map((st) => {
+                const Icon = getAgentIcon(st.agentId);
+                return (
+                  <div
+                    key={st.id}
+                    className="p-4 rounded-2xl border bg-black/50 text-xs transition-all relative overflow-hidden flex flex-col justify-between"
+                    style={{ borderColor: `${st.color}35` }}
+                  >
+                    <div>
+                      <div className="flex items-center justify-between mb-2.5">
+                        <div className="flex items-center gap-2">
+                          <div
+                            className="p-1.5 rounded-lg"
+                            style={{ backgroundColor: `${st.color}20`, color: st.color }}
+                          >
+                            <Icon size={16} />
+                          </div>
+                          <div>
+                            <span className="font-bold text-white text-xs">{st.agentName}</span>
+                            <span className="text-[9.5px] text-slate-500 block font-mono">
+                              [{st.role}]
+                            </span>
+                          </div>
+                        </div>
+                        <span
+                          className="text-[9.5px] font-bold px-2 py-0.5 rounded border font-mono"
+                          style={{ borderColor: `${st.color}40`, color: st.color }}
+                        >
+                          {st.durationMs} ms
+                        </span>
+                      </div>
+
+                      <h4 className="font-bold text-white text-xs mb-1">{st.taskTitle}</h4>
+                      <p className="text-[10.5px] text-slate-300 font-sans mb-3 leading-relaxed">
+                        {st.details}
+                      </p>
+                    </div>
+
+                    <div className="p-2.5 rounded-xl bg-black/70 border border-white/5 space-y-1.5 text-[10px]">
+                      <div className="flex items-center gap-1.5 text-slate-200 font-sans">
+                        <CheckCircle2 size={12} className="text-emerald-400 shrink-0" />
+                        <span>{st.outputSummary}</span>
+                      </div>
+                      <div className="flex items-center gap-1 text-slate-500 font-mono text-[9px] truncate">
+                        <span>ARTIFACTS:</span>
+                        <span className="text-cyan-400 truncate">
+                          {st.artifactsProduced.join(' • ')}
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+
+          {/* Master Consensus Synthesis */}
+          <div className="p-4 rounded-2xl bg-cyan-950/30 border border-cyan-500/30">
+            <div className="flex items-center justify-between mb-1.5">
+              <span className="text-xs font-bold text-cyan-400 uppercase tracking-wider flex items-center gap-1.5">
+                <CheckCircle2 size={14} />
+                PARALLEL SYNTHESIS &amp; AUDIT VERIFICATION
+              </span>
+              <span className="text-[10px] text-slate-400 font-mono">
+                EXECUTED AT: {activeJob.timestamp}
+              </span>
+            </div>
+            <p className="text-slate-200 font-sans text-xs leading-relaxed">
+              {activeJob.consensusOutput}
+            </p>
+          </div>
+
+          {/* Custom Task Decomposer Input */}
+          <form
+            onSubmit={handleCustomTaskSubmit}
+            className="p-4 rounded-2xl bg-black/60 border border-slate-800 flex flex-col sm:flex-row items-center gap-3"
+          >
+            <input
+              type="text"
+              value={customTaskInput}
+              onChange={(e) => setCustomTaskInput(e.target.value)}
+              placeholder="Enter custom task: 'Scan Sector Delta for night infiltrators and dispatch nearest boat patrol'..."
+              className="flex-1 w-full px-4 py-2.5 rounded-xl bg-black/80 border border-slate-700 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-cyan-500/60 font-mono"
+            />
+            <button
+              type="submit"
+              disabled={isDispatchingParallel || !customTaskInput.trim()}
+              className="w-full sm:w-auto px-5 py-2.5 rounded-xl bg-cyan-500 hover:bg-cyan-400 text-black font-bold text-xs flex items-center justify-center gap-1.5 cursor-pointer transition-all disabled:opacity-50 shrink-0"
+            >
+              <Zap size={14} />
+              <span>DECOMPOSE &amp; RUN FAST</span>
+            </button>
+          </form>
+        </div>
+      )}
+
+      {/* TAB 2: ACTIVE DELIBERATION CHAMBER */}
+      {activeMainTab === 'deliberation' && (
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
+          {/* Left Column: Deliberation Chamber (7 cols) */}
+          <div className="lg:col-span-7 space-y-4">
+            <div
+              className={`p-5 rounded-2xl border backdrop-blur-md ${
+                isDaylight
+                  ? 'bg-white border-slate-200 shadow-sm'
+                  : 'bg-[#040813]/90 border-slate-800'
+              }`}
+            >
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-slate-800 pb-4 mb-4">
+                <div>
+                  <div className="flex items-center gap-2">
+                    <Flame size={16} className="text-rose-400" />
+                    <h2 className="text-sm font-black text-white tracking-wider uppercase">
+                      ACTIVE DELIBERATION CHAMBER
+                    </h2>
+                  </div>
+                  <p className="text-xs text-slate-400 mt-0.5 font-sans">
+                    Target Track:{' '}
+                    <span className="text-cyan-400 font-mono font-bold">
+                      {currentPlan?.targetTrackId || 'TRK-992'}
+                    </span>{' '}
+                    // Sector: <span className="text-slate-300">{currentPlan?.sector}</span>
+                  </p>
+                </div>
+
+                {/* Scenario Switchers */}
+                <div className="flex items-center gap-1.5 flex-wrap">
+                  {[
+                    { key: 'perimeter_scaling', label: 'NW FENCE CLIMB' },
+                    { key: 'thermal_night', label: 'RIVERINE FOG' },
+                    { key: 'vehicle_checkpoint', label: 'HIGH-SPEED PROBE' },
+                  ].map((sc) => (
+                    <button
+                      key={sc.key}
+                      onClick={() => handleTriggerDeliberation(sc.key)}
+                      className={`px-3 py-1.5 rounded-lg text-[10px] font-bold tracking-wider transition-all cursor-pointer ${
+                        selectedScenario === sc.key
+                          ? 'bg-cyan-500 text-black shadow-[0_0_10px_rgba(0,240,255,0.4)]'
+                          : 'bg-black/50 text-slate-400 hover:text-white border border-slate-800'
+                      }`}
+                    >
+                      {sc.label}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {/* Deliberation Messages */}
+              <div className="space-y-3.5">
+                {currentPlan?.deliberationLog.map((msg, index) => {
+                  const Icon = getAgentIcon(msg.agentId);
+                  return (
+                    <div
+                      key={msg.id || index}
+                      className="p-4 rounded-xl border bg-black/40 text-xs transition-all relative overflow-hidden"
+                      style={{ borderColor: `${msg.color}35` }}
+                    >
+                      <div className="flex items-center justify-between mb-2">
+                        <div className="flex items-center gap-2">
+                          <div
+                            className="p-1.5 rounded-lg"
+                            style={{ backgroundColor: `${msg.color}20`, color: msg.color }}
+                          >
+                            <Icon size={14} />
+                          </div>
+                          <span className="font-bold text-white font-mono">{msg.agentName}</span>
+                          <span className="text-[10px] text-slate-500 font-mono">
+                            [{msg.role}]
+                          </span>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <span className="text-[10px] text-slate-400 font-mono">
+                            {msg.timestamp}
+                          </span>
+                          <span
+                            className="text-[9px] font-bold px-1.5 py-0.2 rounded font-mono"
+                            style={{ backgroundColor: `${msg.color}20`, color: msg.color }}
+                          >
+                            {msg.confidence}%
+                          </span>
+                        </div>
+                      </div>
+
+                      <p className="text-slate-300 font-sans leading-relaxed text-xs mb-2.5">
+                        {msg.thoughtTrace}
+                      </p>
+
+                      {/* Evidence Points */}
+                      <div className="space-y-1 bg-black/60 p-2.5 rounded-lg border border-white/5 font-mono text-[10.5px]">
+                        {msg.evidencePoints.map((ev, eIdx) => (
+                          <div key={eIdx} className="flex items-center gap-1.5 text-slate-300">
+                            <CheckCircle2 size={11} className="text-cyan-400 shrink-0" />
+                            <span>{ev}</span>
+                          </div>
+                        ))}
+                      </div>
+
+                      {/* Action Recommendation */}
+                      <div className="mt-2 text-[10px] text-cyan-400 font-bold flex items-center gap-1.5">
+                        <ChevronRight size={12} />
+                        <span>RECOMMENDED: {msg.recommendedAction}</span>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          </div>
+
+          {/* Right Column: Consensus Synthesis & Autonomous Action Deck (5 cols) */}
+          <div className="lg:col-span-5 space-y-4">
+            {/* Swarm Consensus Card */}
+            <div
+              className={`p-5 rounded-2xl border backdrop-blur-md ${
+                isDaylight
+                  ? 'bg-white border-slate-200 shadow-sm'
+                  : 'bg-[#040813]/90 border-slate-800'
+              }`}
+            >
+              <div className="flex items-center justify-between border-b border-slate-800 pb-3 mb-3">
+                <span className="text-xs font-black text-white uppercase tracking-widest flex items-center gap-2">
+                  <CheckCircle2 size={15} className="text-emerald-400" />
+                  SWARM CONSENSUS SYNTHESIS
+                </span>
+                <span className="text-xs font-bold text-emerald-400 font-mono">
+                  {currentPlan?.consensusScore}% AGREEMENT
+                </span>
+              </div>
+
+              <p className="text-xs text-slate-300 font-sans leading-relaxed mb-4">
+                {currentPlan?.summary}
+              </p>
+
+              {/* Autonomous Action Execution Deck */}
+              <div className="space-y-2.5 pt-2 border-t border-slate-800/80">
+                <div className="flex items-center justify-between text-[10px] text-slate-400 font-bold uppercase tracking-wider mb-1">
+                  <span>AUTONOMOUS COUNTERMEASURES</span>
+                  <span className="text-slate-500">1-CLICK EXECUTE</span>
+                </div>
+
+                {currentPlan?.countermeasures.map((action) => {
+                  const isExecuted = action.status === 'EXECUTED';
+                  return (
+                    <div
+                      key={action.id}
+                      className="p-3 rounded-xl border border-slate-800 bg-black/50 flex items-center justify-between gap-3 text-xs"
+                    >
+                      <div>
+                        <div className="flex items-center gap-2">
+                          <span
+                            className={`text-[8px] font-bold px-1.5 py-0.2 rounded font-mono ${
+                              action.priority === 'CRITICAL'
+                                ? 'bg-rose-950 text-rose-400 border border-rose-500/40'
+                                : 'bg-cyan-950 text-cyan-400 border border-cyan-500/40'
+                            }`}
+                          >
+                            {action.priority}
+                          </span>
+                          <p className="font-bold text-white text-xs">{action.label}</p>
+                        </div>
+                        <p className="text-[10px] text-slate-400 font-mono mt-1">
+                          {action.actionPayload}
+                        </p>
+                      </div>
+
+                      <button
+                        onClick={() => handleExecuteCountermeasure(action.id)}
+                        disabled={isExecuted}
+                        className={`px-3 py-1.5 rounded-lg text-xs font-bold font-mono transition-all cursor-pointer shrink-0 active:scale-95 ${
+                          isExecuted
+                            ? 'bg-emerald-950 text-emerald-400 border border-emerald-500/40'
+                            : 'bg-cyan-500 hover:bg-cyan-400 text-black shadow-[0_0_12px_rgba(0,240,255,0.4)]'
+                        }`}
+                      >
+                        {isExecuted ? 'EXECUTED' : 'EXECUTE'}
+                      </button>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
           </div>
         </div>
-      </div>
+      )}
+
+      {/* TAB 3: SWARM COPILOT & REASONING CONSOLE */}
+      {activeMainTab === 'copilot' && (
+        <div
+          className={`p-5 rounded-2xl border backdrop-blur-md flex flex-col justify-between max-w-3xl mx-auto ${
+            isDaylight
+              ? 'bg-white border-slate-200 shadow-sm'
+              : 'bg-[#040813]/90 border-slate-800'
+          }`}
+        >
+          <div className="flex items-center justify-between border-b border-slate-800 pb-3 mb-3">
+            <div className="flex items-center gap-2">
+              <Bot size={16} className="text-cyan-400" />
+              <h3 className="text-xs font-black text-white uppercase tracking-widest">
+                SWARM COPILOT CONSOLE
+              </h3>
+            </div>
+            <span className="text-[9px] text-slate-500 font-mono">
+              NATURAL LANGUAGE MULTI-AGENT REASONING
+            </span>
+          </div>
+
+          {/* Chat message stream */}
+          <div className="space-y-3 min-h-[260px] max-h-[360px] overflow-y-auto pr-1 text-xs">
+            {chatMessages.map((m, idx) => (
+              <div
+                key={idx}
+                className={`p-3.5 rounded-xl transition-all ${
+                  m.sender === 'user'
+                    ? 'bg-cyan-950/50 border border-cyan-500/40 text-cyan-200 ml-6'
+                    : 'bg-black/60 border border-slate-800 text-slate-300 mr-2'
+                }`}
+              >
+                <div className="flex items-center justify-between text-[9px] text-slate-500 mb-1 font-mono">
+                  <span className="font-bold text-slate-400">
+                    {m.sender === 'user' ? 'OPERATOR' : 'LEAD ORCHESTRATOR // SWARM CONSENSUS'}
+                  </span>
+                  <span>{m.timestamp}</span>
+                </div>
+
+                <p className="font-sans leading-relaxed text-xs">{m.text}</p>
+
+                {/* Multi-agent deliberation cards if returned */}
+                {m.deliberations && m.deliberations.length > 0 && (
+                  <div className="mt-2.5 pt-2 border-t border-slate-800/80 grid grid-cols-1 sm:grid-cols-2 gap-1.5 font-mono text-[9.5px]">
+                    {m.deliberations.map((d, dIdx) => (
+                      <div
+                        key={dIdx}
+                        className="p-1.5 rounded bg-black/50 border border-white/5 flex flex-col justify-between"
+                      >
+                        <div className="flex items-center justify-between text-cyan-400 font-bold mb-0.5">
+                          <span>{d.agent}</span>
+                          <span className="text-slate-400">{d.confidence}%</span>
+                        </div>
+                        <span className="text-slate-400 font-sans leading-tight line-clamp-2">
+                          {d.perspective}
+                        </span>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            ))}
+
+            {isCopilotThinking && (
+              <div className="p-3 rounded-xl bg-black/60 border border-slate-800 text-cyan-400 flex items-center gap-2 text-xs animate-pulse">
+                <Activity size={13} className="animate-spin" />
+                <span>Synthesizing cross-agent reasoning &amp; consensus...</span>
+              </div>
+            )}
+            <div ref={chatEndRef} />
+          </div>
+
+          {/* Quick Prompt Pill Shortcuts */}
+          <div className="flex items-center gap-1.5 mt-3 mb-2 overflow-x-auto text-[9.5px] pb-1">
+            {[
+              { label: 'Check fence breach at NW-04', query: 'Assess breach risk at NW-04' },
+              { label: 'Riverine fog scan', query: 'Check fog penetration in Sector Delta' },
+              { label: 'Vehicle checkpoint status', query: 'Check vehicle speed status at checkpoint' },
+            ].map((pill, pIdx) => (
+              <button
+                key={pIdx}
+                type="button"
+                onClick={() => {
+                  setCopilotQuery(pill.query);
+                }}
+                className="px-2.5 py-1 rounded-lg bg-black/60 border border-slate-800 text-slate-400 hover:text-cyan-300 hover:border-cyan-500/40 whitespace-nowrap cursor-pointer transition-all"
+              >
+                {pill.label}
+              </button>
+            ))}
+          </div>
+
+          {/* Query Input Box */}
+          <form onSubmit={handleSendCopilotQuery} className="flex items-center gap-2">
+            <input
+              type="text"
+              value={copilotQuery}
+              onChange={(e) => setCopilotQuery(e.target.value)}
+              placeholder="Ask swarm: 'Assess breach at NW-04' or 'Check fog penetration'..."
+              className="flex-1 px-3.5 py-2.5 rounded-xl bg-black/80 border border-slate-800 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-cyan-500/60"
+            />
+            <button
+              type="submit"
+              disabled={isCopilotThinking || !copilotQuery.trim()}
+              className="p-2.5 rounded-xl bg-cyan-500 hover:bg-cyan-400 text-black cursor-pointer transition-all disabled:opacity-50"
+            >
+              <Send size={15} />
+            </button>
+          </form>
+        </div>
+      )}
     </div>
   );
 };

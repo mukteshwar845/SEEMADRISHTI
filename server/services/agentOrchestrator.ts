@@ -1,4 +1,10 @@
-import { TacticalAgentInfo, MultiAgentPlan, AgentDeliberationMessage } from '../../src/types';
+import {
+  TacticalAgentInfo,
+  MultiAgentPlan,
+  AgentDeliberationMessage,
+  ParallelOrchestrationJob,
+  ParallelSubTask,
+} from '../../src/types';
 
 // The 4 Autonomous Tactical Agents + Master Orchestrator
 export const TACTICAL_AGENTS: TacticalAgentInfo[] = [
@@ -374,9 +380,232 @@ export const PRESET_SCENARIOS: Record<string, MultiAgentPlan> = {
   },
 };
 
+export const PRESET_PARALLEL_JOBS: Record<string, ParallelOrchestrationJob> = {
+  perimeter_sweep_9cam: {
+    id: 'JOB-SWARM-001',
+    title: '9-Sector Tactical Perimeter Sweep & Threat Decomposition',
+    category: 'PERIMETER_SWEEP',
+    status: 'COMPLETED',
+    totalSerialEstMs: 123,
+    actualParallelMs: 44,
+    speedupFactor: 2.8,
+    throughputPerSec: 90.9,
+    timestamp: 'JUST NOW',
+    consensusOutput:
+      'Parallel Multi-Agent sweep completed in 44ms (vs 123ms serial). 9 boundary sectors inspected concurrently. All optical tripwires nominal. Zero active breaches detected.',
+    subTasks: [
+      {
+        id: 'st-01',
+        agentId: 'sentinel',
+        agentName: 'Sentinel Vision',
+        role: 'Perception & Triage',
+        color: '#00f0ff',
+        taskTitle: 'Parallel 9-Channel YOLOv8 & Thermal FLIR Multi-Stream Scan',
+        details: 'Evaluated 9 active RTSP streams simultaneously. Processed 540 frames in parallel batch.',
+        status: 'COMPLETED',
+        progressPercent: 100,
+        durationMs: 38,
+        outputSummary: '0 human breaches, 2 wildlife thermal signatures suppressed in Sector Bravo.',
+        artifactsProduced: ['9x Sensor Bounding Heatmaps', 'Dual-Spectrum Contrast Equalization Profile'],
+      },
+      {
+        id: 'st-02',
+        agentId: 'pathfinder',
+        agentName: 'Pathfinder Re-ID',
+        role: 'Spatial Trajectory & Homography',
+        color: '#ec4899',
+        taskTitle: 'Ground-Plane Homography Matrix Transformation & Blindspot Audit',
+        details: 'Computed 9 planar homography projections and mapped overlap matrices across CAM-01 to CAM-09.',
+        status: 'COMPLETED',
+        progressPercent: 100,
+        durationMs: 42,
+        outputSummary: 'Zero unmonitored blindspots. Calibration error < 0.08px across fence baseline.',
+        artifactsProduced: ['9-Sector Homography Ground Mesh', 'Overlap Coverage Matrix (98.4%)'],
+      },
+      {
+        id: 'st-03',
+        agentId: 'commander',
+        agentName: 'Tactical Commander',
+        role: 'Rules of Engagement & Dispatch',
+        color: '#10b981',
+        taskTitle: 'QRT Patrol Unit Proximity Matrix & Rapid Intercept Route Pre-computation',
+        details: 'Polled GPS heartbeats of 6 patrol units and calculated 18 shortest intercept vectors.',
+        status: 'COMPLETED',
+        progressPercent: 100,
+        durationMs: 28,
+        outputSummary: 'Average QRT response time estimated at 38 seconds across all primary sectors.',
+        artifactsProduced: ['Patrol Grid Readiness Map', 'Shortest-Path Vector Table'],
+      },
+      {
+        id: 'st-04',
+        agentId: 'forensic',
+        agentName: 'Lex Forensic',
+        role: 'Chain-of-Custody & Audit',
+        color: '#a855f7',
+        taskTitle: 'Concurrent SHA-256 Telemetry Hashing & Immutable State Ledger Packaging',
+        details: 'Stamped millisecond UTC clock, hashed 9 video keyframes, and logged to audit SQLite database.',
+        status: 'COMPLETED',
+        progressPercent: 100,
+        durationMs: 15,
+        outputSummary: 'SHA-256: 3c8e9b10...9482bf1. Ledger record validated with 0 integrity errors.',
+        artifactsProduced: ['SHA-256 Integrity Certificate', 'Audit Snapshot Block #8820'],
+      },
+    ],
+  },
+
+  suspect_reid_multicam: {
+    id: 'JOB-SWARM-002',
+    title: 'Multi-Camera Target Re-ID & Full Trajectory Reconstruction',
+    category: 'TARGET_REID',
+    status: 'COMPLETED',
+    totalSerialEstMs: 127,
+    actualParallelMs: 48,
+    speedupFactor: 2.6,
+    throughputPerSec: 83.3,
+    timestamp: '2 MINS AGO',
+    consensusOutput:
+      'Target Re-ID resolved in 48ms parallel execution. Track TRK-992 matched between CAM-02 and CAM-03 with 98.6% confidence. Intercept corridor established.',
+    subTasks: [
+      {
+        id: 'st-reid-01',
+        agentId: 'sentinel',
+        agentName: 'Sentinel Vision',
+        role: 'Perception & Triage',
+        color: '#00f0ff',
+        taskTitle: 'Appearance Feature Embedding Extraction (OSNet-ReID Deep Feature Vector)',
+        details: 'Extracted 512-dim visual embeddings from intruder bounding box crop.',
+        status: 'COMPLETED',
+        progressPercent: 100,
+        durationMs: 34,
+        outputSummary: 'Target clothing: Dark tactical jacket, boots, reflective upper trim. Quality score: 99.1%.',
+        artifactsProduced: ['512-dim OSNet Embedding', 'Cropped Feature Palette'],
+      },
+      {
+        id: 'st-reid-02',
+        agentId: 'pathfinder',
+        agentName: 'Pathfinder Re-ID',
+        role: 'Spatial Trajectory & Homography',
+        color: '#ec4899',
+        taskTitle: 'Spatio-Temporal Graph Handover Search Across CAM-01..CAM-09 Feeds',
+        details: 'Searched cross-camera time windows +/- 60s along physical transit corridors.',
+        status: 'COMPLETED',
+        progressPercent: 100,
+        durationMs: 46,
+        outputSummary: 'Found 1 positive match on CAM-03 (East Road) with spatial-temporal score 0.986.',
+        artifactsProduced: ['Target Journey Path Graph', 'Velocity Vector (4.2 m/s @ 34°)'],
+      },
+      {
+        id: 'st-reid-03',
+        agentId: 'commander',
+        agentName: 'Tactical Commander',
+        role: 'Rules of Engagement & Dispatch',
+        color: '#10b981',
+        taskTitle: 'Virtual Roadblock Buffer Optimization & QRT Intercept Vectoring',
+        details: 'Calculated perimeter choke points along East Road transit corridor.',
+        status: 'COMPLETED',
+        progressPercent: 100,
+        durationMs: 29,
+        outputSummary: 'Assigned QRT Delta-02 to Roadblock Point Alpha-4. Intercept ETA: 42s.',
+        artifactsProduced: ['Roadblock Deployment Order', 'Automated Sentry Dispatch Signal'],
+      },
+      {
+        id: 'st-reid-04',
+        agentId: 'forensic',
+        agentName: 'Lex Forensic',
+        role: 'Chain-of-Custody & Audit',
+        color: '#a855f7',
+        taskTitle: 'Forensic Journey Dossier Sealing & Cryptographic Hash Stamp',
+        details: 'Packaged 2 synchronized video clips, trajectory coordinates, and operator audit trail.',
+        status: 'COMPLETED',
+        progressPercent: 100,
+        durationMs: 18,
+        outputSummary: 'SHA-256: 7f83b165...26d9069 certified and deposited into Evidence Vault.',
+        artifactsProduced: ['Courtroom Evidence Dossier PDF', 'Cryptographic Watermark File'],
+      },
+    ],
+  },
+
+  defcon1_lockdown: {
+    id: 'JOB-SWARM-003',
+    title: 'Defcon-1 Automated Sector Lockdown & Sensor Tripwire Verification',
+    category: 'EMERGENCY_LOCKDOWN',
+    status: 'COMPLETED',
+    totalSerialEstMs: 112,
+    actualParallelMs: 41,
+    speedupFactor: 2.7,
+    throughputPerSec: 97.5,
+    timestamp: '5 MINS AGO',
+    consensusOutput:
+      'Defcon-1 Sector Lockdown executed in 41ms across 4 parallel threads. Automated barriers raised, acoustic sirens armed, and emergency alert broadcast to HQ.',
+    subTasks: [
+      {
+        id: 'st-lock-01',
+        agentId: 'sentinel',
+        agentName: 'Sentinel Vision',
+        role: 'Perception & Triage',
+        color: '#00f0ff',
+        taskTitle: 'Multi-Spectral Laser Tripwire & Radar Plane Breach Verification',
+        details: 'Simultaneously audited 7 boundary tower laser tripwires and radar Doppler returns.',
+        status: 'COMPLETED',
+        progressPercent: 100,
+        durationMs: 32,
+        outputSummary: 'Confirmed breach at Tower #04 (Sector Bravo). Physical intrusion verified.',
+        artifactsProduced: ['Tripwire Status Bitmap', 'Doppler Radar Scan File'],
+      },
+      {
+        id: 'st-lock-02',
+        agentId: 'pathfinder',
+        agentName: 'Pathfinder Re-ID',
+        role: 'Spatial Trajectory & Homography',
+        color: '#ec4899',
+        taskTitle: 'Buffer Zone Clearance Rate & Evasive Route Simulation',
+        details: 'Simulated 100 intruder escape vectors through outer brush terrain.',
+        status: 'COMPLETED',
+        progressPercent: 100,
+        durationMs: 39,
+        outputSummary: 'Buffer zone containment probability: 96.8% when Gate Alpha-2 is sealed.',
+        artifactsProduced: ['Containment Probability Iso-surface', 'Evasion Heatmap Grid'],
+      },
+      {
+        id: 'st-lock-03',
+        agentId: 'commander',
+        agentName: 'Tactical Commander',
+        role: 'Rules of Engagement & Dispatch',
+        color: '#10b981',
+        taskTitle: 'Automated Hydraulic Crash Barrier, Sound Cannons & Siren Arming',
+        details: 'Sent serial PLC bus command to physical perimeter gate actuators.',
+        status: 'COMPLETED',
+        progressPercent: 100,
+        durationMs: 25,
+        outputSummary: 'Hydraulic bollards raised. 120dB directional acoustic sirens armed on Commander confirmation.',
+        artifactsProduced: ['PLC Barrier Actuator Log', 'Siren Activation Sequence'],
+      },
+      {
+        id: 'st-lock-04',
+        agentId: 'forensic',
+        agentName: 'Lex Forensic',
+        role: 'Chain-of-Custody & Audit',
+        color: '#a855f7',
+        taskTitle: 'Emergency Incident Dossier Certification & Central HQ Broadcast',
+        details: 'Prepared encrypted JSON-LD incident package for central command broadcast.',
+        status: 'COMPLETED',
+        progressPercent: 100,
+        durationMs: 16,
+        outputSummary: 'Incident package sealed with RSA-4096 / SHA-256. Stored in tamper-proof vault.',
+        artifactsProduced: ['Central HQ Broadcast Envelope', 'Tamper-Proof Audit Manifest'],
+      },
+    ],
+  },
+};
+
 export class AgentOrchestratorService {
   private agents: TacticalAgentInfo[] = [...TACTICAL_AGENTS];
   private currentPlan: MultiAgentPlan = PRESET_SCENARIOS.perimeter_scaling;
+  private activeJobs: ParallelOrchestrationJob[] = [
+    PRESET_PARALLEL_JOBS.perimeter_sweep_9cam,
+    PRESET_PARALLEL_JOBS.suspect_reid_multicam,
+    PRESET_PARALLEL_JOBS.defcon1_lockdown,
+  ];
 
   public getAgents(): TacticalAgentInfo[] {
     return this.agents;
@@ -384,6 +613,10 @@ export class AgentOrchestratorService {
 
   public getCurrentPlan(): MultiAgentPlan {
     return this.currentPlan;
+  }
+
+  public getActiveJobs(): ParallelOrchestrationJob[] {
+    return this.activeJobs;
   }
 
   public deliberateScenario(scenarioKey: string): MultiAgentPlan {
@@ -415,6 +648,91 @@ export class AgentOrchestratorService {
       return cm;
     });
     return this.currentPlan;
+  }
+
+  public orchestrateParallelJob(jobKeyOrQuery: string): ParallelOrchestrationJob {
+    if (PRESET_PARALLEL_JOBS[jobKeyOrQuery]) {
+      const job = JSON.parse(JSON.stringify(PRESET_PARALLEL_JOBS[jobKeyOrQuery]));
+      job.timestamp = new Date().toLocaleTimeString();
+      this.activeJobs = [job, ...this.activeJobs.filter((j) => j.id !== job.id)].slice(0, 8);
+      return job;
+    }
+
+    // Dynamic decomposition for any custom operator instruction
+    const customJob: ParallelOrchestrationJob = {
+      id: `JOB-SWARM-${Math.floor(Math.random() * 8999 + 1000)}`,
+      title: jobKeyOrQuery.length > 55 ? `${jobKeyOrQuery.slice(0, 55)}...` : jobKeyOrQuery,
+      category: 'CUSTOM_PIPELINE',
+      status: 'COMPLETED',
+      totalSerialEstMs: Math.floor(Math.random() * 40 + 130),
+      actualParallelMs: Math.floor(Math.random() * 15 + 38),
+      speedupFactor: 3.4,
+      throughputPerSec: 104.2,
+      timestamp: new Date().toLocaleTimeString(),
+      consensusOutput: `Parallel Multi-Agent Work Distribution complete. Task decomposed across 4 agents and executed concurrently in 41ms with 4.1x parallel acceleration.`,
+      subTasks: [
+        {
+          id: 'dyn-st-01',
+          agentId: 'sentinel',
+          agentName: 'Sentinel Vision',
+          role: 'Perception & Triage',
+          color: '#00f0ff',
+          taskTitle: `Perception Scan: Extract Visual/Thermal Signatures for "${jobKeyOrQuery.slice(0, 28)}"`,
+          details: 'Filtered noise, equalized contrast, and identified target regions of interest.',
+          status: 'COMPLETED',
+          progressPercent: 100,
+          durationMs: Math.floor(Math.random() * 10 + 30),
+          outputSummary: 'Visual analysis verified. 0 false-alarms detected in field of view.',
+          artifactsProduced: ['Filtered Bounding Grid', 'Thermal Feature Mask'],
+        },
+        {
+          id: 'dyn-st-02',
+          agentId: 'pathfinder',
+          agentName: 'Pathfinder Re-ID',
+          role: 'Spatial Trajectory & Homography',
+          color: '#ec4899',
+          taskTitle: `Spatial Alignment: Homography Grid & Velocity Trajectory Mapping`,
+          details: 'Aligned ground plane coordinates and calculated prospective motion corridor.',
+          status: 'COMPLETED',
+          progressPercent: 100,
+          durationMs: Math.floor(Math.random() * 10 + 35),
+          outputSummary: 'Homography transformed to UTM coordinate matrix. Route mapped.',
+          artifactsProduced: ['UTM Ground Projection', 'Handover Graph Node'],
+        },
+        {
+          id: 'dyn-st-03',
+          agentId: 'commander',
+          agentName: 'Tactical Commander',
+          role: 'Rules of Engagement & Dispatch',
+          color: '#10b981',
+          taskTitle: `Tactical Arbitration: Evaluate ROE & Optimize Response Unit Assets`,
+          details: 'Evaluated active Defcon rules and calculated optimal asset allocation.',
+          status: 'COMPLETED',
+          progressPercent: 100,
+          durationMs: Math.floor(Math.random() * 8 + 22),
+          outputSummary: 'Response plan validated under Border Force Standard Operating Procedures.',
+          artifactsProduced: ['Tactical Action Matrix', 'QRT Allocation Profile'],
+        },
+        {
+          id: 'dyn-st-04',
+          agentId: 'forensic',
+          agentName: 'Lex Forensic',
+          role: 'Chain-of-Custody & Audit',
+          color: '#a855f7',
+          taskTitle: `Cryptographic Certification: SHA-256 Ledger Signing & Vault Package`,
+          details: 'Generated millisecond UTC audit trail and signed cryptographic proof block.',
+          status: 'COMPLETED',
+          progressPercent: 100,
+          durationMs: Math.floor(Math.random() * 6 + 12),
+          outputSummary: 'SHA-256 hash verified. Signed by system hardware key.',
+          artifactsProduced: ['Cryptographic Audit Stamp', 'Evidence Ledger Block'],
+        },
+      ],
+    };
+
+    customJob.speedupFactor = Math.round((customJob.totalSerialEstMs / customJob.actualParallelMs) * 10) / 10;
+    this.activeJobs = [customJob, ...this.activeJobs].slice(0, 8);
+    return customJob;
   }
 
   public async processCopilotQuery(query: string): Promise<{
@@ -481,3 +799,4 @@ export class AgentOrchestratorService {
 }
 
 export const agentOrchestrator = new AgentOrchestratorService();
+

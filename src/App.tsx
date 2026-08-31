@@ -33,6 +33,7 @@ import { CameraHealthDiagnosticsView } from './components/CameraHealthDiagnostic
 import { MissionControlView } from './components/MissionControlView';
 import { CameraFleetView } from './components/CameraFleetView';
 import { MultiAgentOrchestratorView } from './components/agents/MultiAgentOrchestratorView';
+import { SwarmHelpModal } from './components/agents/SwarmHelpModal';
 import { EvidenceQueueView } from './components/EvidenceQueueView';
 import { SystemTimelineView } from './components/SystemTimelineView';
 import { CameraCalibrationView } from './components/CameraCalibrationView';
@@ -61,6 +62,7 @@ function SeemadrishtiMainApp() {
   const [audioVolume, setAudioVolume] = useState(85);
   const [isDemoGuideOpen, setIsDemoGuideOpen] = useState(false);
   const [isReportsModalOpen, setIsReportsModalOpen] = useState(false);
+  const [isSwarmHelpOpen, setIsSwarmHelpOpen] = useState(false);
 
   // App Data States
   const [cameras, setCameras] = useState<CameraFeed[]>(() => {
@@ -496,6 +498,7 @@ function SeemadrishtiMainApp() {
           onOpenDemoMode={() => setIsDemoGuideOpen(true)}
           onOpenSettings={() => setCurrentView('settings')}
           onOpenAlerts={() => setCurrentView('alerts')}
+          onOpenSwarmHelp={() => setIsSwarmHelpOpen(true)}
         />
 
         {/* Dynamic Main Body by Current View */}
@@ -767,6 +770,13 @@ function SeemadrishtiMainApp() {
         isOpen={isDemoGuideOpen}
         onClose={() => setIsDemoGuideOpen(false)}
         onNavigateToView={(v) => setCurrentView(v)}
+      />
+
+      {/* Multi-Agent Swarm Orchestration & Fast Work Distribution Help Modal */}
+      <SwarmHelpModal
+        isOpen={isSwarmHelpOpen}
+        onClose={() => setIsSwarmHelpOpen(false)}
+        onNavigateView={(v) => setCurrentView(v)}
       />
 
       {/* Global Device Protection & Operator Profile Modals */}

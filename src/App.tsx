@@ -436,8 +436,16 @@ function SeemadrishtiMainApp() {
 
       {/* Main Content Area */}
       <div
-        className={`flex-1 flex flex-col min-w-0 relative ${
-          isDaylight ? 'bg-[#f8fafc]' : 'bg-[#02040a]'
+        className={`flex-1 flex flex-col min-w-0 relative transition-colors duration-300 ${
+          isDaylight
+            ? 'bg-[#f8fafc]'
+            : theme === 'midnight-cyber'
+            ? 'bg-[#030712]'
+            : theme === 'obsidian-stealth'
+            ? 'bg-[#000000]'
+            : theme === 'emerald-ops'
+            ? 'bg-[#021009]'
+            : 'bg-[#02040a]'
         }`}
       >
         {/* Tactical Defense Telemetry Ribbon */}
@@ -454,7 +462,6 @@ function SeemadrishtiMainApp() {
                 isDaylight ? 'text-emerald-700' : 'text-emerald-400'
               }`}
             >
-              <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-ping"></span>
               [SEC_NET: MIL-SPEC ENCRYPTED 256-BIT]
             </span>
             <span className="text-slate-400">|</span>

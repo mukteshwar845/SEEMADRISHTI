@@ -2,30 +2,15 @@ import React, { useState, useEffect } from 'react';
 import {
   Menu,
   RefreshCw,
-  Radio,
-  Shield,
-  Zap,
-  Bell,
-  Activity,
   Lock,
   Sun,
   Moon,
-  Terminal,
-  Compass,
-  Mic,
-  MicOff,
-  Volume2,
-  Sliders,
-  CheckCircle,
-  LogOut,
-  User,
 } from 'lucide-react';
 import { useTheme } from '../context/ThemeContext';
 import { useAuth } from '../context/AuthContext';
 import { useSecurity } from '../context/SecurityContext';
 import { OperatorProfileDropdown } from './profile/OperatorProfileDropdown';
 import { webSocketService, WebSocketServiceState } from '../services/websocketService';
-import { voiceCommandService, VoiceServiceState } from '../services/voiceCommandService';
 
 interface HeaderProps {
   onToggleSidebarMobile: () => void;
@@ -52,20 +37,14 @@ export const Header: React.FC<HeaderProps> = ({
   const [dateString, setDateString] = useState('MON, SEP 16, 2026');
   const [timeString, setTimeString] = useState('10:45:22 AM');
   const [utcString, setUtcString] = useState('17:45:22 UTC');
-  const [wsState, setWsState] = useState<WebSocketServiceState>(() =>
+  const [wsState, setWsState] = useState<WebSocketServiceState>(
     webSocketService.getState()
   );
-  const [voiceState, setVoiceState] = useState<VoiceServiceState>(() =>
-    voiceCommandService.getState()
-  );
-  const [showVoiceHelp, setShowVoiceHelp] = useState(false);
 
   useEffect(() => {
     const unsubWs = webSocketService.onStateChange((st) => setWsState(st));
-    const unsubVoice = voiceCommandService.onStateChange((st) => setVoiceState(st));
     return () => {
       unsubWs();
-      unsubVoice();
     };
   }, []);
 
@@ -102,16 +81,20 @@ export const Header: React.FC<HeaderProps> = ({
     return () => clearInterval(timer);
   }, []);
 
-  const handleToggleVoice = () => {
-    voiceCommandService.toggle();
-  };
+
 
   return (
     <header
       id="executive-header"
-      className={`h-16 border-b flex items-center justify-between px-3 sm:px-5 sticky top-0 z-30 transition-colors backdrop-blur-md ${
+      className={`h-16 border-b flex items-center justify-between px-3 sm:px-5 sticky top-0 z-30 transition-all duration-300 backdrop-blur-md ${
         isDaylight
           ? 'bg-white/95 border-slate-300 shadow-sm text-slate-900'
+          : theme === 'midnight-cyber'
+          ? 'bg-[#030712]/95 border-indigo-500/30 text-indigo-100'
+          : theme === 'obsidian-stealth'
+          ? 'bg-[#000000]/95 border-slate-800 text-slate-100'
+          : theme === 'emerald-ops'
+          ? 'bg-[#021009]/95 border-emerald-500/30 text-emerald-100'
           : 'bg-[#020409]/95 border-cyan-500/20 shadow-[0_4px_30px_rgba(0,0,0,0.95)] text-slate-200'
       }`}
     >
@@ -131,10 +114,6 @@ export const Header: React.FC<HeaderProps> = ({
         </button>
 
         <div className="flex items-center gap-3">
-          <div className="relative flex items-center justify-center">
-            <span className="w-2.5 h-2.5 rounded-full bg-emerald-400 animate-ping absolute"></span>
-            <span className="w-2 h-2 rounded-full bg-emerald-400 relative shadow-[0_0_8px_#00ff66]"></span>
-          </div>
           <div>
             <div className="flex items-center gap-2">
               <h2
@@ -147,95 +126,22 @@ export const Header: React.FC<HeaderProps> = ({
               >
                 SEEMADRISHTI AI DASHBOARD
               </h2>
-              <span
-                className={`hidden md:inline-flex px-1.5 py-0.5 rounded text-[8px] font-bold font-mono tracking-widest ${
-                  isDaylight
-                    ? 'bg-cyan-100 text-cyan-800 border border-cyan-300'
-                    : 'bg-cyan-950 text-cyan-400 border border-cyan-500/40 shadow-[0_0_8px_rgba(0,240,255,0.2)]'
-                }`}
-              >
-                [SIH26187 - MHA]
-              </span>
             </div>
             <p
               className={`text-[9px] font-mono hidden sm:block tracking-wider uppercase ${
                 isDaylight ? 'text-slate-500' : 'text-slate-400'
               }`}
             >
-              9-Camera Border Surveillance Matrix
+              Camera Border Surveillance Matrix
             </p>
           </div>
         </div>
       </div>
 
-      {/* Center Feedback HUD (When Voice Command is actively heard or executed) */}
-      {voiceState.feedbackText && (
-        <div
-          id="voice-feedback-banner"
-          className="hidden lg:flex items-center gap-2 px-3 py-1 bg-cyan-950/90 border border-cyan-400 text-cyan-300 rounded-full font-mono text-xs font-bold shadow-[0_0_15px_rgba(0,240,255,0.4)] animate-pulse"
-        >
-          <Mic size={12} className="text-cyan-400 animate-bounce" />
-          <span className="truncate max-w-[280px]">{voiceState.feedbackText}</span>
-        </div>
-      )}
+
 
       {/* Right: Telemetry & Actions */}
       <div className="flex items-center gap-2 sm:gap-3">
-        {/* Voice-to-Text Command Listener Toggle Button */}
-        <div className="relative">
-          <button
-            id="btn-toggle-voice-commands"
-            onClick={handleToggleVoice}
-            onMouseEnter={() => setShowVoiceHelp(true)}
-            onMouseLeave={() => setShowVoiceHelp(false)}
-            title="Voice Commands: Speak 'Switch to quad view', 'Show alerts', 'Simulate intrusion'..."
-            className={`p-2 sm:px-2.5 sm:py-1.5 rounded-lg border font-mono text-xs font-bold flex items-center gap-1.5 transition-all cursor-pointer ${
-              voiceState.isListening
-                ? 'bg-rose-600 hover:bg-rose-500 text-white border-rose-400 shadow-[0_0_18px_rgba(244,63,94,0.6)] animate-pulse'
-                : isDaylight
-                ? 'bg-slate-100 hover:bg-slate-200 text-slate-800 border-slate-300'
-                : 'bg-[#050b14] hover:bg-cyan-950/60 border-cyan-500/30 hover:border-cyan-400 text-cyan-400'
-            }`}
-          >
-            {voiceState.isListening ? (
-              <>
-                <Mic size={14} className="animate-bounce" />
-                <span className="hidden sm:inline text-[10px] uppercase tracking-wider font-mono font-black">
-                  LISTENING...
-                </span>
-              </>
-            ) : (
-              <>
-                <MicOff size={14} className="opacity-70" />
-                <span className="hidden sm:inline text-[10px] uppercase tracking-wider font-mono">
-                  VOICE CMD
-                </span>
-              </>
-            )}
-          </button>
-
-          {/* Voice Command Tooltip on Hover */}
-          {showVoiceHelp && !voiceState.isListening && (
-            <div className="absolute right-0 top-11 w-64 p-2.5 bg-slate-950/95 border border-cyan-500/40 rounded-xl shadow-2xl z-50 text-[10px] font-mono pointer-events-none space-y-1.5 backdrop-blur-md">
-              <div className="flex items-center gap-1.5 text-cyan-300 font-bold border-b border-white/10 pb-1">
-                <Mic size={11} />
-                <span>Web Speech API Voice Commands</span>
-              </div>
-              <p className="text-slate-400 text-[9px]">
-                Click mic to speak surveillance controls:
-              </p>
-              <ul className="text-slate-300 space-y-0.5 list-disc list-inside text-[9.5px]">
-                <li><span className="text-cyan-400">&ldquo;Switch to quad view&rdquo;</span></li>
-                <li><span className="text-cyan-400">&ldquo;Switch to 3x3 matrix&rdquo;</span></li>
-                <li><span className="text-cyan-400">&ldquo;Show alerts&rdquo;</span></li>
-                <li><span className="text-cyan-400">&ldquo;Show dashboard&rdquo;</span></li>
-                <li><span className="text-cyan-400">&ldquo;Simulate intrusion&rdquo;</span></li>
-                <li><span className="text-cyan-400">&ldquo;Mute audio&rdquo;</span> / <span className="text-cyan-400">&ldquo;Unmute&rdquo;</span></li>
-                <li><span className="text-cyan-400">&ldquo;Calibrate feeds&rdquo;</span></li>
-              </ul>
-            </div>
-          )}
-        </div>
 
         {/* System Online Pill */}
         <div
@@ -283,19 +189,6 @@ export const Header: React.FC<HeaderProps> = ({
             </>
           )}
         </button>
-
-        {/* SIH 21-Point Judge Demo Flow Guide */}
-        {onOpenDemoMode && (
-          <button
-            id="btn-sih-demo-flow"
-            onClick={onOpenDemoMode}
-            title="Open SIH Judge 21-Point Live Demo Sequence"
-            className="p-1.5 px-2.5 rounded-lg border border-purple-500/40 bg-purple-950/60 hover:bg-purple-900/80 text-purple-300 font-mono text-[11px] font-bold flex items-center gap-1.5 shadow-[0_0_12px_rgba(168,85,247,0.3)] transition-all cursor-pointer active:scale-95"
-          >
-            <Compass size={13} className="text-purple-400 animate-spin-slow" />
-            <span className="hidden sm:inline">SIH DEMO FLOW</span>
-          </button>
-        )}
 
         {/* Real-time Clock HUD */}
         <div

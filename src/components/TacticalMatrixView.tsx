@@ -190,7 +190,7 @@ export const TacticalMatrixView: React.FC<TacticalMatrixViewProps> = ({
               <Grid size={15} />
             </div>
             <h2 className="text-sm sm:text-base font-black text-slate-100 uppercase tracking-widest font-mono">
-              9-CAMERA LIVE CCTV & RECORDED TRACKING MATRIX
+              CAMERA LIVE CCTV & RECORDED TRACKING MATRIX
             </h2>
             <span className="px-2 py-0.5 rounded bg-emerald-950 text-emerald-400 border border-emerald-500/40 text-[9px] font-bold font-mono animate-pulse">
               9/9 LIVE FEEDS

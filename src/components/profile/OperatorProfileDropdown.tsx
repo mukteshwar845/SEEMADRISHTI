@@ -6,8 +6,6 @@ import {
   Settings,
   Lock,
   LogOut,
-  Bell,
-  MessageSquare,
   MapPin,
   Clock,
   Check,
@@ -64,37 +62,7 @@ export const OperatorProfileDropdown: React.FC<OperatorProfileDropdownProps> = (
 
   return (
     <div className="relative font-mono" ref={dropdownRef}>
-      {/* Top Header Trigger Button matching reference (Bell, Chat/Feedback, Avatar with green status ring) */}
-      <div className="flex items-center gap-2 sm:gap-3">
-        {/* Alerts Notification Bell */}
-        <button
-          type="button"
-          onClick={onOpenAlerts}
-          title="Tactical Threat Notifications"
-          className={`p-2 rounded-full border transition-all cursor-pointer relative ${
-            isDaylight
-              ? 'bg-slate-100 hover:bg-slate-200 text-slate-700 border-slate-300'
-              : 'bg-black/50 hover:bg-cyan-950/40 text-slate-300 hover:text-cyan-300 border-slate-800'
-          }`}
-        >
-          <Bell size={16} />
-          <span className="absolute top-1 right-1 w-2 h-2 rounded-full bg-rose-500 animate-ping" />
-          <span className="absolute top-1 right-1 w-2 h-2 rounded-full bg-rose-500" />
-        </button>
-
-        {/* Quick Intel Comms / Feedback */}
-        <button
-          type="button"
-          onClick={onOpenSettings}
-          title="Tactical Comms & Intelligence Feed"
-          className={`p-2 rounded-full border transition-all cursor-pointer ${
-            isDaylight
-              ? 'bg-slate-100 hover:bg-slate-200 text-slate-700 border-slate-300'
-              : 'bg-black/50 hover:bg-cyan-950/40 text-slate-300 hover:text-cyan-300 border-slate-800'
-          }`}
-        >
-          <MessageSquare size={16} />
-        </button>
+      <div className="flex items-center">
 
         {/* Profile Avatar Pill with Glowing Status Ring */}
         <button

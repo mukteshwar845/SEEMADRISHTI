@@ -45,7 +45,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
   isOpenMobile = false,
   onCloseMobile,
 }) => {
-  const { isDaylight } = useTheme();
+  const { theme, isDaylight } = useTheme();
   const { user, logout, setIsProfileModalOpen } = useAuth();
   const { lockNow } = useSecurity();
   const [activeRecCount, setActiveRecCount] = useState(0);
@@ -94,9 +94,15 @@ export const Sidebar: React.FC<SidebarProps> = ({
 
       <aside
         id="seemadrishti-sidebar"
-        className={`fixed top-0 bottom-0 left-0 z-50 w-64 flex flex-col justify-between transition-transform duration-300 ease-in-out lg:static lg:translate-x-0 ${
+        className={`fixed top-0 bottom-0 left-0 z-50 w-64 flex flex-col justify-between transition-all duration-300 ease-in-out lg:static lg:translate-x-0 ${
           isDaylight
             ? 'bg-[#f8fafc] border-r border-slate-300 shadow-md text-slate-900'
+            : theme === 'midnight-cyber'
+            ? 'bg-[#030712] border-r border-indigo-500/30 text-indigo-100'
+            : theme === 'obsidian-stealth'
+            ? 'bg-[#000000] border-r border-slate-800 text-slate-100'
+            : theme === 'emerald-ops'
+            ? 'bg-[#021009] border-r border-emerald-500/30 text-emerald-100'
             : 'bg-[#010307] border-r border-cyan-500/20 shadow-[10px_0_40px_rgba(0,0,0,0.95)] text-slate-200'
         } ${isOpenMobile ? 'translate-x-0' : '-translate-x-full'}`}
       >
@@ -127,23 +133,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
                 >
                   SEEMADRISHTI
                 </h1>
-                <span
-                  className={`px-1.5 py-0.2 rounded text-[8px] font-bold font-mono ${
-                    isDaylight
-                      ? 'bg-cyan-100 text-cyan-800 border border-cyan-300'
-                      : 'bg-cyan-950 text-cyan-300 border border-cyan-500/40'
-                  }`}
-                >
-                  MIL-SPEC v2.8
-                </span>
               </div>
-              <p
-                className={`text-[8px] uppercase tracking-widest font-mono font-bold ${
-                  isDaylight ? 'text-emerald-700' : 'text-emerald-400'
-                }`}
-              >
-                [TACTICAL DEFENSE AI]
-              </p>
             </div>
           </div>
 

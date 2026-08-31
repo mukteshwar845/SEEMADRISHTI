@@ -42,6 +42,69 @@
     --glow-red: none;
   }
 
+  /* Midnight Cyber Theme (Deep Indigo) */
+  [data-theme="midnight-cyber"],
+  html.theme-cyber {
+    --bg-app: #030712;
+    --bg-panel: rgba(15, 23, 42, 0.94);
+    --bg-panel-solid: #0f172a;
+    --bg-subtle: #1e1b4b;
+    --text-main: #f8fafc;
+    --text-muted: #94a3b8;
+    --text-faint: #64748b;
+    --border-main: rgba(99, 102, 241, 0.35);
+    --border-subtle: rgba(99, 102, 241, 0.15);
+    --accent-cyan: #6366f1;
+    --accent-green: #10b981;
+    --accent-red: #f43f5e;
+    --accent-amber: #f59e0b;
+    --glow-cyan: 0 0 15px rgba(99, 102, 241, 0.4);
+    --glow-green: 0 0 15px rgba(16, 185, 129, 0.35);
+    --glow-red: 0 0 15px rgba(244, 63, 94, 0.35);
+  }
+
+  /* Obsidian Stealth Theme (Pure OLED Black) */
+  [data-theme="obsidian-stealth"],
+  html.theme-obsidian {
+    --bg-app: #000000;
+    --bg-panel: #000000;
+    --bg-panel-solid: #050505;
+    --bg-subtle: #0a0a0a;
+    --text-main: #f8fafc;
+    --text-muted: #a1a1aa;
+    --text-faint: #71717a;
+    --border-main: rgba(255, 255, 255, 0.2);
+    --border-subtle: rgba(255, 255, 255, 0.1);
+    --accent-cyan: #ffffff;
+    --accent-green: #22c55e;
+    --accent-red: #ef4444;
+    --accent-amber: #eab308;
+    --glow-cyan: 0 0 15px rgba(255, 255, 255, 0.3);
+    --glow-green: 0 0 15px rgba(34, 197, 94, 0.3);
+    --glow-red: 0 0 15px rgba(239, 68, 68, 0.3);
+  }
+
+  /* Emerald Ops Theme (Military Night-Vision HUD) */
+  [data-theme="emerald-ops"],
+  html.theme-emerald {
+    --bg-app: #021009;
+    --bg-panel: rgba(4, 30, 18, 0.94);
+    --bg-panel-solid: #042013;
+    --bg-subtle: #062c1b;
+    --text-main: #ecfdf5;
+    --text-muted: #6ee7b7;
+    --text-faint: #34d399;
+    --border-main: rgba(16, 185, 129, 0.4);
+    --border-subtle: rgba(16, 185, 129, 0.18);
+    --accent-cyan: #10b981;
+    --accent-green: #00ff66;
+    --accent-red: #f87171;
+    --accent-amber: #fbbf24;
+    --glow-cyan: 0 0 15px rgba(16, 185, 129, 0.45);
+    --glow-green: 0 0 15px rgba(0, 255, 102, 0.45);
+    --glow-red: 0 0 15px rgba(248, 113, 113, 0.4);
+  }
+
   body {
     background-color: #000000;
     color: #e2e8f0;
@@ -68,6 +131,40 @@
       linear-gradient(to right, rgba(203, 213, 225, 0.4) 1px, transparent 1px),
       linear-gradient(to bottom, rgba(203, 213, 225, 0.4) 1px, transparent 1px);
     background-size: 100% 100%, 32px 32px, 32px 32px;
+  }
+
+  /* Midnight Cyber Theme Body */
+  [data-theme="midnight-cyber"] body,
+  html.theme-cyber body {
+    background-color: #030712;
+    color: #f8fafc;
+    background-image: 
+      radial-gradient(circle at 50% 0%, rgba(99, 102, 241, 0.12) 0%, transparent 60%),
+      radial-gradient(circle at 100% 100%, rgba(168, 85, 247, 0.08) 0%, transparent 50%),
+      linear-gradient(to right, rgba(99, 102, 241, 0.04) 1px, transparent 1px),
+      linear-gradient(to bottom, rgba(99, 102, 241, 0.04) 1px, transparent 1px);
+    background-size: 100% 100%, 100% 100%, 28px 28px, 28px 28px;
+  }
+
+  /* Obsidian Stealth Theme Body */
+  [data-theme="obsidian-stealth"] body,
+  html.theme-obsidian body {
+    background-color: #000000;
+    color: #f8fafc;
+    background-image: none;
+  }
+
+  /* Emerald Ops Theme Body */
+  [data-theme="emerald-ops"] body,
+  html.theme-emerald body {
+    background-color: #021009;
+    color: #ecfdf5;
+    background-image: 
+      radial-gradient(circle at 50% 0%, rgba(16, 185, 129, 0.14) 0%, transparent 60%),
+      radial-gradient(circle at 100% 100%, rgba(0, 255, 102, 0.08) 0%, transparent 50%),
+      linear-gradient(to right, rgba(16, 185, 129, 0.04) 1px, transparent 1px),
+      linear-gradient(to bottom, rgba(16, 185, 129, 0.04) 1px, transparent 1px);
+    background-size: 100% 100%, 100% 100%, 24px 24px, 24px 24px;
   }
 
   /* Stealth Pitch-Black Custom Scrollbars */
@@ -619,6 +716,81 @@
   #tactical-matrix-view-root [id^="matrix-camera-card-"] > div:first-child {
     background-color: #f8fafc !important;
     border-bottom-color: #e2e8f0 !important;
+  }
+}
+
+/* =========================================================================
+   MIDNIGHT CYBER THEME (INDIGO / SCI-FI)
+   ========================================================================= */
+[data-theme="midnight-cyber"],
+.theme-cyber {
+  .bg-slate-900,
+  .bg-slate-950,
+  .bg-\[\#040812\],
+  .bg-\[\#020409\],
+  .bg-\[\#02040a\],
+  .bg-\[\#0a0f1d\],
+  .bg-\[\#050b14\] {
+    background-color: #0b1120 !important;
+    border-color: rgba(99, 102, 241, 0.25) !important;
+  }
+  .border-slate-800,
+  .border-slate-700 {
+    border-color: rgba(99, 102, 241, 0.2) !important;
+  }
+  .text-cyan-400,
+  .text-cyan-300 {
+    color: #818cf8 !important;
+  }
+}
+
+/* =========================================================================
+   OBSIDIAN STEALTH THEME (PURE OLED BLACK & SILVER)
+   ========================================================================= */
+[data-theme="obsidian-stealth"],
+.theme-obsidian {
+  .bg-slate-900,
+  .bg-slate-950,
+  .bg-\[\#040812\],
+  .bg-\[\#020409\],
+  .bg-\[\#02040a\],
+  .bg-\[\#0a0f1d\],
+  .bg-\[\#050b14\] {
+    background-color: #080808 !important;
+    border-color: rgba(255, 255, 255, 0.15) !important;
+  }
+  .border-slate-800,
+  .border-slate-700 {
+    border-color: #262626 !important;
+  }
+  .text-cyan-400,
+  .text-cyan-300 {
+    color: #e4e4e7 !important;
+  }
+}
+
+/* =========================================================================
+   EMERALD OPS THEME (NIGHT-VISION TACTICAL GREEN)
+   ========================================================================= */
+[data-theme="emerald-ops"],
+.theme-emerald {
+  .bg-slate-900,
+  .bg-slate-950,
+  .bg-\[\#040812\],
+  .bg-\[\#020409\],
+  .bg-\[\#02040a\],
+  .bg-\[\#0a0f1d\],
+  .bg-\[\#050b14\] {
+    background-color: #031c0e !important;
+    border-color: rgba(16, 185, 129, 0.3) !important;
+  }
+  .border-slate-800,
+  .border-slate-700 {
+    border-color: rgba(16, 185, 129, 0.25) !important;
+  }
+  .text-cyan-400,
+  .text-cyan-300 {
+    color: #34d399 !important;
   }
 }
 

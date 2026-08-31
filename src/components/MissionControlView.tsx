@@ -131,7 +131,7 @@ export const MissionControlView: React.FC<MissionControlViewProps> = ({
                   {getStatusBadge(overallStatus)}
                 </h1>
                 <p className="text-xs text-slate-400 font-mono mt-0.5">
-                  AI-Based Border Surveillance Platform — SIH26187 // Deployment Telemetry & Readiness Matrix
+                  AI-Based Border Surveillance Platform // Deployment Telemetry & Readiness Matrix
                 </p>
               </div>
             </div>

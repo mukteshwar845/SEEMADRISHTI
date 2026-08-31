@@ -104,9 +104,9 @@ export const QuadLiveStreamView: React.FC<QuadLiveStreamViewProps> = ({
         visible += counts.total;
       } else {
         const isRoad = c.id.includes('8') || (c.code || '').includes('8');
-        const p = isRoad ? 2 : 3;
-        const v = isRoad ? 5 : 1;
-        const a = 1;
+        const p = isRoad ? 2 : 15;
+        const v = isRoad ? 8 : 0;
+        const a = 0; // No animals present in default footage
         persons += p;
         vehicles += v;
         animals += a;
@@ -116,7 +116,7 @@ export const QuadLiveStreamView: React.FC<QuadLiveStreamViewProps> = ({
 
     const personTotal = Math.max(persons, fleetCounts.personTotal);
     const vehicleTotal = Math.max(vehicles, fleetCounts.vehicleTotal);
-    const animalTotal = Math.max(animals, 3);
+    const animalTotal = animals; // Accurate reflection without artificial minimum
     const visibleTotal = Math.max(visible, fleetCounts.visibleTotal, personTotal + vehicleTotal + animalTotal);
     const uniqueSessionTotal = Math.max(fleetCounts.uniqueSessionTotal, visibleTotal * 3 + 14);
 
@@ -588,11 +588,11 @@ export const QuadLiveStreamView: React.FC<QuadLiveStreamViewProps> = ({
                   <div className="flex items-center gap-2">
                     {/* Live Object Counts Pill */}
                     <div className="hidden lg:flex items-center gap-1.5 px-2 py-0.5 rounded bg-black/60 border border-white/10 text-[9px] font-mono text-slate-300">
-                      <span className="text-emerald-400 font-bold" title="Active Persons">👥 {camCountsMap[cam.id]?.persons ?? (cam.id.includes('1') || cam.id.includes('7') ? 15 : (cam.id.includes('8') ? 2 : 3))}</span>
+                      <span className="text-emerald-400 font-bold" title="Active Persons">👥 {camCountsMap[cam.id]?.persons ?? (cam.id.includes('8') ? 2 : 15)}</span>
                       <span className="text-slate-600">•</span>
-                      <span className="text-cyan-400 font-bold" title="Active Vehicles">🚗 {camCountsMap[cam.id]?.vehicles ?? (cam.id.includes('1') || cam.id.includes('7') ? 0 : (cam.id.includes('8') ? 5 : 1))}</span>
+                      <span className="text-cyan-400 font-bold" title="Active Vehicles">🚗 {camCountsMap[cam.id]?.vehicles ?? (cam.id.includes('8') ? 8 : 0)}</span>
                       <span className="text-slate-600">•</span>
-                      <span className="text-purple-400 font-bold" title="Active Animals">🐕 {camCountsMap[cam.id]?.animals ?? (cam.id.includes('1') || cam.id.includes('7') ? 0 : 1)}</span>
+                      <span className="text-purple-400 font-bold" title="Active Animals">🐕 {camCountsMap[cam.id]?.animals ?? 0}</span>
                     </div>
 
                     {/* Resolution & Bitrate */}

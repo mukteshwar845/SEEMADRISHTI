@@ -1106,59 +1106,49 @@ class WebSocketService {
             { class_id: 0, class_name: 'person', minCount: 15, maxCount: 19, sizeRange: { wMin: 22, wMax: 48, hMin: 55, hMax: 150 }, yRange: { min: 150, max: 520 }, xRange: { min: 50, max: 950 }, confRange: { min: 0.65, max: 0.98 } },
           ],
         };
-      case 2: // East Perimeter
+      case 2: // East Perimeter (Real VisDrone Pedestrian / Patrol Corridor: Humans Only)
         return {
           sceneType: 'PERIMETER_FENCE',
           templates: [
-            { class_id: 0, class_name: 'person', minCount: 2, maxCount: 4, sizeRange: { wMin: 30, wMax: 55, hMin: 80, hMax: 150 }, yRange: { min: 180, max: 480 }, xRange: { min: 100, max: 880 }, confRange: { min: 0.80, max: 0.96 } },
-            { class_id: 2, class_name: 'car', minCount: 0, maxCount: 2, sizeRange: { wMin: 70, wMax: 120, hMin: 55, hMax: 90 }, yRange: { min: 350, max: 520 }, xRange: { min: 50, max: 800 }, confRange: { min: 0.83, max: 0.95 } },
-            { class_id: 21, class_name: 'cow', minCount: 0, maxCount: 2, sizeRange: { wMin: 45, wMax: 65, hMin: 35, hMax: 55 }, yRange: { min: 280, max: 450 }, xRange: { min: 300, max: 750 }, confRange: { min: 0.68, max: 0.86 } },
+            { class_id: 0, class_name: 'person', minCount: 3, maxCount: 6, sizeRange: { wMin: 30, wMax: 55, hMin: 80, hMax: 150 }, yRange: { min: 180, max: 480 }, xRange: { min: 100, max: 880 }, confRange: { min: 0.80, max: 0.96 } },
           ],
         };
-      case 3: // Access Road
+      case 3: // Access Road (Foot Patrol / Pedestrian Corridor: Humans Only)
         return {
           sceneType: 'ACCESS_ROAD',
           templates: [
-            { class_id: 7, class_name: 'truck', minCount: 1, maxCount: 3, sizeRange: { wMin: 90, wMax: 150, hMin: 70, hMax: 120 }, yRange: { min: 250, max: 480 }, xRange: { min: 100, max: 850 }, confRange: { min: 0.88, max: 0.97 } },
-            { class_id: 2, class_name: 'car', minCount: 1, maxCount: 3, sizeRange: { wMin: 70, wMax: 110, hMin: 50, hMax: 85 }, yRange: { min: 280, max: 500 }, xRange: { min: 50, max: 900 }, confRange: { min: 0.85, max: 0.96 } },
-            { class_id: 0, class_name: 'person', minCount: 1, maxCount: 2, sizeRange: { wMin: 30, wMax: 50, hMin: 80, hMax: 140 }, yRange: { min: 300, max: 500 }, xRange: { min: 500, max: 800 }, confRange: { min: 0.78, max: 0.94 } },
+            { class_id: 0, class_name: 'person', minCount: 3, maxCount: 6, sizeRange: { wMin: 30, wMax: 50, hMin: 80, hMax: 140 }, yRange: { min: 250, max: 500 }, xRange: { min: 100, max: 850 }, confRange: { min: 0.78, max: 0.95 } },
           ],
         };
-      case 4: // Outer Fence
+      case 4: // Outer Fence (Perimeter Sector: Humans Only)
         return {
           sceneType: 'OUTER_FENCE',
           templates: [
-            { class_id: 0, class_name: 'person', minCount: 1, maxCount: 3, sizeRange: { wMin: 35, wMax: 58, hMin: 90, hMax: 155 }, yRange: { min: 200, max: 460 }, xRange: { min: 150, max: 850 }, confRange: { min: 0.79, max: 0.95 } },
-            { class_id: 21, class_name: 'cow', minCount: 1, maxCount: 3, sizeRange: { wMin: 50, wMax: 70, hMin: 35, hMax: 55 }, yRange: { min: 280, max: 450 }, xRange: { min: 100, max: 800 }, confRange: { min: 0.70, max: 0.88 } },
-            { class_id: 2, class_name: 'car', minCount: 0, maxCount: 1, sizeRange: { wMin: 80, wMax: 120, hMin: 55, hMax: 90 }, yRange: { min: 380, max: 520 }, xRange: { min: 600, max: 900 }, confRange: { min: 0.84, max: 0.94 } },
+            { class_id: 0, class_name: 'person', minCount: 2, maxCount: 5, sizeRange: { wMin: 35, wMax: 58, hMin: 90, hMax: 155 }, yRange: { min: 200, max: 460 }, xRange: { min: 150, max: 850 }, confRange: { min: 0.79, max: 0.95 } },
           ],
         };
-      case 5: // Forest Trail
+      case 5: // Forest Trail (Patrol Sector: Humans Only)
         return {
           sceneType: 'FOREST_TRAIL',
           templates: [
-            { class_id: 0, class_name: 'person', minCount: 1, maxCount: 3, sizeRange: { wMin: 25, wMax: 45, hMin: 70, hMax: 130 }, yRange: { min: 200, max: 500 }, xRange: { min: 200, max: 800 }, confRange: { min: 0.72, max: 0.91 } },
-            { class_id: 16, class_name: 'dog', minCount: 0, maxCount: 2, sizeRange: { wMin: 25, wMax: 40, hMin: 20, hMax: 35 }, yRange: { min: 350, max: 500 }, xRange: { min: 150, max: 750 }, confRange: { min: 0.65, max: 0.84 } },
-            { class_id: 21, class_name: 'cow', minCount: 0, maxCount: 1, sizeRange: { wMin: 40, wMax: 60, hMin: 30, hMax: 50 }, yRange: { min: 300, max: 460 }, xRange: { min: 100, max: 600 }, confRange: { min: 0.62, max: 0.82 } },
+            { class_id: 0, class_name: 'person', minCount: 2, maxCount: 4, sizeRange: { wMin: 25, wMax: 45, hMin: 70, hMax: 130 }, yRange: { min: 200, max: 500 }, xRange: { min: 200, max: 800 }, confRange: { min: 0.72, max: 0.91 } },
           ],
         };
-      case 6: // Mountain Pass
+      case 6: // Mountain Pass (Foot Patrol Sector: Humans Only)
         return {
           sceneType: 'MOUNTAIN_PASS',
           templates: [
-            { class_id: 0, class_name: 'person', minCount: 1, maxCount: 4, sizeRange: { wMin: 28, wMax: 48, hMin: 75, hMax: 135 }, yRange: { min: 220, max: 500 }, xRange: { min: 100, max: 900 }, confRange: { min: 0.74, max: 0.93 } },
-            { class_id: 7, class_name: 'truck', minCount: 0, maxCount: 2, sizeRange: { wMin: 85, wMax: 140, hMin: 65, hMax: 110 }, yRange: { min: 320, max: 500 }, xRange: { min: 200, max: 800 }, confRange: { min: 0.82, max: 0.95 } },
-            { class_id: 3, class_name: 'motorcycle', minCount: 0, maxCount: 2, sizeRange: { wMin: 30, wMax: 50, hMin: 30, hMax: 55 }, yRange: { min: 300, max: 480 }, xRange: { min: 150, max: 850 }, confRange: { min: 0.76, max: 0.90 } },
+            { class_id: 0, class_name: 'person', minCount: 2, maxCount: 4, sizeRange: { wMin: 28, wMax: 48, hMin: 75, hMax: 135 }, yRange: { min: 220, max: 500 }, xRange: { min: 100, max: 900 }, confRange: { min: 0.74, max: 0.93 } },
           ],
         };
-      case 7: // Basketball court — many people
+      case 7: // Basketball court — many people (Humans Only)
         return {
           sceneType: 'SPORTS_COURT',
           templates: [
-            { class_id: 0, class_name: 'person', minCount: 10, maxCount: 18, sizeRange: { wMin: 22, wMax: 42, hMin: 55, hMax: 120 }, yRange: { min: 150, max: 520 }, xRange: { min: 50, max: 950 }, confRange: { min: 0.75, max: 0.98 } },
+            { class_id: 0, class_name: 'person', minCount: 15, maxCount: 19, sizeRange: { wMin: 22, wMax: 42, hMin: 55, hMax: 120 }, yRange: { min: 150, max: 520 }, xRange: { min: 50, max: 950 }, confRange: { min: 0.75, max: 0.98 } },
           ],
         };
-      case 8: // Aerial road intersection — many vehicles
+      case 8: // Aerial road intersection — real vehicles footage
         return {
           sceneType: 'ROAD_INTERSECTION',
           templates: [
@@ -1169,14 +1159,12 @@ class WebSocketService {
             { class_id: 0, class_name: 'person', minCount: 1, maxCount: 4, sizeRange: { wMin: 15, wMax: 28, hMin: 30, hMax: 55 }, yRange: { min: 250, max: 520 }, xRange: { min: 200, max: 800 }, confRange: { min: 0.68, max: 0.90 } },
           ],
         };
-      case 9: // Coastal line
+      case 9: // Dispersed patrol tracking corridor (Humans Only)
       default:
         return {
           sceneType: 'COASTAL_GUARD',
           templates: [
-            { class_id: 0, class_name: 'person', minCount: 2, maxCount: 4, sizeRange: { wMin: 30, wMax: 52, hMin: 80, hMax: 140 }, yRange: { min: 220, max: 480 }, xRange: { min: 100, max: 900 }, confRange: { min: 0.78, max: 0.95 } },
-            { class_id: 8, class_name: 'boat', minCount: 0, maxCount: 2, sizeRange: { wMin: 60, wMax: 120, hMin: 30, hMax: 55 }, yRange: { min: 100, max: 300 }, xRange: { min: 200, max: 800 }, confRange: { min: 0.74, max: 0.92 } },
-            { class_id: 2, class_name: 'car', minCount: 0, maxCount: 1, sizeRange: { wMin: 70, wMax: 110, hMin: 50, hMax: 80 }, yRange: { min: 400, max: 520 }, xRange: { min: 50, max: 400 }, confRange: { min: 0.82, max: 0.94 } },
+            { class_id: 0, class_name: 'person', minCount: 3, maxCount: 6, sizeRange: { wMin: 30, wMax: 52, hMin: 80, hMax: 140 }, yRange: { min: 220, max: 480 }, xRange: { min: 100, max: 900 }, confRange: { min: 0.78, max: 0.95 } },
           ],
         };
     }

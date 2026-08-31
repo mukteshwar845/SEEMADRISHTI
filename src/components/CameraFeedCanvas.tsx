@@ -345,40 +345,40 @@ export const getCameraTracks = (camId: string, camCode: string): SyntheticTrackD
     ];
   }
 
-  // CAM-02: Sector Alpha East Perimeter
+  // CAM-02: Sector Alpha East Perimeter (Real VisDrone Pedestrian / Patrol Corridor: Humans Only)
   if (norm.includes('2') || norm.includes('cam-02') || norm.includes('east')) {
     return [
       { id: 1, label: 'PATROL OFFICER', rawClass: 'patrol', baseNormX: 0.30, baseNormY: 0.50, ampX: 0.05, ampY: 0.04, speedFactor: 0.22, phase: 0.8, w: 0.055, h: 0.150, isThreat: false, trail: [], state: 'NORMAL', lastStateChange: 0 },
-      { id: 2, label: 'PERSON', rawClass: 'person', baseNormX: 0.65, baseNormY: 0.42, ampX: 0.04, ampY: 0.08, speedFactor: 0.30, phase: 2.1, w: 0.052, h: 0.145, isThreat: false, trail: [], state: 'NORMAL', lastStateChange: 0 },
-      { id: 3, label: 'ANIMAL (WILDLIFE)', rawClass: 'animal', baseNormX: 0.75, baseNormY: 0.44, ampX: 0.05, ampY: 0.07, speedFactor: 0.28, phase: 1.4, w: 0.040, h: 0.052, isThreat: false, trail: [], state: 'NORMAL', lastStateChange: 0 },
-      { id: 4, label: 'SECURITY VEHICLE', rawClass: 'vehicle', baseNormX: 0.20, baseNormY: 0.64, ampX: 0.03, ampY: 0.02, speedFactor: 0.12, phase: 0.2, w: 0.090, h: 0.120, isThreat: false, trail: [], state: 'NORMAL', lastStateChange: 0 },
+      { id: 2, label: 'SECURITY OFFICER', rawClass: 'patrol', baseNormX: 0.65, baseNormY: 0.42, ampX: 0.04, ampY: 0.08, speedFactor: 0.30, phase: 2.1, w: 0.052, h: 0.145, isThreat: false, trail: [], state: 'NORMAL', lastStateChange: 0 },
+      { id: 3, label: 'GUARD #1', rawClass: 'person', baseNormX: 0.75, baseNormY: 0.44, ampX: 0.05, ampY: 0.07, speedFactor: 0.28, phase: 1.4, w: 0.040, h: 0.130, isThreat: false, trail: [], state: 'NORMAL', lastStateChange: 0 },
+      { id: 4, label: 'PATROL SENTRY', rawClass: 'person', baseNormX: 0.20, baseNormY: 0.64, ampX: 0.03, ampY: 0.02, speedFactor: 0.20, phase: 0.2, w: 0.048, h: 0.138, isThreat: false, trail: [], state: 'NORMAL', lastStateChange: 0 },
     ];
   }
 
-  // CAM-03: Sector Bravo Access Road
+  // CAM-03: Sector Bravo Access Road (Real VisDrone Foot Patrol Corridor: Humans Only)
   if (norm.includes('3') || norm.includes('cam-03') || norm.includes('access road')) {
     return [
-      { id: 1, label: 'SUPPLY TRUCK', rawClass: 'truck', baseNormX: 0.48, baseNormY: 0.50, ampX: 0.03, ampY: 0.15, speedFactor: 0.32, phase: 0.4, w: 0.092, h: 0.145, isThreat: false, trail: [], state: 'NORMAL', lastStateChange: 0 },
-      { id: 2, label: 'PATROL 4X4', rawClass: 'vehicle', baseNormX: 0.28, baseNormY: 0.42, ampX: 0.02, ampY: 0.10, speedFactor: 0.38, phase: 2.4, w: 0.075, h: 0.110, isThreat: false, trail: [], state: 'NORMAL', lastStateChange: 0 },
+      { id: 1, label: 'GUARD #1', rawClass: 'person', baseNormX: 0.48, baseNormY: 0.50, ampX: 0.03, ampY: 0.06, speedFactor: 0.32, phase: 0.4, w: 0.045, h: 0.140, isThreat: false, trail: [], state: 'NORMAL', lastStateChange: 0 },
+      { id: 2, label: 'PATROL OFFICER', rawClass: 'patrol', baseNormX: 0.28, baseNormY: 0.42, ampX: 0.04, ampY: 0.05, speedFactor: 0.28, phase: 2.4, w: 0.048, h: 0.138, isThreat: false, trail: [], state: 'NORMAL', lastStateChange: 0 },
       { id: 3, label: 'GATE GUARD', rawClass: 'person', baseNormX: 0.68, baseNormY: 0.52, ampX: 0.03, ampY: 0.03, speedFactor: 0.18, phase: 1.1, w: 0.048, h: 0.135, isThreat: false, trail: [], state: 'NORMAL', lastStateChange: 0 },
-      { id: 4, label: 'ANIMAL (K9)', rawClass: 'animal', baseNormX: 0.72, baseNormY: 0.56, ampX: 0.03, ampY: 0.03, speedFactor: 0.20, phase: 1.3, w: 0.035, h: 0.048, isThreat: false, trail: [], state: 'NORMAL', lastStateChange: 0 },
+      { id: 4, label: 'FIELD OPERATOR', rawClass: 'person', baseNormX: 0.72, baseNormY: 0.56, ampX: 0.03, ampY: 0.03, speedFactor: 0.20, phase: 1.3, w: 0.042, h: 0.132, isThreat: false, trail: [], state: 'NORMAL', lastStateChange: 0 },
     ];
   }
 
-  // CAM-04: Sector Bravo Outer Fence
+  // CAM-04: Sector Bravo Outer Fence (Perimeter Sector: Humans Only)
   if (norm.includes('4') || norm.includes('cam-04') || norm.includes('outer fence')) {
     return [
       { id: 1, label: 'INTRUDER', rawClass: 'intruder', baseNormX: 0.42, baseNormY: 0.38, ampX: 0.04, ampY: 0.09, speedFactor: 0.34, phase: 0.7, w: 0.055, h: 0.155, isThreat: true, trail: [], state: 'NORMAL', lastStateChange: 0 },
-      { id: 2, label: 'ANIMAL (CATTLE)', rawClass: 'animal', baseNormX: 0.68, baseNormY: 0.42, ampX: 0.04, ampY: 0.06, speedFactor: 0.22, phase: 2.8, w: 0.055, h: 0.070, isThreat: false, trail: [], state: 'NORMAL', lastStateChange: 0 },
+      { id: 2, label: 'PERIMETER SCOUT', rawClass: 'person', baseNormX: 0.68, baseNormY: 0.42, ampX: 0.04, ampY: 0.06, speedFactor: 0.22, phase: 2.8, w: 0.046, h: 0.136, isThreat: false, trail: [], state: 'NORMAL', lastStateChange: 0 },
       { id: 3, label: 'PATROL OFFICER', rawClass: 'patrol', baseNormX: 0.25, baseNormY: 0.55, ampX: 0.04, ampY: 0.03, speedFactor: 0.19, phase: 1.5, w: 0.050, h: 0.140, isThreat: false, trail: [], state: 'NORMAL', lastStateChange: 0 },
     ];
   }
 
-  // Default / Other CCTVs (CAM-05 through CAM-07, CAM-09)
+  // Default / Other CCTVs (CAM-05 through CAM-07, CAM-09: Humans Only)
   return [
     { id: 1, label: 'PERSON', rawClass: 'person', baseNormX: 0.45, baseNormY: 0.42, ampX: 0.04, ampY: 0.08, speedFactor: 0.28, phase: 0.3, w: 0.050, h: 0.145, isThreat: false, trail: [], state: 'NORMAL', lastStateChange: 0 },
-    { id: 2, label: 'VEHICLE', rawClass: 'vehicle', baseNormX: 0.70, baseNormY: 0.50, ampX: 0.03, ampY: 0.12, speedFactor: 0.35, phase: 2.2, w: 0.080, h: 0.115, isThreat: false, trail: [], state: 'NORMAL', lastStateChange: 0 },
-    { id: 3, label: 'ANIMAL', rawClass: 'animal', baseNormX: 0.30, baseNormY: 0.46, ampX: 0.04, ampY: 0.05, speedFactor: 0.25, phase: 1.7, w: 0.038, h: 0.050, isThreat: false, trail: [], state: 'NORMAL', lastStateChange: 0 },
+    { id: 2, label: 'PATROL OFFICER', rawClass: 'patrol', baseNormX: 0.70, baseNormY: 0.50, ampX: 0.03, ampY: 0.05, speedFactor: 0.25, phase: 2.2, w: 0.048, h: 0.140, isThreat: false, trail: [], state: 'NORMAL', lastStateChange: 0 },
+    { id: 3, label: 'SENTRY', rawClass: 'person', baseNormX: 0.30, baseNormY: 0.46, ampX: 0.04, ampY: 0.05, speedFactor: 0.25, phase: 1.7, w: 0.044, h: 0.134, isThreat: false, trail: [], state: 'NORMAL', lastStateChange: 0 },
   ];
 };
 

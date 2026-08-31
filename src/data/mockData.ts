@@ -445,8 +445,19 @@ export const initialCameras: CameraFeed[] = [
     fps: 25,
     bitrate: '8.2 Mbps',
     aiModels: ['YOLOv8-Border', 'ByteTrack-MOT', 'Heavy-Transport'],
-    activeDetections: 4,
-    dangerZones: [],
+    activeDetections: 8,
+    dangerZones: [
+      {
+        name: 'ROADWAY CROSSWALK / ZEBRA CROSSING',
+        type: 'warning',
+        points: [
+          { x: 50, y: 440 },
+          { x: 950, y: 440 },
+          { x: 950, y: 540 },
+          { x: 50, y: 540 },
+        ],
+      },
+    ],
   },
   {
     id: 'cam-9',

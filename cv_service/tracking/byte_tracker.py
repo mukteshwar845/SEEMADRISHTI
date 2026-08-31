@@ -51,6 +51,7 @@ class ByteTrackEngine:
         self.config = config or CVConfig()
         self.detector = detector
         self.active_tracks: Dict[int, TrackLifecycleRecord] = {}
+        self.observed_session_track_ids: Set[int] = set()
         self._total_tracking_time_ms = 0.0
         self._total_track_calls = 0
         self._is_initialized = False
@@ -114,7 +115,9 @@ class ByteTrackEngine:
             persist=True,
             tracker="bytetrack.yaml",
             conf=self.config.confidence_threshold,
-            classes=list(self.config.target_classes.keys()),
+            iou=getattr(self.config, "iou_threshold", 0.45),
+            imgsz=self.config.input_size,
+            classes=list(self.config.target_classes.keys()) if self.config.target_classes else None,
             verbose=False,
         )
         inference_time_ms = round((time.perf_counter() - t_det_start) * 1000, 2)
@@ -139,17 +142,18 @@ class ByteTrackEngine:
                     conf_val = round(float(confs[i]), 4)
                     box = xyxy[i]
 
-                    # Clamp coordinates to frame boundaries
-                    x1 = max(0, int(box[0]))
-                    y1 = max(0, int(box[1]))
-                    x2 = min(w, int(box[2]))
-                    y2 = min(h, int(box[3]))
+                    # Clamp coordinates to actual frame boundaries
+                    x1 = max(0, min(w, int(box[0])))
+                    y1 = max(0, min(h, int(box[1])))
+                    x2 = max(0, min(w, int(box[2])))
+                    y2 = max(0, min(h, int(box[3])))
 
                     bbox_dict = {"x1": x1, "y1": y1, "x2": x2, "y2": y2}
                     class_name = self.config.target_classes.get(
                         cls_id,
                         self.detector.model.names.get(cls_id, f"class_{cls_id}")
                     )
+                    category = YoloDetector.get_category_for_class(class_name)
 
                     # Class-Aware Consistency check
                     if track_id in self.active_tracks:
@@ -157,6 +161,7 @@ class ByteTrackEngine:
                         if record.class_id != cls_id:
                             class_name = record.class_name
                             cls_id = record.class_id
+                            category = YoloDetector.get_category_for_class(class_name)
                         record.mark_detected(bbox_dict)
                     else:
                         # New Track
@@ -166,13 +171,18 @@ class ByteTrackEngine:
 
                     observed_track_ids.add(track_id)
 
+                    cx = (x1 + x2) / 2.0
+                    cy = (y1 + y2) / 2.0
+
                     tracks.append({
                         "track_id": track_id,
                         "class_name": class_name,
                         "class_id": cls_id,
+                        "category": category,
                         "confidence": conf_val,
                         "state": record.state,
                         "bbox": bbox_dict,
+                        "centroid": (cx, cy),
                         "frame_id": frame_id,
                         "trajectory": [{"x": p["cx"], "y": p["cy"]} for p in record.history],
                     })
@@ -184,6 +194,9 @@ class ByteTrackEngine:
                 self.active_tracks[tid].mark_missed(self.config.track_buffer)
                 if self.active_tracks[tid].state == "REMOVED":
                     del self.active_tracks[tid]
+
+        for tid in observed_track_ids:
+            self.observed_session_track_ids.add(tid)
 
         tracking_time_ms = round((time.perf_counter() - t_track_start) * 1000, 2)
         self._total_tracking_time_ms += tracking_time_ms
@@ -201,7 +214,9 @@ class ByteTrackEngine:
             "inference_ms": inference_time_ms,
             "tracking_ms": tracking_time_ms,
             "total_ms": total_latency_ms,
+            "active_count": len(tracks),
             "track_count": len(tracks),
+            "unique_session_count": len(self.observed_session_track_ids),
             "tracks": tracks,
         }
 

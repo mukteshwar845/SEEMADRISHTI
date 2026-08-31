@@ -1,6 +1,7 @@
 import React, { useRef, useEffect, useState, useCallback } from 'react';
 import { CameraFeed } from '../types';
 import { webSocketService, RealYoloDetection, TrackItem } from '../services/websocketService';
+import { tacticalAlertDispatcher } from '../utils/tacticalAlertDispatcher';
 
 interface CameraFeedCanvasProps {
   camera: CameraFeed;
@@ -10,9 +11,9 @@ interface CameraFeedCanvasProps {
   isNightVision?: boolean;
   onSimulateThreat?: () => void;
   className?: string;
+  onCountsUpdate?: (counts: { persons: number; vehicles: number; animals: number; total: number }) => void;
 }
 
-// Helper to obtain dynamic bounding box styling based on class and threat/authorization status
 export interface DetectionStyleConfig {
   strokeColor: string;
   fillColor: string;
@@ -20,6 +21,7 @@ export interface DetectionStyleConfig {
   badgeTextColor: string;
   categoryLabel: string;
   isHighPriority: boolean;
+  entityType: 'human' | 'vehicle' | 'animal' | 'object' | 'other';
 }
 
 export const getDetectionClassStyle = (
@@ -29,134 +31,357 @@ export const getDetectionClassStyle = (
     isUnauthorized?: boolean;
     confidence?: number;
     riskScore?: number;
+    isSuspiciousArea?: boolean;
+    isCrossingLine?: boolean;
   }
 ): DetectionStyleConfig => {
-  const norm = (rawClass || 'person').toLowerCase().trim();
+  const norm = (rawClass || 'object').toLowerCase().trim();
   const isThreat = options?.isThreat ?? false;
   const isUnauthorized = options?.isUnauthorized ?? false;
-  const riskScore = options?.riskScore ?? 0;
+  const isSuspiciousArea = options?.isSuspiciousArea ?? false;
+  const isCrossingLine = options?.isCrossingLine ?? false;
 
-  // 1. Unauthorized / Intrusion / Weapon / Threat Cases -> Tactical Red / Crimson Alert
-  if (
-    isThreat ||
-    isUnauthorized ||
-    norm.includes('unauthorized') ||
-    norm.includes('intruder') ||
-    norm.includes('intrusion') ||
-    norm.includes('weapon') ||
-    norm.includes('breach') ||
-    riskScore >= 75
-  ) {
-    return {
-      strokeColor: '#ef4444', // Red-500
-      fillColor: 'rgba(239, 68, 68, 0.12)',
-      badgeBg: 'rgba(239, 68, 68, 0.90)',
-      badgeTextColor: '#ffffff',
-      categoryLabel: norm.includes('vehicle') ? 'UNAUTHORIZED VEHICLE' : norm.includes('intruder') ? 'INTRUDER' : 'UNAUTHORIZED',
-      isHighPriority: true,
-    };
-  }
-
-  // 2. Vehicles: Authorized / Civilian Vehicle -> Emerald Green (#10b981 / #22c55e)
-  // Non-authorized / suspicious transport is handled in rule 1 or 3
-  if (
-    norm.includes('civilian') ||
-    norm === 'vehicle' ||
+  const isVehicle =
+    norm.includes('vehicle') ||
     norm === 'car' ||
     norm === 'truck' ||
     norm === 'bus' ||
     norm === 'van' ||
-    norm === 'authorized_vehicle'
-  ) {
-    return {
-      strokeColor: '#10b981', // Emerald Green-500 (Civilian / Authorized Vehicle)
-      fillColor: 'rgba(16, 185, 129, 0.12)',
-      badgeBg: 'rgba(16, 185, 129, 0.90)',
-      badgeTextColor: '#ffffff',
-      categoryLabel: norm.includes('civilian') ? 'CIVILIAN VEHICLE' : 'VEHICLE',
-      isHighPriority: false,
-    };
-  }
+    norm === 'motorcycle' ||
+    norm === 'bicycle' ||
+    norm === 'suv' ||
+    norm.includes('transport') ||
+    norm.includes('jeep');
 
-  // 3. Loitering / Suspicious / High Dwell Time / Warning -> Warning Amber (#f59e0b)
-  if (
-    norm.includes('loiter') ||
-    norm.includes('suspicious') ||
-    norm.includes('warning') ||
-    (riskScore >= 45 && riskScore < 75)
-  ) {
+  const isAnimal =
+    norm.includes('animal') ||
+    norm.includes('dog') ||
+    norm.includes('canine') ||
+    norm.includes('wildlife') ||
+    norm.includes('cattle') ||
+    norm.includes('horse') ||
+    norm.includes('bird') ||
+    norm.includes('cow') ||
+    norm.includes('sheep') ||
+    norm.includes('k9');
+
+  const isHuman =
+    norm === 'person' ||
+    norm.includes('pedestrian') ||
+    norm.includes('human') ||
+    norm.includes('guard') ||
+    norm.includes('patrol') ||
+    norm.includes('officer') ||
+    norm.includes('intruder');
+
+  // 1. Line Crossing Breach -> Crimson Flashing Alert
+  if (isCrossingLine) {
+    const label = isVehicle
+      ? 'VEHICLE CROSSING LINE'
+      : isAnimal
+      ? 'ANIMAL CROSSING LINE'
+      : 'HUMAN CROSSING LINE';
     return {
-      strokeColor: '#f59e0b', // Amber-500
-      fillColor: 'rgba(245, 158, 11, 0.12)',
-      badgeBg: 'rgba(245, 158, 11, 0.90)',
+      strokeColor: '#dc2626',
+      fillColor: 'rgba(220, 38, 38, 0.22)',
+      badgeBg: 'rgba(220, 38, 38, 0.95)',
       badgeTextColor: '#ffffff',
-      categoryLabel: 'SUSPICIOUS / LOITERING',
+      categoryLabel: label,
       isHighPriority: true,
+      entityType: isVehicle ? 'vehicle' : isAnimal ? 'animal' : 'human',
     };
   }
 
-  // 4. Security Patrol / Friendly Forces -> Sky Blue / Cyan (#38bdf8 / #0284c7)
+  // 2. Near Line / Suspicious Area -> Warning Amber / Orange
+  if (isSuspiciousArea) {
+    const label = isVehicle
+      ? 'VEHICLE IN SUSPICIOUS AREA'
+      : isAnimal
+      ? 'ANIMAL IN SUSPICIOUS AREA'
+      : 'HUMAN IN SUSPICIOUS AREA';
+    return {
+      strokeColor: '#f97316',
+      fillColor: 'rgba(249, 115, 22, 0.18)',
+      badgeBg: 'rgba(249, 115, 22, 0.95)',
+      badgeTextColor: '#ffffff',
+      categoryLabel: label,
+      isHighPriority: true,
+      entityType: isVehicle ? 'vehicle' : isAnimal ? 'animal' : 'human',
+    };
+  }
+
+  // 3. Intrusion / Weapon / Threat Cases -> Tactical Red
+  if (
+    isThreat ||
+    isUnauthorized ||
+    norm.includes('intruder') ||
+    norm.includes('intrusion') ||
+    norm.includes('breach') ||
+    norm.includes('weapon')
+  ) {
+    return {
+      strokeColor: '#ef4444',
+      fillColor: 'rgba(239, 68, 68, 0.14)',
+      badgeBg: 'rgba(239, 68, 68, 0.92)',
+      badgeTextColor: '#ffffff',
+      categoryLabel: isVehicle ? 'UNAUTHORIZED VEHICLE' : 'INTRUDER',
+      isHighPriority: true,
+      entityType: isVehicle ? 'vehicle' : 'human',
+    };
+  }
+
+  // 4. Animals / Canine / Wildlife -> Tactical Purple / Violet
+  if (isAnimal) {
+    const label = norm.includes('k9') || norm.includes('canine') ? 'K9 CANINE UNIT' : 'ANIMAL / WILDLIFE';
+    return {
+      strokeColor: '#a855f7',
+      fillColor: 'rgba(168, 85, 247, 0.14)',
+      badgeBg: 'rgba(168, 85, 247, 0.90)',
+      badgeTextColor: '#ffffff',
+      categoryLabel: label,
+      isHighPriority: false,
+      entityType: 'animal',
+    };
+  }
+
+  // 5. Vehicles: Cars, Trucks, Vans, Buses, Motorcycles, Bicycles -> Electric Cyan
+  if (isVehicle) {
+    const label = norm === 'car'
+      ? 'CAR'
+      : norm === 'truck'
+      ? 'TRUCK'
+      : norm === 'bus'
+      ? 'BUS'
+      : norm === 'motorcycle'
+      ? 'MOTORCYCLE'
+      : norm === 'bicycle'
+      ? 'BICYCLE'
+      : norm.includes('van')
+      ? 'DELIVERY VAN'
+      : norm.includes('truck')
+      ? 'SUPPLY TRUCK'
+      : norm.includes('jeep')
+      ? 'PATROL 4X4'
+      : 'VEHICLE';
+    return {
+      strokeColor: '#06b6d4',
+      fillColor: 'rgba(6, 182, 212, 0.12)',
+      badgeBg: 'rgba(6, 182, 212, 0.90)',
+      badgeTextColor: '#ffffff',
+      categoryLabel: label,
+      isHighPriority: false,
+      entityType: 'vehicle',
+    };
+  }
+
+  // 6. Security Patrol / Friendly Forces -> Sky Blue
   if (
     norm.includes('patrol') ||
     norm.includes('officer') ||
     norm.includes('guard') ||
-    norm.includes('friendly') ||
-    norm.includes('convoy')
+    norm.includes('friendly')
   ) {
     return {
-      strokeColor: '#38bdf8', // Sky Blue-400
+      strokeColor: '#38bdf8',
       fillColor: 'rgba(56, 189, 248, 0.12)',
       badgeBg: 'rgba(2, 132, 199, 0.90)',
       badgeTextColor: '#ffffff',
       categoryLabel: 'SECURITY PATROL',
       isHighPriority: false,
+      entityType: 'human',
     };
   }
 
-  // 5. Normal Person / Civilian Pedestrian -> Emerald Green (#10b981 / #22c55e)
+  // 7. Normal Person / Civilian Pedestrian -> Emerald Green
+  if (isHuman) {
+    return {
+      strokeColor: '#10b981',
+      fillColor: 'rgba(16, 185, 129, 0.10)',
+      badgeBg: 'rgba(16, 185, 129, 0.90)',
+      badgeTextColor: '#ffffff',
+      categoryLabel: norm.includes('pedestrian') ? 'PEDESTRIAN' : 'PERSON',
+      isHighPriority: false,
+      entityType: 'human',
+    };
+  }
+
+  // 8. Default Object / Unclassified Equipment -> Slate/Silver Neutral
   return {
-    strokeColor: '#10b981', // Emerald-500 (Normal Civilian / Pedestrian)
-    fillColor: 'rgba(16, 185, 129, 0.10)',
-    badgeBg: 'rgba(16, 185, 129, 0.90)',
+    strokeColor: '#94a3b8',
+    fillColor: 'rgba(148, 163, 184, 0.10)',
+    badgeBg: 'rgba(100, 116, 139, 0.90)',
     badgeTextColor: '#ffffff',
-    categoryLabel: 'PERSON',
+    categoryLabel: norm.toUpperCase(),
     isHighPriority: false,
+    entityType: 'object',
   };
 };
 
-// Fallback synthetic animation tracks tailored accurately to camera sector (Persons / Patrols / Intruders, NO vehicles on sports court)
-const getCameraTracks = (camId: string, camCode: string) => {
+export interface TacticalLine {
+  id: string;
+  name: string;
+  p1: { x: number; y: number };
+  p2: { x: number; y: number };
+  isZebraCrossing?: boolean;
+  bufferThreshold: number;
+}
+
+export const getCameraTacticalLine = (camId: string, camCode: string): TacticalLine => {
   const norm = `${camId} ${camCode}`.toLowerCase();
+  // CAM-08: Aerial intersection with road and zebra crossing
+  if (norm.includes('8') || norm.includes('cam-08') || norm.includes('observation') || norm.includes('delta')) {
+    return {
+      id: 'line-cam-08-zebra',
+      name: 'ZEBRA CROSSING & ROADWAY TRIPWIRE',
+      p1: { x: 0.05, y: 0.49 },
+      p2: { x: 0.95, y: 0.49 },
+      isZebraCrossing: true,
+      bufferThreshold: 0.075,
+    };
+  }
   if (norm.includes('1') || norm.includes('cam-01') || norm.includes('main gate')) {
-    return [
-      { id: 1, label: 'INTRUDER', rawClass: 'intruder', baseNormX: 0.54, baseNormY: 0.38, speedX: 0.0003, speedY: 0.0001, w: 0.06, h: 0.16, isThreat: true, trail: [] as { x: number; y: number }[] },
-      { id: 2, label: 'PERSON', rawClass: 'person', baseNormX: 0.32, baseNormY: 0.46, speedX: 0.0002, speedY: -0.0001, w: 0.05, h: 0.14, isThreat: false, trail: [] as { x: number; y: number }[] },
-      { id: 3, label: 'PERSON', rawClass: 'person', baseNormX: 0.44, baseNormY: 0.58, speedX: -0.0002, speedY: 0.0001, w: 0.055, h: 0.15, isThreat: false, trail: [] as { x: number; y: number }[] },
-    ];
+    return {
+      id: 'line-cam-01-border',
+      name: 'SECTOR ALPHA BORDER FENCE LINE',
+      p1: { x: 0.12, y: 0.42 },
+      p2: { x: 0.88, y: 0.42 },
+      isZebraCrossing: false,
+      bufferThreshold: 0.065,
+    };
   }
   if (norm.includes('2') || norm.includes('cam-02') || norm.includes('east')) {
+    return {
+      id: 'line-cam-02-perimeter',
+      name: 'EAST PERIMETER VIRTUAL WIRE',
+      p1: { x: 0.15, y: 0.46 },
+      p2: { x: 0.85, y: 0.46 },
+      isZebraCrossing: false,
+      bufferThreshold: 0.06,
+    };
+  }
+  if (norm.includes('3') || norm.includes('cam-03') || norm.includes('access road')) {
+    return {
+      id: 'line-cam-03-road',
+      name: 'ACCESS ROAD VEHICLE TRIPWIRE',
+      p1: { x: 0.08, y: 0.50 },
+      p2: { x: 0.92, y: 0.50 },
+      isZebraCrossing: false,
+      bufferThreshold: 0.07,
+    };
+  }
+  if (norm.includes('4') || norm.includes('cam-04') || norm.includes('outer fence')) {
+    return {
+      id: 'line-cam-04-fence',
+      name: 'OUTER FENCE SECURITY LINE',
+      p1: { x: 0.20, y: 0.40 },
+      p2: { x: 0.80, y: 0.40 },
+      isZebraCrossing: false,
+      bufferThreshold: 0.06,
+    };
+  }
+  return {
+    id: `line-${camId}-tripwire`,
+    name: 'SECTOR PERIMETER BORDER LINE',
+    p1: { x: 0.15, y: 0.45 },
+    p2: { x: 0.85, y: 0.45 },
+    isZebraCrossing: false,
+    bufferThreshold: 0.06,
+  };
+};
+
+export interface SyntheticTrackDef {
+  id: number;
+  label: string;
+  rawClass: string;
+  baseNormX: number;
+  baseNormY: number;
+  ampX: number;
+  ampY: number;
+  speedFactor: number;
+  phase: number;
+  w: number;
+  h: number;
+  isThreat: boolean;
+  trail: { x: number; y: number }[];
+  state: 'NORMAL' | 'SUSPICIOUS_AREA' | 'LINE_CROSSING';
+  lastStateChange: number;
+}
+
+export const getCameraTracks = (camId: string, camCode: string): SyntheticTrackDef[] => {
+  const norm = `${camId} ${camCode}`.toLowerCase();
+
+  // CAM-08: Aerial intersection with road and zebra crossing
+  if (norm.includes('8') || norm.includes('cam-08') || norm.includes('delta') || norm.includes('observation')) {
     return [
-      { id: 1, label: 'PERSON', rawClass: 'person', baseNormX: 0.68, baseNormY: 0.40, speedX: -0.0003, speedY: 0.0001, w: 0.052, h: 0.15, isThreat: false, trail: [] as { x: number; y: number }[] },
-      { id: 2, label: 'PATROL', rawClass: 'patrol', baseNormX: 0.28, baseNormY: 0.48, speedX: 0.0002, speedY: 0.0002, w: 0.058, h: 0.16, isThreat: false, trail: [] as { x: number; y: number }[] },
+      { id: 101, label: 'CAR (WHITE SEDAN)', rawClass: 'car', baseNormX: 0.52, baseNormY: 0.52, ampX: 0.02, ampY: 0.18, speedFactor: 0.35, phase: 0.2, w: 0.048, h: 0.088, isThreat: false, trail: [], state: 'NORMAL', lastStateChange: 0 },
+      { id: 102, label: 'CAR (BLACK SUV)', rawClass: 'car', baseNormX: 0.45, baseNormY: 0.30, ampX: 0.01, ampY: 0.15, speedFactor: 0.40, phase: 1.8, w: 0.052, h: 0.095, isThreat: false, trail: [], state: 'NORMAL', lastStateChange: 0 },
+      { id: 103, label: 'CAR (BLUE SEDAN)', rawClass: 'car', baseNormX: 0.24, baseNormY: 0.52, ampX: 0.18, ampY: 0.02, speedFactor: 0.30, phase: 2.5, w: 0.085, h: 0.050, isThreat: false, trail: [], state: 'NORMAL', lastStateChange: 0 },
+      { id: 104, label: 'VAN (DELIVERY VAN)', rawClass: 'van', baseNormX: 0.78, baseNormY: 0.46, ampX: 0.16, ampY: 0.02, speedFactor: 0.28, phase: 3.2, w: 0.098, h: 0.058, isThreat: false, trail: [], state: 'NORMAL', lastStateChange: 0 },
+      { id: 105, label: 'MOTORCYCLE', rawClass: 'motorcycle', baseNormX: 0.60, baseNormY: 0.42, ampX: 0.08, ampY: 0.12, speedFactor: 0.45, phase: 0.9, w: 0.028, h: 0.052, isThreat: false, trail: [], state: 'NORMAL', lastStateChange: 0 },
+      { id: 201, label: 'PEDESTRIAN', rawClass: 'person', baseNormX: 0.58, baseNormY: 0.48, ampX: 0.06, ampY: 0.03, speedFactor: 0.18, phase: 4.1, w: 0.032, h: 0.065, isThreat: false, trail: [], state: 'NORMAL', lastStateChange: 0 },
+      { id: 202, label: 'PEDESTRIAN', rawClass: 'person', baseNormX: 0.38, baseNormY: 0.65, ampX: 0.04, ampY: 0.04, speedFactor: 0.15, phase: 1.2, w: 0.030, h: 0.062, isThreat: false, trail: [], state: 'NORMAL', lastStateChange: 0 },
+      { id: 301, label: 'ANIMAL (CANINE)', rawClass: 'animal', baseNormX: 0.35, baseNormY: 0.48, ampX: 0.05, ampY: 0.04, speedFactor: 0.22, phase: 2.9, w: 0.032, h: 0.042, isThreat: false, trail: [], state: 'NORMAL', lastStateChange: 0 },
     ];
   }
-  if (norm.includes('3') || norm.includes('cam-03') || norm.includes('road') || norm.includes('court')) {
+
+  // CAM-01: Sector Alpha Main Gate
+  if (norm.includes('1') || norm.includes('cam-01') || norm.includes('main gate')) {
     return [
-      { id: 1, label: 'PERSON', rawClass: 'person', baseNormX: 0.48, baseNormY: 0.50, speedX: -0.0003, speedY: 0.0001, w: 0.055, h: 0.16, isThreat: false, trail: [] as { x: number; y: number }[] },
-      { id: 2, label: 'PERSON', rawClass: 'person', baseNormX: 0.22, baseNormY: 0.44, speedX: 0.0002, speedY: -0.0001, w: 0.05, h: 0.14, isThreat: false, trail: [] as { x: number; y: number }[] },
+      { id: 1, label: 'INTRUDER', rawClass: 'intruder', baseNormX: 0.54, baseNormY: 0.40, ampX: 0.04, ampY: 0.10, speedFactor: 0.35, phase: 0.5, w: 0.058, h: 0.155, isThreat: true, trail: [], state: 'NORMAL', lastStateChange: 0 },
+      { id: 2, label: 'PERSON', rawClass: 'person', baseNormX: 0.32, baseNormY: 0.52, ampX: 0.05, ampY: 0.03, speedFactor: 0.20, phase: 1.6, w: 0.050, h: 0.140, isThreat: false, trail: [], state: 'NORMAL', lastStateChange: 0 },
+      { id: 3, label: 'PATROL OFFICER', rawClass: 'patrol', baseNormX: 0.44, baseNormY: 0.58, ampX: 0.04, ampY: 0.04, speedFactor: 0.22, phase: 3.1, w: 0.055, h: 0.150, isThreat: false, trail: [], state: 'NORMAL', lastStateChange: 0 },
+      { id: 4, label: 'K9 CANINE UNIT', rawClass: 'animal', baseNormX: 0.48, baseNormY: 0.60, ampX: 0.04, ampY: 0.03, speedFactor: 0.24, phase: 3.3, w: 0.038, h: 0.055, isThreat: false, trail: [], state: 'NORMAL', lastStateChange: 0 },
+      { id: 5, label: 'PATROL JEEP', rawClass: 'vehicle', baseNormX: 0.72, baseNormY: 0.62, ampX: 0.02, ampY: 0.02, speedFactor: 0.10, phase: 0.0, w: 0.095, h: 0.125, isThreat: false, trail: [], state: 'NORMAL', lastStateChange: 0 },
     ];
   }
-  if (norm.includes('4') || norm.includes('cam-04') || norm.includes('fence')) {
+
+  // CAM-02: Sector Alpha East Perimeter
+  if (norm.includes('2') || norm.includes('cam-02') || norm.includes('east')) {
     return [
-      { id: 1, label: 'INTRUDER', rawClass: 'intruder', baseNormX: 0.42, baseNormY: 0.35, speedX: 0.0004, speedY: 0.0001, w: 0.055, h: 0.16, isThreat: true, trail: [] as { x: number; y: number }[] },
-      { id: 2, label: 'PERSON', rawClass: 'person', baseNormX: 0.65, baseNormY: 0.52, speedX: -0.0002, speedY: 0.0001, w: 0.05, h: 0.14, isThreat: false, trail: [] as { x: number; y: number }[] },
+      { id: 1, label: 'PATROL OFFICER', rawClass: 'patrol', baseNormX: 0.30, baseNormY: 0.50, ampX: 0.05, ampY: 0.04, speedFactor: 0.22, phase: 0.8, w: 0.055, h: 0.150, isThreat: false, trail: [], state: 'NORMAL', lastStateChange: 0 },
+      { id: 2, label: 'PERSON', rawClass: 'person', baseNormX: 0.65, baseNormY: 0.42, ampX: 0.04, ampY: 0.08, speedFactor: 0.30, phase: 2.1, w: 0.052, h: 0.145, isThreat: false, trail: [], state: 'NORMAL', lastStateChange: 0 },
+      { id: 3, label: 'ANIMAL (WILDLIFE)', rawClass: 'animal', baseNormX: 0.75, baseNormY: 0.44, ampX: 0.05, ampY: 0.07, speedFactor: 0.28, phase: 1.4, w: 0.040, h: 0.052, isThreat: false, trail: [], state: 'NORMAL', lastStateChange: 0 },
+      { id: 4, label: 'SECURITY VEHICLE', rawClass: 'vehicle', baseNormX: 0.20, baseNormY: 0.64, ampX: 0.03, ampY: 0.02, speedFactor: 0.12, phase: 0.2, w: 0.090, h: 0.120, isThreat: false, trail: [], state: 'NORMAL', lastStateChange: 0 },
     ];
   }
+
+  // CAM-03: Sector Bravo Access Road
+  if (norm.includes('3') || norm.includes('cam-03') || norm.includes('access road')) {
+    return [
+      { id: 1, label: 'SUPPLY TRUCK', rawClass: 'truck', baseNormX: 0.48, baseNormY: 0.50, ampX: 0.03, ampY: 0.15, speedFactor: 0.32, phase: 0.4, w: 0.092, h: 0.145, isThreat: false, trail: [], state: 'NORMAL', lastStateChange: 0 },
+      { id: 2, label: 'PATROL 4X4', rawClass: 'vehicle', baseNormX: 0.28, baseNormY: 0.42, ampX: 0.02, ampY: 0.10, speedFactor: 0.38, phase: 2.4, w: 0.075, h: 0.110, isThreat: false, trail: [], state: 'NORMAL', lastStateChange: 0 },
+      { id: 3, label: 'GATE GUARD', rawClass: 'person', baseNormX: 0.68, baseNormY: 0.52, ampX: 0.03, ampY: 0.03, speedFactor: 0.18, phase: 1.1, w: 0.048, h: 0.135, isThreat: false, trail: [], state: 'NORMAL', lastStateChange: 0 },
+      { id: 4, label: 'ANIMAL (K9)', rawClass: 'animal', baseNormX: 0.72, baseNormY: 0.56, ampX: 0.03, ampY: 0.03, speedFactor: 0.20, phase: 1.3, w: 0.035, h: 0.048, isThreat: false, trail: [], state: 'NORMAL', lastStateChange: 0 },
+    ];
+  }
+
+  // CAM-04: Sector Bravo Outer Fence
+  if (norm.includes('4') || norm.includes('cam-04') || norm.includes('outer fence')) {
+    return [
+      { id: 1, label: 'INTRUDER', rawClass: 'intruder', baseNormX: 0.42, baseNormY: 0.38, ampX: 0.04, ampY: 0.09, speedFactor: 0.34, phase: 0.7, w: 0.055, h: 0.155, isThreat: true, trail: [], state: 'NORMAL', lastStateChange: 0 },
+      { id: 2, label: 'ANIMAL (CATTLE)', rawClass: 'animal', baseNormX: 0.68, baseNormY: 0.42, ampX: 0.04, ampY: 0.06, speedFactor: 0.22, phase: 2.8, w: 0.055, h: 0.070, isThreat: false, trail: [], state: 'NORMAL', lastStateChange: 0 },
+      { id: 3, label: 'PATROL OFFICER', rawClass: 'patrol', baseNormX: 0.25, baseNormY: 0.55, ampX: 0.04, ampY: 0.03, speedFactor: 0.19, phase: 1.5, w: 0.050, h: 0.140, isThreat: false, trail: [], state: 'NORMAL', lastStateChange: 0 },
+    ];
+  }
+
+  // Default / Other CCTVs (CAM-05 through CAM-07, CAM-09)
   return [
-    { id: 1, label: 'PERSON', rawClass: 'person', baseNormX: 0.45, baseNormY: 0.44, speedX: 0.0003, speedY: 0.0001, w: 0.055, h: 0.15, isThreat: false, trail: [] as { x: number; y: number }[] },
-    { id: 2, label: 'PERSON', rawClass: 'person', baseNormX: 0.62, baseNormY: 0.50, speedX: -0.0002, speedY: 0.0001, w: 0.05, h: 0.14, isThreat: false, trail: [] as { x: number; y: number }[] },
+    { id: 1, label: 'PERSON', rawClass: 'person', baseNormX: 0.45, baseNormY: 0.42, ampX: 0.04, ampY: 0.08, speedFactor: 0.28, phase: 0.3, w: 0.050, h: 0.145, isThreat: false, trail: [], state: 'NORMAL', lastStateChange: 0 },
+    { id: 2, label: 'VEHICLE', rawClass: 'vehicle', baseNormX: 0.70, baseNormY: 0.50, ampX: 0.03, ampY: 0.12, speedFactor: 0.35, phase: 2.2, w: 0.080, h: 0.115, isThreat: false, trail: [], state: 'NORMAL', lastStateChange: 0 },
+    { id: 3, label: 'ANIMAL', rawClass: 'animal', baseNormX: 0.30, baseNormY: 0.46, ampX: 0.04, ampY: 0.05, speedFactor: 0.25, phase: 1.7, w: 0.038, h: 0.050, isThreat: false, trail: [], state: 'NORMAL', lastStateChange: 0 },
   ];
 };
+
+function getDistanceToSegment(px: number, py: number, x1: number, y1: number, x2: number, y2: number) {
+  const dx = x2 - x1;
+  const dy = y2 - y1;
+  const lenSq = dx * dx + dy * dy;
+  if (lenSq === 0) return { dist: Math.hypot(px - x1, py - y1), projX: x1, projY: y1 };
+  const t = Math.max(0, Math.min(1, ((px - x1) * dx + (py - y1) * dy) / lenSq));
+  const projX = x1 + t * dx;
+  const projY = y1 + t * dy;
+  return { dist: Math.hypot(px - projX, py - projY), projX, projY };
+}
 
 export const CameraFeedCanvas: React.FC<CameraFeedCanvasProps> = ({
   camera,
@@ -165,6 +390,7 @@ export const CameraFeedCanvas: React.FC<CameraFeedCanvasProps> = ({
   showMotionTrails = true,
   isNightVision = false,
   className = '',
+  onCountsUpdate,
 }) => {
   const containerRef = useRef<HTMLDivElement | null>(null);
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
@@ -172,25 +398,60 @@ export const CameraFeedCanvas: React.FC<CameraFeedCanvasProps> = ({
   const [videoLoaded, setVideoLoaded] = useState(false);
   const [videoError, setVideoError] = useState(false);
 
-  // Live detections & tracks from WebSocket stream
   const liveDetectionsRef = useRef<RealYoloDetection[]>([]);
   const liveTracksRef = useRef<TrackItem[]>([]);
   const lastWsUpdateTimeRef = useRef<number>(0);
-  const frameDimensionsRef = useRef<{ w: number; h: number }>({ w: 1920, h: 1080 });
 
-  // Fallback synthetic animation tracks for smooth visualization
+  const initialResolution = (() => {
+    if (camera.resolution && camera.resolution.includes('x')) {
+      const [cw, ch] = camera.resolution.toLowerCase().split('x').map(n => parseInt(n.trim(), 10));
+      if (!isNaN(cw) && !isNaN(ch) && cw > 0 && ch > 0) return { w: cw, h: ch };
+    }
+    const id = camera.id.toLowerCase();
+    if (id.includes('8') || id.includes('cam-08')) return { w: 1904, h: 1072 };
+    if (id.includes('cam-01') || id.includes('cam-02') || id.includes('cam-03') || id.includes('cam-04') || id.includes('cam-05') || id.includes('cam-06') || id.includes('cam-07') || id.includes('cam-09')) {
+      return { w: 1344, h: 756 };
+    }
+    return { w: 1920, h: 1080 };
+  })();
+
+  const frameDimensionsRef = useRef<{ w: number; h: number }>(initialResolution);
+
+  const tacticalLineRef = useRef<TacticalLine>(getCameraTacticalLine(camera.id, camera.code || ''));
+
   const simState = useRef({
     tick: 17,
     scanline: 0,
     syntheticTracks: getCameraTracks(camera.id, camera.code || ''),
   });
 
-  // Recompute synthetic tracks when camera changes
   useEffect(() => {
+    tacticalLineRef.current = getCameraTacticalLine(camera.id, camera.code || '');
     simState.current.syntheticTracks = getCameraTracks(camera.id, camera.code || '');
   }, [camera.id, camera.code]);
 
-  // ResizeObserver for dynamic relative scaling in all grid modes (2x2 Quad, 1+3 Split, Single, Fullscreen)
+  // Compute and report counts to parent QuadLiveStreamView
+  useEffect(() => {
+    const tracks = simState.current.syntheticTracks;
+    let persons = 0;
+    let vehicles = 0;
+    let animals = 0;
+
+    tracks.forEach((t) => {
+      const c = t.rawClass.toLowerCase();
+      if (c === 'person' || c === 'intruder' || c === 'patrol') persons++;
+      else if (c === 'car' || c === 'truck' || c === 'van' || c === 'motorcycle' || c === 'vehicle') vehicles++;
+      else if (c === 'animal' || c === 'dog' || c === 'canine' || c === 'wildlife' || c === 'cattle') animals++;
+    });
+
+    onCountsUpdate?.({
+      persons,
+      vehicles,
+      animals,
+      total: tracks.length,
+    });
+  }, [camera.id, onCountsUpdate]);
+
   const syncCanvasDimensions = useCallback(() => {
     const container = containerRef.current;
     const canvas = canvasRef.current;
@@ -229,7 +490,6 @@ export const CameraFeedCanvas: React.FC<CameraFeedCanvasProps> = ({
     ? camera.rtspUrl
     : `/api/cameras/${camera.id.toLowerCase()}/video`;
 
-  // Subscribe to live detections and tracking for this camera
   useEffect(() => {
     const camIdNorm = camera.id.toLowerCase();
     const camCodeNorm = (camera.code || '').toLowerCase().replace(/\s+/g, '-');
@@ -276,6 +536,7 @@ export const CameraFeedCanvas: React.FC<CameraFeedCanvasProps> = ({
     };
   }, [camera.id, camera.code]);
 
+  // Main Render Loop
   useEffect(() => {
     let animId: number;
     const canvas = canvasRef.current;
@@ -292,11 +553,18 @@ export const CameraFeedCanvas: React.FC<CameraFeedCanvasProps> = ({
       }
 
       const s = simState.current;
-      s.tick += 0.02;
+      s.tick += 0.025;
 
       ctx.clearRect(0, 0, w, h);
 
-      // 1. Render Security Danger / Warning Zones with dynamic relative coordinates
+      const tacticalLine = tacticalLineRef.current;
+      const lx1 = tacticalLine.p1.x * w;
+      const ly1 = tacticalLine.p1.y * h;
+      const lx2 = tacticalLine.p2.x * w;
+      const ly2 = tacticalLine.p2.y * h;
+      const bufPx = tacticalLine.bufferThreshold * h;
+
+      // 1. Draw Calibrated Danger / Warning Zones (Polygons)
       if (showZones && camera.dangerZones && camera.dangerZones.length > 0) {
         camera.dangerZones.forEach((zone) => {
           if (zone.points.length >= 3) {
@@ -308,13 +576,12 @@ export const CameraFeedCanvas: React.FC<CameraFeedCanvasProps> = ({
               ctx.lineTo((zone.points[i].x / 1000) * w, (zone.points[i].y / 600) * h);
             }
             ctx.closePath();
-            ctx.fillStyle = zone.type === 'restricted' ? 'rgba(239, 68, 68, 0.15)' : 'rgba(245, 158, 11, 0.15)';
+            ctx.fillStyle = zone.type === 'restricted' ? 'rgba(239, 68, 68, 0.12)' : 'rgba(245, 158, 11, 0.12)';
             ctx.strokeStyle = zone.type === 'restricted' ? '#ef4444' : '#f59e0b';
             ctx.lineWidth = 1.5;
             ctx.fill();
             ctx.stroke();
 
-            // Draw zone label tag
             ctx.font = 'bold 9px monospace';
             ctx.fillStyle = zone.type === 'restricted' ? '#ef4444' : '#f59e0b';
             ctx.fillText(zone.name.toUpperCase(), (p0.x / 1000) * w + 4, (p0.y / 600) * h + 12);
@@ -323,14 +590,73 @@ export const CameraFeedCanvas: React.FC<CameraFeedCanvasProps> = ({
         });
       }
 
-      // 2. Render AI Bounding Boxes & Tracking Vectors with precise relative scaling
+      // 2. Draw Virtual Border Line / Zebra Crossing
+      if (showZones) {
+        // A. Suspicious Buffer Zone (Ribbon)
+        ctx.save();
+        ctx.fillStyle = tacticalLine.isZebraCrossing ? 'rgba(56, 189, 248, 0.08)' : 'rgba(245, 158, 11, 0.08)';
+        ctx.strokeStyle = tacticalLine.isZebraCrossing ? 'rgba(56, 189, 248, 0.40)' : 'rgba(245, 158, 11, 0.40)';
+        ctx.lineWidth = 1;
+        ctx.setLineDash([4, 4]);
+        ctx.beginPath();
+        ctx.moveTo(lx1, ly1 - bufPx);
+        ctx.lineTo(lx2, ly2 - bufPx);
+        ctx.lineTo(lx2, ly2 + bufPx);
+        ctx.lineTo(lx1, ly1 + bufPx);
+        ctx.closePath();
+        ctx.fill();
+        ctx.stroke();
+
+        // B. Zebra Crossing Stripes (if roadway crosswalk)
+        if (tacticalLine.isZebraCrossing) {
+          ctx.fillStyle = 'rgba(255, 255, 255, 0.25)';
+          const numStripes = 16;
+          const stripeW = (lx2 - lx1) / (numStripes * 2.2);
+          for (let i = 0; i < numStripes; i++) {
+            const sx = lx1 + (i / numStripes) * (lx2 - lx1);
+            ctx.fillRect(sx, ly1 - bufPx * 0.75, stripeW, bufPx * 1.5);
+          }
+        }
+
+        // C. Glowing Primary Tripwire Vector
+        ctx.strokeStyle = tacticalLine.isZebraCrossing ? '#38bdf8' : '#06b6d4';
+        ctx.lineWidth = 2.5;
+        ctx.setLineDash([8, 4]);
+        ctx.shadowColor = tacticalLine.isZebraCrossing ? '#38bdf8' : '#06b6d4';
+        ctx.shadowBlur = 10;
+        ctx.beginPath();
+        ctx.moveTo(lx1, ly1);
+        ctx.lineTo(lx2, ly2);
+        ctx.stroke();
+
+        // Crosshairs at line endpoints
+        [{ x: lx1, y: ly1 }, { x: lx2, y: ly2 }].forEach((pt) => {
+          ctx.fillStyle = '#ffffff';
+          ctx.beginPath();
+          ctx.arc(pt.x, pt.y, 3.5, 0, Math.PI * 2);
+          ctx.fill();
+        });
+
+        // Line Identifier Badge
+        const badgeText = `[${tacticalLine.name}]`;
+        ctx.font = 'bold 8.5px monospace';
+        const bWidth = ctx.measureText(badgeText).width;
+        ctx.fillStyle = tacticalLine.isZebraCrossing ? 'rgba(2, 132, 199, 0.90)' : 'rgba(8, 145, 178, 0.90)';
+        ctx.fillRect(lx1 + (lx2 - lx1) * 0.35, ly1 - 14, bWidth + 8, 14);
+        ctx.fillStyle = '#ffffff';
+        ctx.fillText(badgeText, lx1 + (lx2 - lx1) * 0.35 + 4, ly1 - 3);
+
+        ctx.restore();
+      }
+
+      // 3. Render Detections, Line Proximity & Line Crossing Logic
       if (showAiBoxes) {
-        const hasLiveWs = (Date.now() - lastWsUpdateTimeRef.current) < 4000;
+        const hasLiveWs = Date.now() - lastWsUpdateTimeRef.current < 4000;
         const tracks = liveTracksRef.current;
         const detections = liveDetectionsRef.current;
 
         if (hasLiveWs && (tracks.length > 0 || detections.length > 0)) {
-          // Render Live Tracks from Real YOLO/ByteTrack
+          // Render Live Tracks from real YOLO/ByteTrack stream
           tracks.forEach((track) => {
             const fw = frameDimensionsRef.current?.w || 1920;
             const fh = frameDimensionsRef.current?.h || 1080;
@@ -340,39 +666,60 @@ export const CameraFeedCanvas: React.FC<CameraFeedCanvasProps> = ({
             const bw = isNorm ? (track.bbox.x2 - track.bbox.x1) * w : ((track.bbox.x2 - track.bbox.x1) / fw) * w;
             const bh = isNorm ? (track.bbox.y2 - track.bbox.y1) * h : ((track.bbox.y2 - track.bbox.y1) / fh) * h;
 
-            const isThreat = Boolean(
-              (track as any).risk_level === 'CRITICAL' ||
-              (track as any).risk_score >= 70 ||
-              (track as any).is_loitering
-            );
+            const tCenterX = bx1 + bw / 2;
+            const tCenterY = by1 + bh / 2;
+
+            const { dist, projX, projY } = getDistanceToSegment(tCenterX, tCenterY, lx1, ly1, lx2, ly2);
+            const isCrossing = Math.abs(tCenterY - ly1) < 8 && tCenterX >= lx1 && tCenterX <= lx2;
+            const isNear = dist < bufPx && !isCrossing;
+
+            if (isCrossing) {
+              tacticalAlertDispatcher.trigger({
+                cameraId: camera.id,
+                cameraName: camera.name,
+                trackId: track.track_id,
+                className: track.class_name,
+                type: 'LINE_CROSSING',
+                lineName: tacticalLine.name,
+              });
+            } else if (isNear) {
+              tacticalAlertDispatcher.trigger({
+                cameraId: camera.id,
+                cameraName: camera.name,
+                trackId: track.track_id,
+                className: track.class_name,
+                type: 'SUSPICIOUS_AREA',
+                lineName: tacticalLine.name,
+              });
+            }
+
             const style = getDetectionClassStyle(track.class_name, {
-              isThreat,
+              isThreat: Boolean((track as any).risk_level === 'CRITICAL' || (track as any).risk_score >= 70),
               confidence: track.confidence,
+              isSuspiciousArea: isNear,
+              isCrossingLine: isCrossing,
             });
 
             ctx.save();
-            // Subtle translucent target highlight
             ctx.fillStyle = style.fillColor;
             ctx.fillRect(bx1, by1, bw, bh);
 
-            // Dynamic border color based on detected class & status
             ctx.strokeStyle = style.strokeColor;
             ctx.lineWidth = style.isHighPriority ? 2.0 : 1.5;
             ctx.strokeRect(bx1, by1, bw, bh);
 
-            // Corner crosshairs
-            const cornerLen = 5;
-            ctx.strokeStyle = '#ffffff';
-            ctx.lineWidth = 1.5;
-            ctx.beginPath();
-            ctx.moveTo(bx1, by1 + cornerLen); ctx.lineTo(bx1, by1); ctx.lineTo(bx1 + cornerLen, by1);
-            ctx.moveTo(bx1 + bw - cornerLen, by1); ctx.lineTo(bx1 + bw, by1); ctx.lineTo(bx1 + bw, by1 + cornerLen);
-            ctx.moveTo(bx1, by1 + bh - cornerLen); ctx.lineTo(bx1, by1 + bh); ctx.lineTo(bx1 + cornerLen, by1 + bh);
-            ctx.moveTo(bx1 + bw - cornerLen, by1 + bh); ctx.lineTo(bx1 + bw, by1 + bh); ctx.lineTo(bx1 + bw, by1 + bh - cornerLen);
-            ctx.stroke();
+            // Laser connector to line when suspicious or crossing
+            if (isNear || isCrossing) {
+              ctx.strokeStyle = isCrossing ? '#dc2626' : '#f97316';
+              ctx.lineWidth = 1.5;
+              ctx.setLineDash([3, 3]);
+              ctx.beginPath();
+              ctx.moveTo(tCenterX, tCenterY);
+              ctx.lineTo(projX, projY);
+              ctx.stroke();
+            }
 
-            // Label tag with dynamic class styling
-            const labelText = `#${track.track_id} ${style.categoryLabel} ${(track.confidence * 100).toFixed(0)}%`;
+            const labelText = `[${style.categoryLabel} #${track.track_id}] ${(track.confidence * 100).toFixed(0)}%`;
             ctx.font = 'bold 8.5px monospace';
             const textWidth = ctx.measureText(labelText).width;
             ctx.fillStyle = style.badgeBg;
@@ -382,24 +729,62 @@ export const CameraFeedCanvas: React.FC<CameraFeedCanvasProps> = ({
             ctx.restore();
           });
         } else {
-          // Render Real-Time Procedural YOLO AI Detections using relative normalized coordinates
+          // Render High-Fidelity Synthetic YOLO Detections Tailored Per CCTV
           s.syntheticTracks.forEach((st) => {
-            const timeOffset = s.tick * 0.4;
-            const curNormX = (st.baseNormX + Math.sin(timeOffset + st.id) * 0.05 + 1) % 1;
-            const curNormY = (st.baseNormY + Math.cos(timeOffset * 0.8 + st.id) * 0.04 + 1) % 1;
+            const time = s.tick * st.speedFactor + st.phase;
 
-            const bx = curNormX * w;
-            const by = curNormY * h;
+            // Compute periodic traversal across space
+            const normX = (st.baseNormX + Math.sin(time) * st.ampX + 1) % 1;
+            const normY = (st.baseNormY + Math.cos(time * 0.9) * st.ampY + 1) % 1;
+
+            const bx = normX * w;
+            const by = normY * h;
             const bw = st.w * w;
             const bh = st.h * h;
+            const tCenterX = bx + bw / 2;
+            const tCenterY = by + bh / 2;
+
+            // Two-Stage Line Proximity & Crossing Geometry
+            const { dist, projX, projY } = getDistanceToSegment(tCenterX, tCenterY, lx1, ly1, lx2, ly2);
+            const distNorm = dist / h;
+
+            const lineYAtX = ly1 + ((tCenterX - lx1) / Math.max(1, lx2 - lx1)) * (ly2 - ly1);
+            const isCrossing = Math.abs(tCenterY - lineYAtX) < (bh * 0.35) && tCenterX >= lx1 && tCenterX <= lx2;
+            const isNear = distNorm < tacticalLine.bufferThreshold && !isCrossing;
+
+            if (isCrossing) {
+              st.state = 'LINE_CROSSING';
+              tacticalAlertDispatcher.trigger({
+                cameraId: camera.id,
+                cameraName: camera.name,
+                trackId: st.id,
+                className: st.rawClass,
+                type: 'LINE_CROSSING',
+                lineName: tacticalLine.name,
+              });
+            } else if (isNear) {
+              st.state = 'SUSPICIOUS_AREA';
+              tacticalAlertDispatcher.trigger({
+                cameraId: camera.id,
+                cameraName: camera.name,
+                trackId: st.id,
+                className: st.rawClass,
+                type: 'SUSPICIOUS_AREA',
+                lineName: tacticalLine.name,
+              });
+            } else {
+              st.state = 'NORMAL';
+            }
 
             const style = getDetectionClassStyle(st.rawClass || st.label, {
               isThreat: st.isThreat,
+              isSuspiciousArea: st.state === 'SUSPICIOUS_AREA',
+              isCrossingLine: st.state === 'LINE_CROSSING',
             });
 
             // Motion trail
             if (showMotionTrails) {
-              st.trail.push({ x: bx + bw / 2, y: by + bh / 2 });
+              st.trail.push({ x: tCenterX, y: tCenterY });
               if (st.trail.length > 14) st.trail.shift();
 
               ctx.save();
@@ -415,20 +800,40 @@ export const CameraFeedCanvas: React.FC<CameraFeedCanvasProps> = ({
               ctx.restore();
             }
 
+            // Translucent box background & border
             ctx.save();
-            // Subtle translucent background tint
             ctx.fillStyle = style.fillColor;
             ctx.fillRect(bx, by, bw, bh);
 
-            // Dynamic border color based on detected class
             ctx.strokeStyle = style.strokeColor;
             ctx.lineWidth = style.isHighPriority ? 2.0 : 1.5;
             ctx.strokeRect(bx, by, bw, bh);
+
+            // Laser connector to line when suspicious or crossing
+            if (st.state === 'SUSPICIOUS_AREA' || st.state === 'LINE_CROSSING') {
+              ctx.strokeStyle = st.state === 'LINE_CROSSING' ? '#dc2626' : '#f97316';
+              ctx.lineWidth = 1.5;
+              ctx.setLineDash([3, 3]);
+              ctx.beginPath();
+              ctx.moveTo(tCenterX, tCenterY);
+              ctx.lineTo(projX, projY);
+              ctx.stroke();
+
+              // Impact ripple at projection point on line if crossing
+              if (st.state === 'LINE_CROSSING') {
+                const pulseR = 5 + Math.sin(s.tick * 6) * 3;
+                ctx.fillStyle = 'rgba(220, 38, 38, 0.5)';
+                ctx.beginPath();
+                ctx.arc(projX, projY, pulseR, 0, Math.PI * 2);
+                ctx.fill();
+              }
+            }
 
             // Corner highlights
             const cLen = 4;
             ctx.strokeStyle = '#ffffff';
             ctx.lineWidth = 1.5;
+            ctx.setLineDash([]);
             ctx.beginPath();
             ctx.moveTo(bx, by + cLen); ctx.lineTo(bx, by); ctx.lineTo(bx + cLen, by);
             ctx.moveTo(bx + bw - cLen, by); ctx.lineTo(bx + bw, by); ctx.lineTo(bx + bw, by + cLen);
@@ -436,7 +841,7 @@ export const CameraFeedCanvas: React.FC<CameraFeedCanvasProps> = ({
             ctx.moveTo(bx + bw - cLen, by + bh); ctx.lineTo(bx + bw, by + bh); ctx.lineTo(bx + bw, by + bh - cLen);
             ctx.stroke();
 
-            // Label pill with dynamic background & clear typography
+            // Label pill
             const conf = Math.round(92 + Math.sin(s.tick + st.id) * 6);
             const pillText = `#${st.id} ${style.categoryLabel} ${conf}%`;
             ctx.font = 'bold 8px monospace';
@@ -450,7 +855,7 @@ export const CameraFeedCanvas: React.FC<CameraFeedCanvasProps> = ({
         }
       }
 
-      // 3. Tactical Reticle & Scanline
+      // 4. Tactical Scanline
       s.scanline = (s.scanline + 1.2) % h;
       ctx.strokeStyle = 'rgba(56, 189, 248, 0.10)';
       ctx.lineWidth = 1;
@@ -471,7 +876,6 @@ export const CameraFeedCanvas: React.FC<CameraFeedCanvasProps> = ({
       ref={containerRef}
       className={`relative w-full h-full overflow-hidden bg-black ${className}`}
     >
-      {/* Real HTML5 Video element with H.264 video source */}
       <video
         ref={videoRef}
         src={videoUrl}
@@ -497,7 +901,6 @@ export const CameraFeedCanvas: React.FC<CameraFeedCanvasProps> = ({
         }}
       />
 
-      {/* Overlay Canvas for Zones, Motion Vectors and YOLO AI Detections - dynamically sized to container */}
       <canvas
         ref={canvasRef}
         className="absolute inset-0 w-full h-full pointer-events-none z-10 block"

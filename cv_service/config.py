@@ -13,7 +13,11 @@ class CVConfig:
     frame_skip: int = int(os.getenv("FRAME_SKIP", "2"))  # Process every Nth frame
 
     # Target Detection Classes (COCO Dataset Mapping)
-    # 0: person, 1: bicycle, 2: car, 3: motorcycle, 5: bus, 7: truck
+    # COCO Class IDs:
+    # Humans: 0: person
+    # Vehicles: 1: bicycle, 2: car, 3: motorcycle, 5: bus, 7: truck
+    # Animals: 14: bird, 15: cat, 16: dog, 17: horse, 18: sheep, 19: cow, 20: elephant, 21: bear, 22: zebra, 23: giraffe
+    # Objects/Luggage: 24: backpack, 26: handbag, 28: suitcase
     target_classes: Dict[int, str] = field(
         default_factory=lambda: {
             0: "person",
@@ -22,11 +26,29 @@ class CVConfig:
             3: "motorcycle",
             5: "bus",
             7: "truck",
+            14: "bird",
+            15: "cat",
+            16: "dog",
+            17: "horse",
+            18: "sheep",
+            19: "cow",
+            20: "elephant",
+            21: "bear",
+            22: "zebra",
+            23: "giraffe",
+            24: "backpack",
+            26: "handbag",
+            28: "suitcase",
         }
     )
 
+    # Detection Strategy: FAST (640), BALANCED (960/1280), HIGH_ACCURACY (1280+)
+    detection_mode: str = os.getenv("DETECTION_MODE", "BALANCED")
+    iou_threshold: float = float(os.getenv("IOU_THRESHOLD", "0.45"))
+    proximity_buffer_norm: float = float(os.getenv("PROXIMITY_BUFFER_NORM", "0.035"))
+
     # Maximum detections per frame (prevents payload bloat)
-    max_detections: int = int(os.getenv("MAX_DETECTIONS", "30"))
+    max_detections: int = int(os.getenv("MAX_DETECTIONS", "50"))
 
     # Backend Connection
     ws_url: str = os.getenv("BACKEND_WS_URL", "ws://127.0.0.1:8000/ws")
@@ -42,6 +64,51 @@ class CVConfig:
 
     # Performance / Profiling
     benchmark_frames: int = int(os.getenv("BENCHMARK_FRAMES", "0"))
+
+    @classmethod
+    def from_camera_profile(cls, camera_id: str, **kwargs) -> "CVConfig":
+        """Factory initializing CVConfig with camera-specific detection profile overrides."""
+        cam_key = str(camera_id).lower().strip()
+        prof_data = {}
+        try:
+            import json
+            prof_path = os.path.abspath(
+                os.path.join(os.path.dirname(__file__), "..", "config", "detection_profiles.json")
+            )
+            if os.path.exists(prof_path):
+                with open(prof_path, "r", encoding="utf-8") as f:
+                    all_profs = json.load(f)
+                prof_data = all_profs.get(cam_key) or all_profs.get("default", {})
+        except Exception:
+            pass
+
+        conf_val = kwargs.get("confidence_threshold", prof_data.get("confidence", 0.30))
+        imgsz_val = kwargs.get("input_size", prof_data.get("imgsz", 960))
+        iou_val = kwargs.get("iou_threshold", prof_data.get("iou", 0.45))
+        mode_val = kwargs.get("detection_mode", prof_data.get("mode", "BALANCED"))
+        prox_buf = kwargs.get("proximity_buffer_norm", prof_data.get("proximity_buffer_norm", 0.035))
+
+        merged_kwargs = {
+            "camera_id": cam_key,
+            "confidence_threshold": conf_val,
+            "input_size": imgsz_val,
+            "iou_threshold": iou_val,
+            "detection_mode": mode_val,
+            "proximity_buffer_norm": prox_buf,
+            **{k: v for k, v in kwargs.items() if k not in ("camera_id", "confidence_threshold", "input_size", "iou_threshold", "detection_mode", "proximity_buffer_norm")}
+        }
+        return cls(**merged_kwargs)
+
+    @classmethod
+    def from_detection_profile(cls, profile_name: str, **kwargs) -> "CVConfig":
+        """Factory initializing CVConfig for FAST, BALANCED, or ACCURACY presets."""
+        p_name = str(profile_name).upper().strip()
+        if p_name == "FAST":
+            return cls(detection_mode="FAST", confidence_threshold=0.20, input_size=640, **kwargs)
+        elif p_name == "ACCURACY":
+            return cls(detection_mode="ACCURACY", confidence_threshold=0.30, input_size=1280, **kwargs)
+        else:
+            return cls(detection_mode="BALANCED", confidence_threshold=0.25, input_size=960, **kwargs)
 
     # Phase 5 Loitering Configuration
     loitering_enabled: bool = os.getenv("LOITERING_ENABLED", "true").lower() in ("true", "1", "yes")

@@ -41,11 +41,39 @@ def is_point_on_segment(
     if dot_product < -eps:
         return False
 
-    squared_len = (x2 - x1) * (x2 - x1) + (y2 - y1) * (y2 - y1)
-    if dot_product > squared_len + eps:
-        return False
+def point_to_segment_distance(
+    px: float, py: float, x1: float, y1: float, x2: float, y2: float
+) -> float:
+    """Calculates perpendicular Euclidean distance from point (px, py) to line segment (x1, y1)-(x2, y2)."""
+    import math
+    dx = x2 - x1
+    dy = y2 - y1
+    if dx == 0 and dy == 0:
+        return math.hypot(px - x1, py - y1)
+    # Project point onto segment
+    t = ((px - x1) * dx + (py - y1) * dy) / (dx * dx + dy * dy)
+    t = max(0.0, min(1.0, t))
+    proj_x = x1 + t * dx
+    proj_y = y1 + t * dy
+    return math.hypot(px - proj_x, py - proj_y)
 
-    return True
+
+def point_to_polygon_distance(
+    point: Tuple[float, float], polygon: List[Tuple[float, float]]
+) -> float:
+    """Calculates shortest distance from a point to any boundary edge of a polygon."""
+    if len(polygon) < 2:
+        return float("inf")
+    px, py = point
+    min_dist = float("inf")
+    n = len(polygon)
+    for i in range(n):
+        x1, y1 = polygon[i]
+        x2, y2 = polygon[(i + 1) % n]
+        dist = point_to_segment_distance(px, py, x1, y1, x2, y2)
+        if dist < min_dist:
+            min_dist = dist
+    return min_dist
 
 
 def _orientation(p: Tuple[float, float], q: Tuple[float, float], r: Tuple[float, float]) -> int:
@@ -203,25 +231,72 @@ class PolygonZone:
             ]
         return self.raw_polygon
 
+    def distance_to_boundary(
+        self,
+        point: Tuple[float, float],
+        frame_width: int = 1920,
+        frame_height: int = 1080,
+    ) -> Tuple[float, float]:
+        """
+        Calculates shortest distance from point to this boundary/zone:
+        Returns (distance_px, distance_normalized).
+        """
+        poly = self.get_pixel_polygon(frame_width, frame_height)
+        if len(poly) < 2:
+            return float("inf"), float("inf")
+        if self.is_tripwire or len(poly) == 2:
+            dist_px = point_to_segment_distance(point[0], point[1], poly[0][0], poly[0][1], poly[1][0], poly[1][1])
+        else:
+            dist_px = point_to_polygon_distance(point, poly)
+        ref_diag = (frame_width ** 2 + frame_height ** 2) ** 0.5
+        dist_norm = dist_px / max(1.0, ref_diag)
+        return dist_px, dist_norm
+
+    def is_in_proximity(
+        self,
+        point: Tuple[float, float],
+        frame_width: int = 1920,
+        frame_height: int = 1080,
+        proximity_buffer_norm: float = 0.035,
+    ) -> Tuple[bool, float, float]:
+        """
+        Tests if point is within normalized proximity distance to boundary.
+        Returns (is_approaching_buffer, distance_px, distance_norm).
+        """
+        dist_px, dist_norm = self.distance_to_boundary(point, frame_width, frame_height)
+        return (dist_norm <= proximity_buffer_norm), dist_px, dist_norm
+
+    def is_point_inside(
+        self,
+        point: Tuple[float, float],
+        frame_width: int = 1920,
+        frame_height: int = 1080,
+        eps: float = 35.0,
+    ) -> bool:
+        """Alias for is_inside ensuring backwards compatibility."""
+        return self.is_inside(point, frame_width, frame_height, eps=eps)
+
     def is_inside(
         self,
         point: Tuple[float, float],
         frame_width: int = 1920,
         frame_height: int = 1080,
+        eps: float = 35.0,
     ) -> bool:
         """
         Tests if point (cx, cy in frame pixel coordinates) is inside this zone.
-        For tripwires, tests proximity to line segment (within 15px threshold).
+        For tripwires, tests proximity to line segment (default within 35px buffer threshold).
         """
         if not self.enabled:
             return False
 
         poly = self.get_pixel_polygon(frame_width, frame_height)
         if self.is_tripwire or len(poly) < 3:
-            # Proximity check for tripwire
+            if len(poly) < 2:
+                return False
             x1, y1 = poly[0]
             x2, y2 = poly[1]
-            return is_point_on_segment(point[0], point[1], x1, y1, x2, y2, eps=15.0)
+            return is_point_on_segment(point[0], point[1], x1, y1, x2, y2, eps=eps)
 
         return is_point_in_polygon(point, poly, include_boundary=True)
 

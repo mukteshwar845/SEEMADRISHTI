@@ -1028,8 +1028,20 @@ export const MatrixCameraCell: React.FC<MatrixCameraCellProps> = ({
 
         if (hasRealTracks && realTrackData) {
           // RENDER REAL BYTETRACK PERSISTENT TRACKS
-          const fw = realTrackData.frameWidth || 1920;
-          const fh = realTrackData.frameHeight || 1080;
+          let defaultFw = 1920;
+          let defaultFh = 1080;
+          if (camera.resolution && camera.resolution.includes('x')) {
+            const parts = camera.resolution.toLowerCase().split('x').map(p => parseInt(p.trim(), 10));
+            if (!isNaN(parts[0]) && !isNaN(parts[1]) && parts[0] > 0 && parts[1] > 0) {
+              defaultFw = parts[0];
+              defaultFh = parts[1];
+            }
+          } else if (camera.id === 8 || (camera.code || '').toLowerCase().includes('cam-08')) {
+            defaultFw = 1904;
+            defaultFh = 1072;
+          }
+          const fw = realTrackData.frameWidth || defaultFw;
+          const fh = realTrackData.frameHeight || defaultFh;
           const scaleX = width / fw;
           const scaleY = height / fh;
 
@@ -1040,20 +1052,31 @@ export const MatrixCameraCell: React.FC<MatrixCameraCellProps> = ({
             const bw = (trk.bbox.x2 - trk.bbox.x1) * scaleX;
             const bh = (trk.bbox.y2 - trk.bbox.y1) * scaleY;
 
-            const isVehicle = ['car', 'truck', 'bus', 'motorcycle', 'bicycle'].includes(
-              trk.class_name.toLowerCase()
+            const cat = (trk as any).category || (
+              ['car', 'truck', 'bus', 'motorcycle', 'bicycle'].includes(trk.class_name.toLowerCase()) ? 'VEHICLE' :
+              ['bird', 'cat', 'dog', 'horse', 'sheep', 'cow'].includes(trk.class_name.toLowerCase()) ? 'ANIMAL' :
+              ['backpack', 'handbag', 'suitcase'].includes(trk.class_name.toLowerCase()) ? 'OBJECT' : 'HUMAN'
             );
+            const isVehicle = cat === 'VEHICLE';
+            const isAnimal = cat === 'ANIMAL';
+            const isObject = cat === 'OBJECT';
             const isLoitering = Boolean((trk as any).is_loitering);
             const dwellSec = (trk as any).dwell_seconds;
             const riskScore = (trk as any).risk_score;
             const riskLevel = (trk as any).risk_level;
 
-            // Tactical Crimson (#ef4444) for CRITICAL, Amber (#f59e0b) for HIGH, Yellow (#eab308) for MEDIUM, Cyan for vehicles, Emerald for normal
-            let color = isVehicle ? '#38bdf8' : '#22c55e';
+            // Tactical Colors: Critical: Crimson (#ef4444), Animal: Amber (#f59e0b), Vehicle: Sky (#38bdf8), Object: Purple (#a855f7), Human: Emerald (#22c55e)
+            let color = '#22c55e';
             if (riskLevel === 'CRITICAL') {
               color = '#ef4444';
             } else if (riskLevel === 'HIGH' || isLoitering) {
               color = '#f59e0b';
+            } else if (isAnimal) {
+              color = '#f59e0b'; // Warm amber for wildlife / fauna
+            } else if (isObject) {
+              color = '#c084fc'; // Purple for stationary equipment/luggage
+            } else if (isVehicle) {
+              color = '#38bdf8'; // Sky blue for vehicles
             } else if (riskLevel === 'MEDIUM') {
               color = '#eab308';
             }
@@ -1063,18 +1086,19 @@ export const MatrixCameraCell: React.FC<MatrixCameraCellProps> = ({
             const speed = (trk as any).speed_px_per_sec || (trk as any).speed;
             const inGroup = (trk as any).is_in_group;
 
-            let subLabel = `TRACK ID: ${trk.track_id} [${Math.round(trk.confidence * 100)}%]`;
+            let dirArrow = '';
+            if (direction === 'IN' || direction === 'ENTERING') dirArrow = ' → IN';
+            else if (direction === 'OUT' || direction === 'EXITING') dirArrow = ' ← OUT';
+
+            let subLabel = `[${cat}] ID:${trk.track_id} ${Math.round(trk.confidence * 100)}%${dirArrow}`;
             if (riskScore !== undefined && riskScore > 0 && riskLevel) {
-              subLabel = `RISK ${riskScore} // ${riskLevel}`;
+              subLabel = `RISK ${riskScore} // ${riskLevel}${dirArrow}`;
             } else if (isLoitering) {
-              subLabel = `LOITERING ${dwellSec ? Math.round(dwellSec) + 's' : ''}`;
+              subLabel = `LOITERING ${dwellSec ? Math.round(dwellSec) + 's' : ''}${dirArrow}`;
             } else if (dwellSec && dwellSec > 2) {
-              subLabel = `DWELL ${Math.round(dwellSec)}s`;
+              subLabel = `DWELL ${Math.round(dwellSec)}s${dirArrow}`;
             }
 
-            if (direction && direction !== 'UNKNOWN' && direction !== 'STATIONARY') {
-              subLabel += ` [${direction}]`;
-            }
             if (speed && speed > 2) {
               subLabel += ` ${Math.round(speed)}px/s`;
             }
@@ -1126,8 +1150,20 @@ export const MatrixCameraCell: React.FC<MatrixCameraCellProps> = ({
           });
         } else if (hasRealDetections && realData && realData.detections && realData.detections.length > 0) {
           // RENDER REAL YOLO BOUNDING BOXES (Normalized from frame coordinates)
-          const fw = realData.frameWidth || 1920;
-          const fh = realData.frameHeight || 1080;
+          let defaultFw = 1920;
+          let defaultFh = 1080;
+          if (camera.resolution && camera.resolution.includes('x')) {
+            const parts = camera.resolution.toLowerCase().split('x').map(p => parseInt(p.trim(), 10));
+            if (!isNaN(parts[0]) && !isNaN(parts[1]) && parts[0] > 0 && parts[1] > 0) {
+              defaultFw = parts[0];
+              defaultFh = parts[1];
+            }
+          } else if (camera.id === 8 || (camera.code || '').toLowerCase().includes('cam-08')) {
+            defaultFw = 1904;
+            defaultFh = 1072;
+          }
+          const fw = realData.frameWidth || defaultFw;
+          const fh = realData.frameHeight || defaultFh;
           const scaleX = width / fw;
           const scaleY = height / fh;
 
@@ -1138,10 +1174,15 @@ export const MatrixCameraCell: React.FC<MatrixCameraCellProps> = ({
             const bw = (det.bbox.x2 - det.bbox.x1) * scaleX;
             const bh = (det.bbox.y2 - det.bbox.y1) * scaleY;
 
-            const isVehicle = ['car', 'truck', 'bus', 'motorcycle', 'bicycle'].includes(
-              det.class_name.toLowerCase()
+            const cat = (det as any).category || (
+              ['car', 'truck', 'bus', 'motorcycle', 'bicycle'].includes(det.class_name.toLowerCase()) ? 'VEHICLE' :
+              ['bird', 'cat', 'dog', 'horse', 'sheep', 'cow'].includes(det.class_name.toLowerCase()) ? 'ANIMAL' :
+              ['backpack', 'handbag', 'suitcase'].includes(det.class_name.toLowerCase()) ? 'OBJECT' : 'HUMAN'
             );
-            const color = isVehicle ? '#38bdf8' : '#22c55e'; // Cyan for vehicles, Emerald for persons
+            const isVehicle = cat === 'VEHICLE';
+            const isAnimal = cat === 'ANIMAL';
+            const isObject = cat === 'OBJECT';
+            const color = isAnimal ? '#f59e0b' : isObject ? '#c084fc' : isVehicle ? '#38bdf8' : '#22c55e';
 
             targets.push({
               type: isVehicle ? 'vehicle' : 'pedestrian',

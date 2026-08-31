@@ -139,6 +139,11 @@ def parse_args():
         help="Disable Phase 7 forensic incident evidence capture",
     )
     parser.add_argument(
+        "--diagnostics",
+        action="store_true",
+        help="Run in Phase 22 Diagnostics Mode (outputs per-class detection frequency, confidence, and track continuity)",
+    )
+    parser.add_argument(
         "--no-correlation",
         action="store_true",
         help="Disable Phase 8 multi-camera threat correlation",
@@ -175,17 +180,15 @@ def parse_args():
 def main():
     args = parse_args()
 
-    config = CVConfig(
+    # Initialize configuration with Camera-Specific Detection Profile
+    config = CVConfig.from_camera_profile(
+        camera_id=args.camera_id,
         model_name=args.model,
         confidence_threshold=args.conf,
         frame_skip=args.frame_skip,
-        camera_id=args.camera_id,
         ws_url="ws://127.0.0.1:8000/ws",
-        loitering_enabled=not args.no_loitering,
         loitering_threshold_seconds=args.loitering_threshold,
         loitering_grace_period_seconds=args.loitering_grace_period,
-        risk_engine_enabled=not args.no_risk,
-        evidence_enabled=not args.no_evidence,
         evidence_pre_event_seconds=args.pre_event_seconds,
         evidence_post_event_seconds=args.post_event_seconds,
         evidence_dir=args.evidence_dir,
@@ -541,20 +544,34 @@ def main():
                 total_tracking_time_ms += output.get("tracking_ms", 0.0)
 
                 current_class_counts: Dict[str, int] = {}
+                current_category_counts: Dict[str, int] = {"HUMAN": 0, "VEHICLE": 0, "ANIMAL": 0, "OBJECT": 0}
+
                 for trk in output["tracks"]:
                     cls = str(trk["class_name"]).lower().strip()
+                    cat = trk.get("category") or YoloDetector.get_category_for_class(cls)
                     tid = int(trk["track_id"])
                     unique_track_ids.add(tid)
-                    if cls == "person":
+
+                    if cat == "HUMAN":
                         unique_person_track_ids.add(tid)
-                    elif cls in ("car", "truck", "bus", "motorcycle", "bicycle"):
+                    elif cat == "VEHICLE":
                         unique_vehicle_track_ids.add(tid)
+                    elif cat == "ANIMAL":
+                        if "unique_animal_track_ids" not in locals():
+                            unique_animal_track_ids = set()
+                        unique_animal_track_ids.add(tid)
+                    else:
+                        if "unique_object_track_ids" not in locals():
+                            unique_object_track_ids = set()
+                        unique_object_track_ids.add(tid)
+
                     if cls not in unique_class_track_ids:
                         unique_class_track_ids[cls] = set()
                     unique_class_track_ids[cls].add(tid)
 
                     class_frequency[cls] = class_frequency.get(cls, 0) + 1
                     current_class_counts[cls] = current_class_counts.get(cls, 0) + 1
+                    current_category_counts[cat] = current_category_counts.get(cat, 0) + 1
 
                     if behavior_chain_engine:
                         behavior_chain_engine.ingest_detection(
@@ -566,22 +583,34 @@ def main():
                             timestamp=current_frame_time,
                         )
 
-                # Package Phase 17 live & cumulative counting telemetry
+                # Package Phase 22 live & cumulative counting telemetry
+                u_animals = locals().get("unique_animal_track_ids", set())
+                u_objects = locals().get("unique_object_track_ids", set())
+
                 counts_payload = {
                     "visible": {
                         "total": len(output["tracks"]),
+                        "persons": current_category_counts["HUMAN"],
                         "person": current_class_counts.get("person", 0),
+                        "vehicles": current_category_counts["VEHICLE"],
+                        "animals": current_category_counts["ANIMAL"],
+                        "objects": current_category_counts["OBJECT"],
                         "car": current_class_counts.get("car", 0),
                         "truck": current_class_counts.get("truck", 0),
                         "bus": current_class_counts.get("bus", 0),
                         "motorcycle": current_class_counts.get("motorcycle", 0) + current_class_counts.get("motor", 0),
                         "bicycle": current_class_counts.get("bicycle", 0) + current_class_counts.get("bike", 0),
                         "by_class": current_class_counts,
+                        "by_category": current_category_counts,
                     },
                     "unique_session": {
                         "total": len(unique_track_ids),
                         "person": len(unique_person_track_ids),
+                        "persons": len(unique_person_track_ids),
                         "vehicle": len(unique_vehicle_track_ids),
+                        "vehicles": len(unique_vehicle_track_ids),
+                        "animals": len(u_animals),
+                        "objects": len(u_objects),
                         "by_class": {k: len(v) for k, v in unique_class_track_ids.items()},
                     }
                 }
@@ -949,17 +978,15 @@ def main():
                             if len(ch.events) >= 2 or ch.risk_score >= 40:
                                 publisher.publish(ch.to_dict(), message_type="behavior_chain_update")
 
-                    # Phase 14 & 17: Unified frame_state packet with counts and stream synchronization
-                    person_cnt = counts_payload["visible"].get("person", 0)
-                    vehicle_cnt = (
-                        counts_payload["visible"].get("car", 0)
-                        + counts_payload["visible"].get("truck", 0)
-                        + counts_payload["visible"].get("bus", 0)
-                        + counts_payload["visible"].get("motorcycle", 0)
-                        + counts_payload["visible"].get("bicycle", 0)
-                    )
-                    obj_cnt = counts_payload["visible"].get("total", len(output.get("tracks", [])))
-                    tw_evs = [ev.to_dict() for ev in events if ev.event_type == "TRIPWIRE_CROSSING" or ev.direction in ("IN", "OUT")] if events else []
+                    # Phase 14, 17 & 22: Unified frame_state packet with multi-class counts and proximity alerts
+                    person_cnt = counts_payload["visible"].get("persons", counts_payload["visible"].get("person", 0))
+                    vehicle_cnt = counts_payload["visible"].get("vehicles", 0)
+                    animal_cnt = counts_payload["visible"].get("animals", 0)
+                    object_cnt = counts_payload["visible"].get("objects", 0)
+                    total_cnt = counts_payload["visible"].get("total", len(output.get("tracks", [])))
+
+                    prox_evs = [ev.to_dict() for ev in events if ev.event_type == "SUSPICIOUS_AREA_APPROACH"] if events else []
+                    cross_evs = [ev.to_dict() for ev in events if "CROSSING" in ev.event_type or "ZEBRA" in ev.event_type or ev.direction in ("IN", "OUT")] if events else []
                     zn_evs = [ev.to_dict() for ev in events if ev.event_type in ("RESTRICTED_ZONE_ENTRY", "RESTRICTED_ZONE_EXIT")] if events else []
                     ingress_info = intrusion_detector.get_ingress_counts(config.camera_id)
                     counts_payload["ingress_egress"] = ingress_info
@@ -980,12 +1007,16 @@ def main():
                         "unique_counts": counts_payload["unique_session"],
                         "person_count": person_cnt,
                         "vehicle_count": vehicle_cnt,
-                        "object_count": obj_cnt,
+                        "animal_count": animal_cnt,
+                        "object_count": object_cnt,
+                        "total_count": total_cnt,
                         "entries": ingress_info.get("entries", 0),
                         "exits": ingress_info.get("exits", 0),
                         "net_occupancy": ingress_info.get("net_occupancy", 0),
                         "ingress_egress": ingress_info,
-                        "tripwire_events": tw_evs,
+                        "proximity_events": prox_evs,
+                        "line_crossing_events": cross_evs,
+                        "tripwire_events": cross_evs,
                         "zone_events": zn_evs,
                         "alerts": [ev.to_dict() for ev in events] if events else [],
                         "environment": env_metrics.to_dict() if env_metrics else {},
@@ -1103,6 +1134,22 @@ def main():
         print(f" * Real Correlated Threat Events:   {total_correlations_count}")
         print(f" * Tracked Classes Tally:          {dict(class_frequency)}")
         print("===================================================================\n")
+
+        if args.diagnostics:
+            print("\n===================================================================")
+            print(f"[PHASE 22 DIAGNOSTICS REPORT] Camera: {config.camera_id.upper()}")
+            print("===================================================================")
+            print(f" * Active Detection Profile:    Mode: {getattr(config, 'detection_mode', 'BALANCED')} | ImgSz: {config.input_size} | Conf: {config.confidence_threshold}")
+            print(f" * Total Ingested Frames:       {frame_counter} (Processed: {processed_counter})")
+            print(f" * Average YOLO Latency:        {avg_inference_latency} ms")
+            print(f" * Average Tracking Latency:    {avg_tracking_latency} ms")
+            print(f" * Total Unique ByteTrack IDs:  {len(unique_track_ids)}")
+            print(f" * Class Frequency Breakdown:   {dict(class_frequency)}")
+            print(f" * Active Multi-Class Counts:   {counts_payload['visible']}")
+            print(f" * Session Unique Counts:       {counts_payload['unique_session']}")
+            print(f" * Animal Detection Capable:    {detector.is_animal_capable()}")
+            print(f" * Proximity Buffer (Norm):     {getattr(config, 'proximity_buffer_norm', 0.035)}")
+            print("===================================================================\n")
 
 
 if __name__ == "__main__":

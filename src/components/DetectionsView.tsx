@@ -30,8 +30,9 @@ export const DetectionsView: React.FC = () => {
             const d = new Date(evt.timestamp);
             const timeStr = isNaN(d.getTime()) ? '00:00:00' : d.toLocaleTimeString();
             const labelStr = (meta.class_name || evt.event_type || 'PERSON').toUpperCase();
+            const isVeh = ['VEHICLE', 'CAR', 'TRUCK', 'BUS', 'MOTORCYCLE', 'BICYCLE', 'VAN', 'SUV'].some(v => labelStr.includes(v));
             const label: DetectionItem['label'] =
-              labelStr === 'VEHICLE' || labelStr === 'CAR' || labelStr === 'TRUCK'
+              isVeh
                 ? 'VEHICLE'
                 : labelStr === 'NO_HELMET'
                 ? 'NO_HELMET'
@@ -61,8 +62,9 @@ export const DetectionsView: React.FC = () => {
       if (payload && payload.detections && Array.isArray(payload.detections)) {
         const mappedList: DetectionItem[] = payload.detections.map((det: any, idx: number) => {
           const labelStr = (det.class_name || det.label || 'PERSON').toUpperCase();
+          const isVeh = ['VEHICLE', 'CAR', 'TRUCK', 'BUS', 'MOTORCYCLE', 'BICYCLE', 'VAN', 'SUV'].some(v => labelStr.includes(v));
           const label: DetectionItem['label'] =
-            labelStr === 'VEHICLE' || labelStr === 'CAR' || labelStr === 'TRUCK'
+            isVeh
               ? 'VEHICLE'
               : labelStr === 'NO_HELMET'
               ? 'NO_HELMET'
@@ -91,8 +93,9 @@ export const DetectionsView: React.FC = () => {
         setDetections((prev) => [...mappedList, ...prev].slice(0, 80));
       } else if (payload) {
         const labelStr = (payload.label || 'PERSON').toUpperCase();
+        const isVeh = ['VEHICLE', 'CAR', 'TRUCK', 'BUS', 'MOTORCYCLE', 'BICYCLE', 'VAN', 'SUV'].some(v => labelStr.includes(v));
         const label: DetectionItem['label'] =
-          labelStr === 'VEHICLE'
+          isVeh
             ? 'VEHICLE'
             : labelStr === 'NO_HELMET'
             ? 'NO_HELMET'

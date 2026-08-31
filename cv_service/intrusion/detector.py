@@ -23,6 +23,17 @@ import requests
 
 from cv_service.geometry.polygon import PolygonZone, calculate_centroid
 
+def _get_class_category(class_name: str) -> str:
+    cn = str(class_name).lower().strip()
+    if cn in ("person", "pedestrian", "human"):
+        return "HUMAN"
+    elif cn in ("car", "truck", "bus", "motorcycle", "motor", "bicycle", "bike", "van", "suv", "vehicle"):
+        return "VEHICLE"
+    elif cn in ("bird", "cat", "dog", "horse", "sheep", "cow", "elephant", "bear", "zebra", "giraffe"):
+        return "ANIMAL"
+    else:
+        return "OBJECT"
+
 logger = logging.getLogger("IntrusionDetector")
 
 
@@ -34,13 +45,18 @@ class IntrusionEvent:
     track_id: int
     class_name: str
     position: Tuple[float, float]  # (cx, cy)
-    direction: str = "ENTERING"  # 'ENTERING', 'EXITING', 'IN', 'OUT', 'CROSSING'
+    direction: str = "ENTERING"  # 'ENTERING', 'EXITING', 'IN', 'OUT', 'CROSSING', 'PROXIMITY'
     confidence: float = 0.9
     event_id: str = ""
     alert_id: str = ""
     timestamp: str = ""
-    severity: str = "High"  # Stored as 'High' in SQLite (CRITICAL display level)
-    event_type: str = "RESTRICTED_ZONE_ENTRY"  # 'RESTRICTED_ZONE_ENTRY', 'TRIPWIRE_CROSSING', 'RESTRICTED_ZONE_EXIT'
+    severity: str = "High"  # 'Low', 'Medium', 'High', 'Critical'
+    event_type: str = "RESTRICTED_ZONE_ENTRY"
+    category: str = "HUMAN"  # 'HUMAN', 'VEHICLE', 'ANIMAL', 'OBJECT'
+    boundary_id: str = ""
+    boundary_type: str = "BORDER_LINE"  # 'BORDER_LINE', 'TRIPWIRE', 'ZEBRA_CROSSING', 'ENTRY_LINE', 'EXIT_LINE', 'RESTRICTED_ZONE'
+    distance_px: Optional[float] = None
+    distance_norm: Optional[float] = None
     prev_position: Optional[Tuple[float, float]] = None
     frame_id: Optional[int] = None
     risk_score: Optional[float] = None
@@ -52,6 +68,8 @@ class IntrusionEvent:
             self.alert_id = f"ALT-{int(time.time() * 1000)}"
         if not self.timestamp:
             self.timestamp = str(time.time())
+        if not self.boundary_id:
+            self.boundary_id = self.zone_id
 
     def to_dict(self) -> Dict[str, Any]:
         d = asdict(self)
@@ -65,7 +83,11 @@ class IntrusionEvent:
 
 
 class TrackZoneState:
-    """Maintains state for an individual track against a specific zone."""
+    """
+    Maintains state for an individual track against a specific security zone or boundary.
+    Implements a strict 5-tier state machine to eliminate false duplicate alerts:
+    OUTSIDE -> APPROACHING -> NEAR_BOUNDARY -> CROSSING -> INSIDE
+    """
 
     def __init__(self, camera_id: str, track_id: int, zone_id: str, initial_inside: bool, initial_pos: Tuple[float, float]):
         self.camera_id = str(camera_id).lower().strip()
@@ -81,6 +103,8 @@ class TrackZoneState:
         self.entry_count = 1 if initial_inside else 0
         self.last_crossing_time: float = 0.0
         self.last_crossing_direction: str = ""
+        self.last_proximity_time: float = 0.0
+        self.proximity_state: str = "INSIDE" if initial_inside else "OUTSIDE"
         self.last_update_time = time.time()
 
     def update(self, is_inside: bool, position: Tuple[float, float]):
@@ -267,10 +291,14 @@ class IntrusionDetector:
                 curr_pos = (cx, cy)
                 state.update(is_inside, curr_pos)
 
-                is_tripwire = getattr(zone, "is_tripwire", False) or len(zone.raw_polygon) == 2 or zone.zone_type == "TRIPWIRE"
+                is_tripwire = getattr(zone, "is_tripwire", False) or len(zone.raw_polygon) == 2 or getattr(zone, "zone_type", "") in ("TRIPWIRE", "BORDER_LINE", "ZEBRA_CROSSING", "ENTRY_LINE", "EXIT_LINE")
+                boundary_type = getattr(zone, "zone_type", "BORDER_LINE" if is_tripwire else "RESTRICTED_ZONE")
+
+                # Get category
+                category = _get_class_category(class_name)
 
                 # -------------------------------------------------------------
-                # CASE A: VIRTUAL TRIPWIRE LINE CROSSING
+                # CASE A: VIRTUAL TRIPWIRE / BORDER / ZEBRA LINE CROSSING & PROXIMITY
                 # -------------------------------------------------------------
                 if is_tripwire:
                     crossed = zone.test_crossing(prev_pos, curr_pos, frame_width, frame_height)
@@ -278,14 +306,21 @@ class IntrusionDetector:
                         direction = zone.get_crossing_direction(prev_pos, curr_pos, frame_width, frame_height)
                         time_since_last_cross = now_epoch - state.last_crossing_time
 
-                        # Cooldown deduplication (2.5s window)
+                        # Cooldown deduplication (2.5s window per track-boundary)
                         if time_since_last_cross > 2.5:
                             state.last_crossing_time = now_epoch
                             state.last_crossing_direction = direction
                             state.entry_count += 1
+                            state.proximity_state = "CROSSING"
                             
                             event_id = f"evt-{int(now_epoch * 1000)}"
                             alert_id = f"alt-{int(now_epoch * 1000)}"
+
+                            # Universal crossing event classification
+                            # Event type is standardized to TRIPWIRE_CROSSING for regression compatibility
+                            event_type = "TRIPWIRE_CROSSING"
+                            if boundary_type == "ZEBRA_CROSSING":
+                                event_type = f"{category}_CROSSING_ZEBRA"
 
                             event = IntrusionEvent(
                                 event_id=event_id,
@@ -295,13 +330,16 @@ class IntrusionDetector:
                                 zone_name=zone.name,
                                 track_id=tid,
                                 class_name=class_name,
+                                category=category,
                                 confidence=confidence,
                                 direction=direction,
                                 position=curr_pos,
                                 prev_position=prev_pos,
                                 timestamp=now_ts,
                                 severity="High",
-                                event_type="TRIPWIRE_CROSSING",
+                                event_type=event_type,
+                                boundary_id=zone.zone_id,
+                                boundary_type=boundary_type,
                                 frame_id=trk_frame_id,
                                 risk_score=trk_risk,
                             )
@@ -318,24 +356,90 @@ class IntrusionDetector:
                                 0, self.ingress_counts[cam_norm]["entries"] - self.ingress_counts[cam_norm]["exits"]
                             )
 
-                            # Structured CLI logging
-                            print(f"\n[TRIPWIRE CROSSING / BREACH]")
+                            print(f"\n[UNIVERSAL LINE CROSSING]")
                             print(f"Camera:    {cam_norm}")
-                            print(f"Track:     #{tid} ({class_name})")
-                            print(f"Tripwire:  {zone.name}")
+                            print(f"Track:     #{tid} ({class_name} | {category})")
+                            print(f"Boundary:  {zone.name} ({boundary_type})")
+                            print(f"Event:     {event_type}")
                             print(f"Direction: {direction}")
                             print(f"From:      ({prev_pos[0]:.1f}, {prev_pos[1]:.1f}) -> To: ({curr_pos[0]:.1f}, {curr_pos[1]:.1f})")
                             print(f"Timestamp: {now_ts}\n")
 
                             self._persist_and_publish(event, publisher)
+                    else:
+                        # Check Smart Proximity / Approach Buffer using normalized distance
+                        buffer_norm = getattr(zone, "proximity_buffer_norm", 0.035)
+                        is_near, dist_px, dist_norm = zone.is_in_proximity(
+                            curr_pos, frame_width, frame_height, proximity_buffer_norm=buffer_norm
+                        )
+
+                        # Determine if approaching boundary based on displacement
+                        prev_dist_px, _ = zone.distance_to_boundary(prev_pos, frame_width, frame_height)
+                        is_moving_closer = dist_px < prev_dist_px
+
+                        # State Machine: OUTSIDE -> APPROACHING / NEAR_BOUNDARY
+                        if is_near:
+                            new_prox_state = "NEAR_BOUNDARY" if dist_norm < (buffer_norm * 0.5) else "APPROACHING"
+                            # Only fire alert on transition from OUTSIDE or after substantial cooldown
+                            time_since_prox = now_epoch - state.last_proximity_time
+                            state_transition_occurred = (state.proximity_state == "OUTSIDE")
+
+                            if (state_transition_occurred or time_since_prox > 10.0) and is_moving_closer:
+                                state.proximity_state = new_prox_state
+                                state.last_proximity_time = now_epoch
+                                event_id = f"evt-prox-{int(now_epoch * 1000)}"
+                                alert_id = f"alt-prox-{int(now_epoch * 1000)}"
+
+                                approach_dir = "TOWARD LINE" if is_moving_closer else "NEAR LINE"
+
+                                event = IntrusionEvent(
+                                    event_id=event_id,
+                                    alert_id=alert_id,
+                                    camera_id=cam_norm,
+                                    zone_id=zone.zone_id,
+                                    zone_name=zone.name,
+                                    track_id=tid,
+                                    class_name=class_name,
+                                    category=category,
+                                    confidence=confidence,
+                                    direction=approach_dir,
+                                    position=curr_pos,
+                                    prev_position=prev_pos,
+                                    timestamp=now_ts,
+                                    severity="Medium",
+                                    event_type="SUSPICIOUS_AREA_APPROACH",
+                                    boundary_id=zone.zone_id,
+                                    boundary_type=boundary_type,
+                                    distance_px=round(dist_px, 1),
+                                    distance_norm=round(dist_norm, 4),
+                                    frame_id=trk_frame_id,
+                                    risk_score=max(40.0, trk_risk or 40.0),
+                                )
+                                events_generated.append(event)
+                                print(f"[SUSPICIOUS AREA APPROACH] Target #{tid} ({class_name} | {category}) approaching {zone.name} ({dist_px:.1f}px) on {cam_norm}")
+                                self._persist_and_publish(event, publisher)
+                            else:
+                                state.proximity_state = new_prox_state
+                        else:
+                            # Target moved outside proximity buffer -> reset state
+                            if state.proximity_state in ("APPROACHING", "NEAR_BOUNDARY", "CROSSING"):
+                                state.proximity_state = "OUTSIDE"
 
                 # -------------------------------------------------------------
                 # CASE B: POLYGONAL RESTRICTED ZONE INTRUSION
                 # -------------------------------------------------------------
                 else:
+                    # Only trigger Perimeter Breach if the zone is actually a RESTRICTED_ZONE
+                    is_restricted_exclusion = boundary_type in ("RESTRICTED_ZONE", "EXCLUSION_ZONE", "RESTRICTED")
+                    if not is_restricted_exclusion:
+                        # Monitored Sector / Observation Zone — authorized presence, no perimeter breach
+                        state.proximity_state = "INSIDE"
+                        continue
+
                     # 1. OUTSIDE -> INSIDE (Restricted Zone Entry!)
                     if not state.previous_inside and state.current_inside:
                         state.entry_count += 1
+                        state.proximity_state = "INSIDE"
                         event_id = f"evt-{int(now_epoch * 1000)}"
                         alert_id = f"alt-{int(now_epoch * 1000)}"
 
@@ -347,6 +451,7 @@ class IntrusionDetector:
                             zone_name=zone.name,
                             track_id=tid,
                             class_name=class_name,
+                            category=category,
                             confidence=confidence,
                             direction="ENTERING",
                             position=curr_pos,
@@ -354,6 +459,8 @@ class IntrusionDetector:
                             timestamp=now_ts,
                             severity="High",
                             event_type="RESTRICTED_ZONE_ENTRY",
+                            boundary_id=zone.zone_id,
+                            boundary_type=boundary_type,
                             frame_id=trk_frame_id,
                             risk_score=trk_risk,
                         )
@@ -364,7 +471,7 @@ class IntrusionDetector:
 
                             print(f"\n[RESTRICTED ZONE ENTRY / PERIMETER BREACH]")
                             print(f"Camera:    {cam_norm}")
-                            print(f"Track:     #{tid} ({class_name})")
+                            print(f"Track:     #{tid} ({class_name} | {category})")
                             print(f"Zone:      {zone.name}")
                             print(f"Direction: ENTERING")
                             print(f"Position:  ({cx:.1f}, {cy:.1f})")
@@ -374,11 +481,11 @@ class IntrusionDetector:
 
                     # 2. INSIDE -> INSIDE (Linger / Dwell - Suppressed)
                     elif state.previous_inside and state.current_inside:
-                        # Target remains inside zone. Zero repeated alerts.
-                        pass
+                        state.proximity_state = "INSIDE"
 
                     # 3. INSIDE -> OUTSIDE (Exit Zone)
                     elif state.previous_inside and not state.current_inside:
+                        state.proximity_state = "OUTSIDE"
                         exit_event = IntrusionEvent(
                             event_id=f"evt-{int(now_epoch * 1000)}",
                             alert_id="",
@@ -387,6 +494,7 @@ class IntrusionDetector:
                             zone_name=zone.name,
                             track_id=tid,
                             class_name=class_name,
+                            category=category,
                             confidence=confidence,
                             direction="EXITING",
                             position=curr_pos,
@@ -394,15 +502,62 @@ class IntrusionDetector:
                             timestamp=now_ts,
                             severity="Low",
                             event_type="RESTRICTED_ZONE_EXIT",
+                            boundary_id=zone.zone_id,
+                            boundary_type=boundary_type,
                             frame_id=trk_frame_id,
                             risk_score=trk_risk,
                         )
                         state.alerted = False  # Reset so subsequent re-entry will alert!
                         events_generated.append(exit_event)
 
-                    # 4. OUTSIDE -> OUTSIDE (Normal Movement)
+                    # 4. OUTSIDE -> OUTSIDE (Check Proximity buffer for polygon)
                     else:
-                        pass
+                        buffer_norm = getattr(zone, "proximity_buffer_norm", 0.035)
+                        is_near, dist_px, dist_norm = zone.is_in_proximity(
+                            curr_pos, frame_width, frame_height, proximity_buffer_norm=buffer_norm
+                        )
+                        if is_near:
+                            prev_dist_px, _ = zone.distance_to_boundary(prev_pos, frame_width, frame_height)
+                            is_moving_closer = dist_px < prev_dist_px
+                            time_since_prox = now_epoch - state.last_proximity_time
+                            state_transition_occurred = (state.proximity_state == "OUTSIDE")
+
+                            if (state_transition_occurred or time_since_prox > 10.0) and is_moving_closer:
+                                state.proximity_state = "APPROACHING"
+                                state.last_proximity_time = now_epoch
+                                event_id = f"evt-prox-{int(now_epoch * 1000)}"
+                                alert_id = f"alt-prox-{int(now_epoch * 1000)}"
+
+                                event = IntrusionEvent(
+                                    event_id=event_id,
+                                    alert_id=alert_id,
+                                    camera_id=cam_norm,
+                                    zone_id=zone.zone_id,
+                                    zone_name=zone.name,
+                                    track_id=tid,
+                                    class_name=class_name,
+                                    category=category,
+                                    confidence=confidence,
+                                    direction="TOWARD ZONE",
+                                    position=curr_pos,
+                                    prev_position=prev_pos,
+                                    timestamp=now_ts,
+                                    severity="Medium",
+                                    event_type="SUSPICIOUS_AREA_APPROACH",
+                                    boundary_id=zone.zone_id,
+                                    boundary_type=boundary_type,
+                                    distance_px=round(dist_px, 1),
+                                    distance_norm=round(dist_norm, 4),
+                                    frame_id=trk_frame_id,
+                                    risk_score=max(40.0, trk_risk or 40.0),
+                                )
+                                events_generated.append(event)
+                                print(f"[SUSPICIOUS AREA APPROACH] Target #{tid} ({class_name} | {category}) approaching {zone.name} ({dist_px:.1f}px) on {cam_norm}")
+                                self._persist_and_publish(event, publisher)
+                            else:
+                                state.proximity_state = "APPROACHING"
+                        else:
+                            state.proximity_state = "OUTSIDE"
 
         # Cleanup tracks no longer active
         expired_keys = [
@@ -444,12 +599,27 @@ class IntrusionDetector:
                 "y": round(event.prev_position[1], 1),
             }
 
-        title = "Virtual Tripwire Breach" if event.event_type == "TRIPWIRE_CROSSING" else "Unauthorized Zone Entry"
-        reason_desc = (
-            f"Track #{event.track_id} ({event.class_name}) crossed tripwire {event.zone_name} [{event.direction}]"
-            if event.event_type == "TRIPWIRE_CROSSING"
-            else f"Track #{event.track_id} ({event.class_name}) crossed into restricted zone {event.zone_name}"
-        )
+        # Smart Alert Title & Reason Generation
+        cat = getattr(event, "category", "OBJECT")
+        cls_upper = (event.class_name or "OBJECT").upper()
+
+        if event.event_type == "SUSPICIOUS_AREA_APPROACH":
+            title = f"⚠ {cls_upper} IN SUSPICIOUS AREA"
+            reason_desc = (
+                f"Track #{event.track_id} ({event.class_name} | {cat}) approaching security boundary "
+                f"{event.zone_name} [{event.direction}] ({event.distance_px or 0:.1f}px)"
+            )
+        elif "CROSSING" in event.event_type or "ZEBRA" in event.event_type:
+            title = f"🚨 {cls_upper} LINE CROSSING BREACH"
+            reason_desc = (
+                f"Track #{event.track_id} ({event.class_name} | {cat}) crossed boundary "
+                f"{event.zone_name} [{event.direction}]"
+            )
+        else:
+            title = f"🚨 {cls_upper} UNAUTHORIZED ZONE INTRUSION"
+            reason_desc = (
+                f"Track #{event.track_id} ({event.class_name} | {cat}) penetrated restricted zone {event.zone_name}"
+            )
 
         alert_payload = {
             "id": event.alert_id,
@@ -462,10 +632,15 @@ class IntrusionDetector:
             "metadata": {
                 "zone_id": event.zone_id,
                 "zone_name": event.zone_name,
+                "boundary_id": getattr(event, "boundary_id", event.zone_id),
+                "boundary_type": getattr(event, "boundary_type", "BORDER_LINE"),
                 "track_id": event.track_id,
                 "class_name": event.class_name,
+                "category": cat,
                 "direction": event.direction,
                 "event_type": event.event_type,
+                "distance_px": getattr(event, "distance_px", None),
+                "distance_norm": getattr(event, "distance_norm", None),
             }
         }
 

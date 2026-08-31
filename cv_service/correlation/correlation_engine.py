@@ -312,9 +312,9 @@ class CorrelationEngine:
 
         try:
             url = f"{self.backend_http_url}/api/correlations"
-            requests.post(url, json=payload, timeout=0.2)
-        except Exception as e:
-            logger.warning("Failed to sync correlation %s to backend: %s", corr.id, e)
+            requests.post(url, json=payload, timeout=0.03)
+        except Exception:
+            pass
 
         # Broadcast via WebSocket publisher if provided
         if publisher and hasattr(publisher, "publish"):

@@ -107,19 +107,25 @@ export const CameraHudHeader: React.FC<CameraHudHeaderProps> = ({
         <div className="flex items-center gap-1 shrink-0">
           <button
             onClick={() => setPlaybackMode((m) => (m === 'LIVE' ? 'RECORDED' : 'LIVE'))}
-            title={playbackMode === 'LIVE' ? 'Switch to Recorded Playback' : 'Switch to Live RTSP Feed'}
+            title={camera.src?.includes('.mp4') ? 'Source: VisDrone Video Playback (MP4)' : (playbackMode === 'LIVE' ? 'Switch to Recorded Playback' : 'Switch to Live RTSP Feed')}
             className={`px-1.5 py-0.5 rounded text-[8.5px] font-mono font-bold border transition-all cursor-pointer flex items-center gap-1 whitespace-nowrap ${
-              playbackMode === 'LIVE'
+              camera.src?.includes('.mp4')
+                ? 'bg-sky-950/80 text-sky-400 border-sky-500/40 shadow-[0_0_8px_rgba(56,189,248,0.2)]'
+                : playbackMode === 'LIVE'
                 ? 'bg-emerald-950/80 text-emerald-400 border-emerald-500/40 shadow-[0_0_8px_rgba(16,185,129,0.2)]'
                 : 'bg-amber-950/90 text-amber-300 border-amber-500/50'
             }`}
           >
             <span
               className={`w-1.5 h-1.5 rounded-full shrink-0 ${
-                playbackMode === 'LIVE' ? 'bg-emerald-400 animate-pulse' : 'bg-amber-400'
+                camera.src?.includes('.mp4')
+                  ? 'bg-sky-400 animate-pulse'
+                  : playbackMode === 'LIVE'
+                  ? 'bg-emerald-400 animate-pulse'
+                  : 'bg-amber-400'
               }`}
             />
-            <span>{playbackMode}</span>
+            <span>{camera.src?.includes('.mp4') ? 'PLAYBACK (MP4)' : playbackMode}</span>
           </button>
 
           {onSelectSpotlight && (
@@ -134,40 +140,40 @@ export const CameraHudHeader: React.FC<CameraHudHeaderProps> = ({
         </div>
       </div>
 
-      {/* Phase 17: Compact Intelligence & Real-Time Counting Strip */}
-      <div className="px-2.5 py-1 bg-slate-950 border-b border-slate-800/80 flex items-center justify-between text-[8.5px] font-mono select-none">
-        <div className="flex items-center gap-2.5">
-          <span className="text-cyan-400 font-bold tracking-wider">OBJECTS</span>
+      {/* Phase 22: Multi-Class Real-Time Counting Strip */}
+      <div className="px-2.5 py-1 bg-slate-950 border-b border-slate-800/80 flex items-center justify-between text-[8.5px] font-mono select-none flex-wrap gap-y-1">
+        <div className="flex items-center gap-2 flex-wrap">
+          <span className="text-cyan-400 font-bold tracking-wider">ACTIVE:</span>
           <span className="text-slate-400">
-            P:<span className="text-emerald-400 font-bold ml-0.5">
-              {String(liveCounts?.visible?.person ?? 0).padStart(2, '0')}
+            HUMAN:<span className="text-emerald-400 font-bold ml-0.5">
+              {String(liveCounts?.visible?.persons ?? liveCounts?.visible?.person ?? 0).padStart(2, '0')}
             </span>
           </span>
           <span className="text-slate-400">
-            C:<span className="text-sky-400 font-bold ml-0.5">
-              {String(liveCounts?.visible?.car ?? 0).padStart(2, '0')}
+            VEHICLE:<span className="text-sky-400 font-bold ml-0.5">
+              {String(liveCounts?.visible?.vehicles ?? ((liveCounts?.visible?.car ?? 0) + (liveCounts?.visible?.truck ?? 0) + (liveCounts?.visible?.bus ?? 0))).padStart(2, '0')}
             </span>
           </span>
           <span className="text-slate-400">
-            T:<span className="text-amber-400 font-bold ml-0.5">
-              {String(liveCounts?.visible?.truck ?? 0).padStart(2, '0')}
+            ANIMAL:<span className="text-amber-400 font-bold ml-0.5">
+              {String(liveCounts?.visible?.animals ?? 0).padStart(2, '0')}
             </span>
           </span>
           <span className="text-slate-400">
-            B:<span className="text-purple-400 font-bold ml-0.5">
-              {String(liveCounts?.visible?.bus ?? 0).padStart(2, '0')}
+            OBJECT:<span className="text-purple-400 font-bold ml-0.5">
+              {String(liveCounts?.visible?.objects ?? 0).padStart(2, '0')}
             </span>
           </span>
         </div>
 
         <div className="flex items-center gap-2">
-          <span className="text-slate-500 font-bold">TRACKS</span>
+          <span className="text-slate-500 font-bold">TOTAL</span>
           <span className="text-cyan-300 font-bold">
-            {tracksCount} ACTIVE
+            {liveCounts?.visible?.total ?? tracksCount} ACTIVE
           </span>
           {liveCounts?.unique_session?.total !== undefined && liveCounts.unique_session.total > 0 && (
             <span className="text-slate-500 text-[7.5px]">
-              ({liveCounts.unique_session.total} TOT)
+              ({liveCounts.unique_session.total} UNIQUE)
             </span>
           )}
         </div>

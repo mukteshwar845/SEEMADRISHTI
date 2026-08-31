@@ -16,6 +16,7 @@ export interface WebSocketServiceState {
 export interface RealYoloDetection {
   class_name: string;
   class_id: number;
+  category?: 'HUMAN' | 'VEHICLE' | 'ANIMAL' | 'OBJECT';
   confidence: number;
   bbox: {
     x1: number;
@@ -39,6 +40,7 @@ export interface TrackItem {
   track_id: number;
   class_name: string;
   class_id: number;
+  category?: 'HUMAN' | 'VEHICLE' | 'ANIMAL' | 'OBJECT';
   confidence: number;
   state?: string;
   bbox: {
@@ -52,6 +54,10 @@ export interface TrackItem {
 export interface ObjectCountsPayload {
   visible: {
     total: number;
+    persons?: number;
+    vehicles?: number;
+    animals?: number;
+    objects?: number;
     person: number;
     car: number;
     truck: number;
@@ -59,9 +65,14 @@ export interface ObjectCountsPayload {
     motorcycle: number;
     bicycle: number;
     by_class?: Record<string, number>;
+    by_category?: Record<string, number>;
   };
   unique_session: {
     total: number;
+    persons?: number;
+    vehicles?: number;
+    animals?: number;
+    objects?: number;
     person: number;
     vehicle: number;
     by_class?: Record<string, number>;
@@ -1055,7 +1066,204 @@ class WebSocketService {
     }
   }
 
-  // Periodic heartbeat / live metrics stream simulation when offline or testing
+  // ─────────────────────────────────────────────────────────────────────────
+  // RICH EMULATION ENGINE — generates realistic, per-camera, multi-class
+  // detections that flow through the real WebSocket pipeline (frame_state)
+  // ─────────────────────────────────────────────────────────────────────────
+
+  private emulationFrameSeq = 0;
+
+  /**
+   * Deterministic pseudo-random number generator (mulberry32)
+   * Produces repeatable sequences per seed — no Math.random().
+   */
+  private prng(seed: number): number {
+    let t = (seed + 0x6d2b79f5) | 0;
+    t = Math.imul(t ^ (t >>> 15), t | 1);
+    t ^= t + Math.imul(t ^ (t >>> 7), t | 61);
+    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+  }
+
+  /** Scene profile for each camera — defines what YOLO would detect */
+  private getCameraSceneProfile(camIdx: number): {
+    sceneType: string;
+    templates: Array<{
+      class_id: number;
+      class_name: string;
+      minCount: number;
+      maxCount: number;
+      sizeRange: { wMin: number; wMax: number; hMin: number; hMax: number };
+      yRange: { min: number; max: number };
+      xRange: { min: number; max: number };
+      confRange: { min: number; max: number };
+    }>;
+  } {
+    switch (camIdx) {
+      case 1: // Sector Alpha Main Gate — border patrol scene
+        return {
+          sceneType: 'BORDER_GATE',
+          templates: [
+            { class_id: 0, class_name: 'person', minCount: 3, maxCount: 6, sizeRange: { wMin: 35, wMax: 60, hMin: 90, hMax: 160 }, yRange: { min: 200, max: 480 }, xRange: { min: 80, max: 900 }, confRange: { min: 0.82, max: 0.97 } },
+            { class_id: 2, class_name: 'car', minCount: 1, maxCount: 2, sizeRange: { wMin: 80, wMax: 130, hMin: 60, hMax: 100 }, yRange: { min: 300, max: 500 }, xRange: { min: 400, max: 900 }, confRange: { min: 0.85, max: 0.96 } },
+            { class_id: 16, class_name: 'dog', minCount: 0, maxCount: 1, sizeRange: { wMin: 30, wMax: 50, hMin: 25, hMax: 45 }, yRange: { min: 350, max: 500 }, xRange: { min: 200, max: 700 }, confRange: { min: 0.72, max: 0.88 } },
+          ],
+        };
+      case 2: // East Perimeter
+        return {
+          sceneType: 'PERIMETER_FENCE',
+          templates: [
+            { class_id: 0, class_name: 'person', minCount: 2, maxCount: 4, sizeRange: { wMin: 30, wMax: 55, hMin: 80, hMax: 150 }, yRange: { min: 180, max: 480 }, xRange: { min: 100, max: 880 }, confRange: { min: 0.80, max: 0.96 } },
+            { class_id: 2, class_name: 'car', minCount: 0, maxCount: 2, sizeRange: { wMin: 70, wMax: 120, hMin: 55, hMax: 90 }, yRange: { min: 350, max: 520 }, xRange: { min: 50, max: 800 }, confRange: { min: 0.83, max: 0.95 } },
+            { class_id: 21, class_name: 'cow', minCount: 0, maxCount: 2, sizeRange: { wMin: 45, wMax: 65, hMin: 35, hMax: 55 }, yRange: { min: 280, max: 450 }, xRange: { min: 300, max: 750 }, confRange: { min: 0.68, max: 0.86 } },
+          ],
+        };
+      case 3: // Access Road
+        return {
+          sceneType: 'ACCESS_ROAD',
+          templates: [
+            { class_id: 7, class_name: 'truck', minCount: 1, maxCount: 3, sizeRange: { wMin: 90, wMax: 150, hMin: 70, hMax: 120 }, yRange: { min: 250, max: 480 }, xRange: { min: 100, max: 850 }, confRange: { min: 0.88, max: 0.97 } },
+            { class_id: 2, class_name: 'car', minCount: 1, maxCount: 3, sizeRange: { wMin: 70, wMax: 110, hMin: 50, hMax: 85 }, yRange: { min: 280, max: 500 }, xRange: { min: 50, max: 900 }, confRange: { min: 0.85, max: 0.96 } },
+            { class_id: 0, class_name: 'person', minCount: 1, maxCount: 2, sizeRange: { wMin: 30, wMax: 50, hMin: 80, hMax: 140 }, yRange: { min: 300, max: 500 }, xRange: { min: 500, max: 800 }, confRange: { min: 0.78, max: 0.94 } },
+          ],
+        };
+      case 4: // Outer Fence
+        return {
+          sceneType: 'OUTER_FENCE',
+          templates: [
+            { class_id: 0, class_name: 'person', minCount: 1, maxCount: 3, sizeRange: { wMin: 35, wMax: 58, hMin: 90, hMax: 155 }, yRange: { min: 200, max: 460 }, xRange: { min: 150, max: 850 }, confRange: { min: 0.79, max: 0.95 } },
+            { class_id: 21, class_name: 'cow', minCount: 1, maxCount: 3, sizeRange: { wMin: 50, wMax: 70, hMin: 35, hMax: 55 }, yRange: { min: 280, max: 450 }, xRange: { min: 100, max: 800 }, confRange: { min: 0.70, max: 0.88 } },
+            { class_id: 2, class_name: 'car', minCount: 0, maxCount: 1, sizeRange: { wMin: 80, wMax: 120, hMin: 55, hMax: 90 }, yRange: { min: 380, max: 520 }, xRange: { min: 600, max: 900 }, confRange: { min: 0.84, max: 0.94 } },
+          ],
+        };
+      case 5: // Forest Trail
+        return {
+          sceneType: 'FOREST_TRAIL',
+          templates: [
+            { class_id: 0, class_name: 'person', minCount: 1, maxCount: 3, sizeRange: { wMin: 25, wMax: 45, hMin: 70, hMax: 130 }, yRange: { min: 200, max: 500 }, xRange: { min: 200, max: 800 }, confRange: { min: 0.72, max: 0.91 } },
+            { class_id: 16, class_name: 'dog', minCount: 0, maxCount: 2, sizeRange: { wMin: 25, wMax: 40, hMin: 20, hMax: 35 }, yRange: { min: 350, max: 500 }, xRange: { min: 150, max: 750 }, confRange: { min: 0.65, max: 0.84 } },
+            { class_id: 21, class_name: 'cow', minCount: 0, maxCount: 1, sizeRange: { wMin: 40, wMax: 60, hMin: 30, hMax: 50 }, yRange: { min: 300, max: 460 }, xRange: { min: 100, max: 600 }, confRange: { min: 0.62, max: 0.82 } },
+          ],
+        };
+      case 6: // Mountain Pass
+        return {
+          sceneType: 'MOUNTAIN_PASS',
+          templates: [
+            { class_id: 0, class_name: 'person', minCount: 1, maxCount: 4, sizeRange: { wMin: 28, wMax: 48, hMin: 75, hMax: 135 }, yRange: { min: 220, max: 500 }, xRange: { min: 100, max: 900 }, confRange: { min: 0.74, max: 0.93 } },
+            { class_id: 7, class_name: 'truck', minCount: 0, maxCount: 2, sizeRange: { wMin: 85, wMax: 140, hMin: 65, hMax: 110 }, yRange: { min: 320, max: 500 }, xRange: { min: 200, max: 800 }, confRange: { min: 0.82, max: 0.95 } },
+            { class_id: 3, class_name: 'motorcycle', minCount: 0, maxCount: 2, sizeRange: { wMin: 30, wMax: 50, hMin: 30, hMax: 55 }, yRange: { min: 300, max: 480 }, xRange: { min: 150, max: 850 }, confRange: { min: 0.76, max: 0.90 } },
+          ],
+        };
+      case 7: // Basketball court — many people
+        return {
+          sceneType: 'SPORTS_COURT',
+          templates: [
+            { class_id: 0, class_name: 'person', minCount: 10, maxCount: 18, sizeRange: { wMin: 22, wMax: 42, hMin: 55, hMax: 120 }, yRange: { min: 150, max: 520 }, xRange: { min: 50, max: 950 }, confRange: { min: 0.75, max: 0.98 } },
+          ],
+        };
+      case 8: // Aerial road intersection — many vehicles
+        return {
+          sceneType: 'ROAD_INTERSECTION',
+          templates: [
+            { class_id: 2, class_name: 'car', minCount: 8, maxCount: 14, sizeRange: { wMin: 30, wMax: 60, hMin: 25, hMax: 50 }, yRange: { min: 100, max: 540 }, xRange: { min: 50, max: 950 }, confRange: { min: 0.82, max: 0.97 } },
+            { class_id: 7, class_name: 'truck', minCount: 1, maxCount: 3, sizeRange: { wMin: 50, wMax: 80, hMin: 35, hMax: 60 }, yRange: { min: 150, max: 500 }, xRange: { min: 100, max: 900 }, confRange: { min: 0.80, max: 0.95 } },
+            { class_id: 5, class_name: 'bus', minCount: 0, maxCount: 2, sizeRange: { wMin: 60, wMax: 95, hMin: 30, hMax: 55 }, yRange: { min: 200, max: 480 }, xRange: { min: 150, max: 850 }, confRange: { min: 0.83, max: 0.94 } },
+            { class_id: 3, class_name: 'motorcycle', minCount: 1, maxCount: 3, sizeRange: { wMin: 18, wMax: 32, hMin: 18, hMax: 35 }, yRange: { min: 200, max: 500 }, xRange: { min: 100, max: 900 }, confRange: { min: 0.72, max: 0.91 } },
+            { class_id: 0, class_name: 'person', minCount: 1, maxCount: 4, sizeRange: { wMin: 15, wMax: 28, hMin: 30, hMax: 55 }, yRange: { min: 250, max: 520 }, xRange: { min: 200, max: 800 }, confRange: { min: 0.68, max: 0.90 } },
+          ],
+        };
+      case 9: // Coastal line
+      default:
+        return {
+          sceneType: 'COASTAL_GUARD',
+          templates: [
+            { class_id: 0, class_name: 'person', minCount: 2, maxCount: 4, sizeRange: { wMin: 30, wMax: 52, hMin: 80, hMax: 140 }, yRange: { min: 220, max: 480 }, xRange: { min: 100, max: 900 }, confRange: { min: 0.78, max: 0.95 } },
+            { class_id: 8, class_name: 'boat', minCount: 0, maxCount: 2, sizeRange: { wMin: 60, wMax: 120, hMin: 30, hMax: 55 }, yRange: { min: 100, max: 300 }, xRange: { min: 200, max: 800 }, confRange: { min: 0.74, max: 0.92 } },
+            { class_id: 2, class_name: 'car', minCount: 0, maxCount: 1, sizeRange: { wMin: 70, wMax: 110, hMin: 50, hMax: 80 }, yRange: { min: 400, max: 520 }, xRange: { min: 50, max: 400 }, confRange: { min: 0.82, max: 0.94 } },
+          ],
+        };
+    }
+  }
+
+  /**
+   * Generate detections + tracks for one camera based on its scene profile.
+   * Uses deterministic PRNG seeded on (camIdx, tick) so positions evolve
+   * smoothly over time without Math.random().
+   */
+  private generateCameraDetections(
+    camIdx: number,
+    tick: number,
+    frameW: number,
+    frameH: number,
+  ): { detections: RealYoloDetection[]; tracks: TrackItem[] } {
+    const profile = this.getCameraSceneProfile(camIdx);
+    const detections: RealYoloDetection[] = [];
+    const tracks: TrackItem[] = [];
+    let trackId = camIdx * 100;
+
+    for (const tmpl of profile.templates) {
+      // Determine count for this class using time-varying seed
+      const countSeed = camIdx * 1000 + tmpl.class_id * 100 + Math.floor(tick / 8);
+      const countRange = tmpl.maxCount - tmpl.minCount;
+      const count = tmpl.minCount + Math.floor(this.prng(countSeed) * (countRange + 1));
+
+      for (let i = 0; i < count; i++) {
+        trackId++;
+        const baseSeed = camIdx * 10000 + tmpl.class_id * 1000 + i * 100;
+
+        // Position evolves smoothly with sin/cos over time
+        const xPhase = this.prng(baseSeed + 1) * Math.PI * 2;
+        const yPhase = this.prng(baseSeed + 2) * Math.PI * 2;
+        const xSpeed = 0.08 + this.prng(baseSeed + 3) * 0.15;
+        const ySpeed = 0.05 + this.prng(baseSeed + 4) * 0.12;
+        const xAmp = (tmpl.xRange.max - tmpl.xRange.min) * 0.35;
+        const yAmp = (tmpl.yRange.max - tmpl.yRange.min) * 0.30;
+        const xCenter = (tmpl.xRange.min + tmpl.xRange.max) / 2 + (this.prng(baseSeed + 5) - 0.5) * xAmp * 0.8;
+        const yCenter = (tmpl.yRange.min + tmpl.yRange.max) / 2 + (this.prng(baseSeed + 6) - 0.5) * yAmp * 0.8;
+
+        const cx = Math.max(tmpl.xRange.min, Math.min(tmpl.xRange.max,
+          xCenter + Math.sin(tick * xSpeed + xPhase) * xAmp * 0.5));
+        const cy = Math.max(tmpl.yRange.min, Math.min(tmpl.yRange.max,
+          yCenter + Math.cos(tick * ySpeed + yPhase) * yAmp * 0.5));
+
+        // Size varies slightly
+        const sizeVar = this.prng(baseSeed + 7);
+        const w = tmpl.sizeRange.wMin + sizeVar * (tmpl.sizeRange.wMax - tmpl.sizeRange.wMin);
+        const h = tmpl.sizeRange.hMin + sizeVar * (tmpl.sizeRange.hMax - tmpl.sizeRange.hMin);
+
+        const x1 = Math.max(0, Math.round(cx - w / 2));
+        const y1 = Math.max(0, Math.round(cy - h / 2));
+        const x2 = Math.min(frameW, Math.round(cx + w / 2));
+        const y2 = Math.min(frameH, Math.round(cy + h / 2));
+
+        // Confidence varies gently
+        const confVar = this.prng(baseSeed + 8 + Math.floor(tick));
+        const confidence = Math.round(
+          (tmpl.confRange.min + confVar * (tmpl.confRange.max - tmpl.confRange.min)) * 100,
+        ) / 100;
+
+        const det: RealYoloDetection = {
+          class_id: tmpl.class_id,
+          class_name: tmpl.class_name,
+          confidence,
+          bbox: { x1, y1, x2, y2 },
+        };
+        detections.push(det);
+
+        const track: TrackItem = {
+          track_id: trackId,
+          class_id: tmpl.class_id,
+          class_name: tmpl.class_name,
+          confidence,
+          state: 'TRACKED',
+          bbox: { x1, y1, x2, y2 },
+        };
+        tracks.push(track);
+      }
+    }
+
+    return { detections, tracks };
+  }
+
   private startEmulationFallback() {
     if (this.emulationTimer) clearInterval(this.emulationTimer);
 
@@ -1069,9 +1277,13 @@ class WebSocketService {
     this.emulationTimer = setInterval(() => {
       if (!this.isEmulationEnabled) return;
 
-      // Update jitter / latency variations deterministically without Math.random
-      this.latencyMs = Math.round(14 + (Math.sin(Date.now() / 3000) * 3));
-      this.lastHeartbeat = Date.now();
+      const now = Date.now();
+      this.emulationFrameSeq++;
+      const tick = this.emulationFrameSeq;
+
+      // Update jitter / latency variations deterministically
+      this.latencyMs = Math.round(14 + (Math.sin(now / 3000) * 3));
+      this.lastHeartbeat = now;
       this.packetsReceived++;
 
       // Maintain active frame tracking for all 9 cameras
@@ -1085,37 +1297,108 @@ class WebSocketService {
       const sampleMetrics = this.generateLiveDiagnostics();
       this.metricsListeners.forEach((fn) => fn(sampleMetrics));
 
-      // Emit live neural detection pulse
-      const now = Date.now();
-      const camIdx = ((Math.floor(now / 3000) % 4) + 1);
-      const isBreach = camIdx === 1;
-      const detPayload: CameraDetectionsPayload = {
-        camera_id: `cam-${camIdx}`,
-        frame_width: 1000,
-        frame_height: 600,
-        timestamp: new Date().toISOString(),
-        detections: [
-          {
-            class_id: 0,
-            class_name: isBreach ? 'person' : 'person',
-            confidence: 0.96,
-            bbox: { x1: 520, y1: 210, x2: 600, y2: 400 },
+      // ── Emit rich frame_state for ALL cameras every cycle ──
+      const frameW = 1000;
+      const frameH = 600;
+
+      for (let camIdx = 1; camIdx <= 9; camIdx++) {
+        const { detections, tracks } = this.generateCameraDetections(camIdx, tick, frameW, frameH);
+
+        // Aggregate counts from detections
+        let personCount = 0;
+        let carCount = 0;
+        let truckCount = 0;
+        let busCount = 0;
+        let motorcycleCount = 0;
+        let bicycleCount = 0;
+        const byClass: Record<string, number> = {};
+
+        detections.forEach((d) => {
+          const cn = d.class_name.toLowerCase();
+          byClass[cn] = (byClass[cn] || 0) + 1;
+          if (cn === 'person') personCount++;
+          else if (cn === 'car') carCount++;
+          else if (cn === 'truck') truckCount++;
+          else if (cn === 'bus') busCount++;
+          else if (cn === 'motorcycle') motorcycleCount++;
+          else if (cn === 'bicycle') bicycleCount++;
+        });
+
+        const vehicleTotal = carCount + truckCount + busCount + motorcycleCount + bicycleCount;
+
+        const counts: ObjectCountsPayload = {
+          visible: {
+            total: detections.length,
+            person: personCount,
+            car: carCount,
+            truck: truckCount,
+            bus: busCount,
+            motorcycle: motorcycleCount,
+            bicycle: bicycleCount,
+            by_class: byClass,
           },
-          {
-            class_id: 0,
-            class_name: 'person',
-            confidence: 0.93,
-            bbox: { x1: 220, y1: 280, x2: 300, y2: 440 },
+          unique_session: {
+            total: detections.length + Math.floor(tick / 20) + camIdx,
+            person: personCount + Math.floor(tick / 25),
+            vehicle: vehicleTotal + Math.floor(tick / 30),
+            by_class: byClass,
           },
-        ],
-      };
-      this.detectionListeners.forEach((fn) => fn(detPayload));
+        };
+
+        const camId = `cam-${camIdx}`;
+        const frameState: FrameStatePayload = {
+          type: 'frame_state',
+          camera_id: camId,
+          frame_id: tick * 10 + camIdx,
+          frame_sequence: this.emulationFrameSeq,
+          source_type: 'emulated_yolo',
+          timestamp: now,
+          measured_fps: camIdx % 2 === 0 ? 60.0 : 30.0,
+          processing_latency_ms: Math.round(8 + Math.sin(tick * 0.3 + camIdx) * 3),
+          detections,
+          tracks,
+          counts,
+          person_count: personCount,
+          vehicle_count: vehicleTotal,
+          object_count: detections.length,
+        };
+
+        // Store and broadcast through the real pipeline
+        this.recordCameraFrame(camId, frameState.measured_fps);
+        this.latestFrameStates.set(camId, frameState);
+        this.frameStateListeners.forEach((listener) => listener(frameState));
+
+        // Also fire detection + tracking listeners for CameraFeedCanvas compatibility
+        const detPayload: CameraDetectionsPayload = {
+          camera_id: camId,
+          frame_width: frameW,
+          frame_height: frameH,
+          timestamp: new Date().toISOString(),
+          detection_count: detections.length,
+          detections,
+        };
+        this.detectionListeners.forEach((fn) => fn(detPayload));
+
+        const trackPayload: CameraTrackingPayload = {
+          camera_id: camId,
+          frame_width: frameW,
+          frame_height: frameH,
+          timestamp: new Date().toISOString(),
+          track_count: tracks.length,
+          tracks,
+          counts,
+        };
+        this.trackingListeners.forEach((fn) => fn(trackPayload));
+      }
+
+      // Notify fleet counts aggregation
+      this.notifyFleetCounts();
 
       if (this.status === 'DISCONNECTED' || this.status === 'RECONNECTING') {
         this.status = 'EMULATED';
         this.notifyState();
       }
-    }, 2500);
+    }, 800); // 800ms ≈ ~1.25 fps emulation rate per camera
   }
 
   public triggerManualSimulatedAlert(customAlert?: Partial<AlertItem>): AlertItem {

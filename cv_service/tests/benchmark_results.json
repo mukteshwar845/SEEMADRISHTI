@@ -1,0 +1,364 @@
+{
+  "cam-01": {
+    "camera_id": "cam-01",
+    "width": 1344,
+    "height": 756,
+    "aspect_ratio": "1.78:1 (1344x756)",
+    "tested_frames": 15,
+    "nominal_fps": 25.0,
+    "baseline": {
+      "imgsz": 640,
+      "conf": 0.45,
+      "avg_latency_ms": 52.3,
+      "fps": 19.1,
+      "total_detections": 202,
+      "detection_rate": 100.0,
+      "classes": {
+        "person": 202
+      }
+    },
+    "optimized": {
+      "imgsz": 1280,
+      "conf": 0.25,
+      "avg_latency_ms": 235.4,
+      "fps": 4.2,
+      "total_detections": 436,
+      "detection_rate": 100.0,
+      "classes": {
+        "person": 436
+      },
+      "categories": {
+        "HUMAN": 436,
+        "VEHICLE": 0,
+        "ANIMAL": 0,
+        "OBJECT": 0
+      },
+      "unique_tracks": 32,
+      "proximity_events": 11,
+      "crossing_events": 0,
+      "animal_capable": true
+    }
+  },
+  "cam-02": {
+    "camera_id": "cam-02",
+    "width": 1344,
+    "height": 756,
+    "aspect_ratio": "1.78:1 (1344x756)",
+    "tested_frames": 15,
+    "nominal_fps": 25.0,
+    "baseline": {
+      "imgsz": 640,
+      "conf": 0.45,
+      "avg_latency_ms": 79.7,
+      "fps": 12.5,
+      "total_detections": 202,
+      "detection_rate": 100.0,
+      "classes": {
+        "person": 202
+      }
+    },
+    "optimized": {
+      "imgsz": 960,
+      "conf": 0.22,
+      "avg_latency_ms": 223.1,
+      "fps": 4.5,
+      "total_detections": 373,
+      "detection_rate": 100.0,
+      "classes": {
+        "person": 373
+      },
+      "categories": {
+        "HUMAN": 373,
+        "VEHICLE": 0,
+        "ANIMAL": 0,
+        "OBJECT": 0
+      },
+      "unique_tracks": 30,
+      "proximity_events": 26,
+      "crossing_events": 1,
+      "animal_capable": true
+    }
+  },
+  "cam-03": {
+    "camera_id": "cam-03",
+    "width": 1344,
+    "height": 756,
+    "aspect_ratio": "1.78:1 (1344x756)",
+    "tested_frames": 15,
+    "nominal_fps": 25.0,
+    "baseline": {
+      "imgsz": 640,
+      "conf": 0.45,
+      "avg_latency_ms": 57.5,
+      "fps": 17.4,
+      "total_detections": 202,
+      "detection_rate": 100.0,
+      "classes": {
+        "person": 202
+      }
+    },
+    "optimized": {
+      "imgsz": 960,
+      "conf": 0.25,
+      "avg_latency_ms": 125.5,
+      "fps": 8.0,
+      "total_detections": 369,
+      "detection_rate": 100.0,
+      "classes": {
+        "person": 369
+      },
+      "categories": {
+        "HUMAN": 369,
+        "VEHICLE": 0,
+        "ANIMAL": 0,
+        "OBJECT": 0
+      },
+      "unique_tracks": 30,
+      "proximity_events": 24,
+      "crossing_events": 1,
+      "animal_capable": true
+    }
+  },
+  "cam-04": {
+    "camera_id": "cam-04",
+    "width": 1344,
+    "height": 756,
+    "aspect_ratio": "1.78:1 (1344x756)",
+    "tested_frames": 15,
+    "nominal_fps": 25.0,
+    "baseline": {
+      "imgsz": 640,
+      "conf": 0.45,
+      "avg_latency_ms": 49.8,
+      "fps": 20.1,
+      "total_detections": 202,
+      "detection_rate": 100.0,
+      "classes": {
+        "person": 202
+      }
+    },
+    "optimized": {
+      "imgsz": 1280,
+      "conf": 0.2,
+      "avg_latency_ms": 230.0,
+      "fps": 4.3,
+      "total_detections": 439,
+      "detection_rate": 100.0,
+      "classes": {
+        "person": 439
+      },
+      "categories": {
+        "HUMAN": 439,
+        "VEHICLE": 0,
+        "ANIMAL": 0,
+        "OBJECT": 0
+      },
+      "unique_tracks": 33,
+      "proximity_events": 8,
+      "crossing_events": 1,
+      "animal_capable": true
+    }
+  },
+  "cam-05": {
+    "camera_id": "cam-05",
+    "width": 1344,
+    "height": 756,
+    "aspect_ratio": "1.78:1 (1344x756)",
+    "tested_frames": 15,
+    "nominal_fps": 25.0,
+    "baseline": {
+      "imgsz": 640,
+      "conf": 0.45,
+      "avg_latency_ms": 51.3,
+      "fps": 19.5,
+      "total_detections": 202,
+      "detection_rate": 100.0,
+      "classes": {
+        "person": 202
+      }
+    },
+    "optimized": {
+      "imgsz": 1280,
+      "conf": 0.22,
+      "avg_latency_ms": 237.6,
+      "fps": 4.2,
+      "total_detections": 438,
+      "detection_rate": 100.0,
+      "classes": {
+        "person": 438
+      },
+      "categories": {
+        "HUMAN": 438,
+        "VEHICLE": 0,
+        "ANIMAL": 0,
+        "OBJECT": 0
+      },
+      "unique_tracks": 33,
+      "proximity_events": 22,
+      "crossing_events": 0,
+      "animal_capable": true
+    }
+  },
+  "cam-06": {
+    "camera_id": "cam-06",
+    "width": 1344,
+    "height": 756,
+    "aspect_ratio": "1.78:1 (1344x756)",
+    "tested_frames": 15,
+    "nominal_fps": 25.0,
+    "baseline": {
+      "imgsz": 640,
+      "conf": 0.45,
+      "avg_latency_ms": 53.6,
+      "fps": 18.7,
+      "total_detections": 202,
+      "detection_rate": 100.0,
+      "classes": {
+        "person": 202
+      }
+    },
+    "optimized": {
+      "imgsz": 1280,
+      "conf": 0.2,
+      "avg_latency_ms": 210.9,
+      "fps": 4.7,
+      "total_detections": 439,
+      "detection_rate": 100.0,
+      "classes": {
+        "person": 439
+      },
+      "categories": {
+        "HUMAN": 439,
+        "VEHICLE": 0,
+        "ANIMAL": 0,
+        "OBJECT": 0
+      },
+      "unique_tracks": 33,
+      "proximity_events": 6,
+      "crossing_events": 0,
+      "animal_capable": true
+    }
+  },
+  "cam-07": {
+    "camera_id": "cam-07",
+    "width": 1344,
+    "height": 756,
+    "aspect_ratio": "1.78:1 (1344x756)",
+    "tested_frames": 15,
+    "nominal_fps": 25.0,
+    "baseline": {
+      "imgsz": 640,
+      "conf": 0.45,
+      "avg_latency_ms": 49.6,
+      "fps": 20.1,
+      "total_detections": 202,
+      "detection_rate": 100.0,
+      "classes": {
+        "person": 202
+      }
+    },
+    "optimized": {
+      "imgsz": 1280,
+      "conf": 0.2,
+      "avg_latency_ms": 352.4,
+      "fps": 2.8,
+      "total_detections": 439,
+      "detection_rate": 100.0,
+      "classes": {
+        "person": 439
+      },
+      "categories": {
+        "HUMAN": 439,
+        "VEHICLE": 0,
+        "ANIMAL": 0,
+        "OBJECT": 0
+      },
+      "unique_tracks": 33,
+      "proximity_events": 14,
+      "crossing_events": 0,
+      "animal_capable": true
+    }
+  },
+  "cam-08": {
+    "camera_id": "cam-08",
+    "width": 1904,
+    "height": 1072,
+    "aspect_ratio": "1.78:1 (1904x1072)",
+    "tested_frames": 15,
+    "nominal_fps": 25.0,
+    "baseline": {
+      "imgsz": 640,
+      "conf": 0.45,
+      "avg_latency_ms": 50.6,
+      "fps": 19.8,
+      "total_detections": 17,
+      "detection_rate": 93.3,
+      "classes": {
+        "car": 17
+      }
+    },
+    "optimized": {
+      "imgsz": 1280,
+      "conf": 0.25,
+      "avg_latency_ms": 207.6,
+      "fps": 4.8,
+      "total_detections": 117,
+      "detection_rate": 100.0,
+      "classes": {
+        "car": 104,
+        "person": 6,
+        "bus": 7
+      },
+      "categories": {
+        "HUMAN": 6,
+        "VEHICLE": 111,
+        "ANIMAL": 0,
+        "OBJECT": 0
+      },
+      "unique_tracks": 12,
+      "proximity_events": 2,
+      "crossing_events": 0,
+      "animal_capable": true
+    }
+  },
+  "cam-09": {
+    "camera_id": "cam-09",
+    "width": 1344,
+    "height": 756,
+    "aspect_ratio": "1.78:1 (1344x756)",
+    "tested_frames": 15,
+    "nominal_fps": 25.0,
+    "baseline": {
+      "imgsz": 640,
+      "conf": 0.45,
+      "avg_latency_ms": 51.6,
+      "fps": 19.4,
+      "total_detections": 174,
+      "detection_rate": 100.0,
+      "classes": {
+        "person": 174
+      }
+    },
+    "optimized": {
+      "imgsz": 960,
+      "conf": 0.22,
+      "avg_latency_ms": 118.1,
+      "fps": 8.5,
+      "total_detections": 366,
+      "detection_rate": 100.0,
+      "classes": {
+        "person": 366
+      },
+      "categories": {
+        "HUMAN": 366,
+        "VEHICLE": 0,
+        "ANIMAL": 0,
+        "OBJECT": 0
+      },
+      "unique_tracks": 32,
+      "proximity_events": 16,
+      "crossing_events": 1,
+      "animal_capable": true
+    }
+  }
+}

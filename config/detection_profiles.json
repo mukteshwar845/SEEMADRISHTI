@@ -1,0 +1,82 @@
+{
+  "default": {
+    "confidence": 0.25,
+    "iou": 0.45,
+    "imgsz": 960,
+    "mode": "BALANCED",
+    "proximity_buffer_norm": 0.035,
+    "min_track_hits": 2
+  },
+  "cam-01": {
+    "confidence": 0.25,
+    "iou": 0.45,
+    "imgsz": 1280,
+    "mode": "BALANCED",
+    "proximity_buffer_norm": 0.035,
+    "description": "Sector Alpha Main Gate - High pedestrian & vehicle ingress point (1904x1072)"
+  },
+  "cam-02": {
+    "confidence": 0.22,
+    "iou": 0.45,
+    "imgsz": 960,
+    "mode": "BALANCED",
+    "proximity_buffer_norm": 0.035,
+    "description": "Sector Alpha East Perimeter - Dense pedestrian patrol corridor (1344x756)"
+  },
+  "cam-03": {
+    "confidence": 0.25,
+    "iou": 0.45,
+    "imgsz": 960,
+    "mode": "BALANCED",
+    "proximity_buffer_norm": 0.040,
+    "description": "Sector Bravo Access Road - Fast vehicle approach corridor (1344x756)"
+  },
+  "cam-04": {
+    "confidence": 0.20,
+    "iou": 0.40,
+    "imgsz": 1280,
+    "mode": "HIGH_ACCURACY",
+    "proximity_buffer_norm": 0.030,
+    "description": "Sector Bravo Outer Fence - High-resolution wide perimeter fence (2720x1530)"
+  },
+  "cam-05": {
+    "confidence": 0.22,
+    "iou": 0.45,
+    "imgsz": 1280,
+    "mode": "BALANCED",
+    "proximity_buffer_norm": 0.030,
+    "description": "Sector Charlie Checkpoint - Transit & cyclist checkpoint (2688x1512)"
+  },
+  "cam-06": {
+    "confidence": 0.20,
+    "iou": 0.40,
+    "imgsz": 1280,
+    "mode": "HIGH_ACCURACY",
+    "proximity_buffer_norm": 0.025,
+    "description": "Sector Charlie Transit Zone - 4K long-range vehicle transit corridor (3840x2160)"
+  },
+  "cam-07": {
+    "confidence": 0.20,
+    "iou": 0.40,
+    "imgsz": 1280,
+    "mode": "HIGH_ACCURACY",
+    "proximity_buffer_norm": 0.025,
+    "description": "Sector Delta Approach - 4K forward observation sector (3840x2160)"
+  },
+  "cam-08": {
+    "confidence": 0.25,
+    "iou": 0.45,
+    "imgsz": 1280,
+    "mode": "BALANCED",
+    "proximity_buffer_norm": 0.035,
+    "description": "Sector Delta Observation - Multi-lane transport & bus convoy observation (1904x1072)"
+  },
+  "cam-09": {
+    "confidence": 0.22,
+    "iou": 0.45,
+    "imgsz": 960,
+    "mode": "BALANCED",
+    "proximity_buffer_norm": 0.035,
+    "description": "Sector Echo Border Corridor - Dispersed patrol tracking corridor (1344x756)"
+  }
+}

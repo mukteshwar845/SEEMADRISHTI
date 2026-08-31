@@ -40,12 +40,38 @@ class YoloDetector:
                 f"[YoloDetector] Failed to load YOLO model '{self.config.model_name}': {str(e)}"
             ) from e
 
+    @staticmethod
+    def get_category_for_class(class_name: str) -> str:
+        """
+        Maps a specific YOLO class name to high-level security categories:
+        HUMAN, VEHICLE, ANIMAL, OBJECT.
+        Preserves truthful categorization without ever guessing or falsifying.
+        """
+        cn = str(class_name).lower().strip()
+        if cn in ("person", "pedestrian", "human"):
+            return "HUMAN"
+        elif cn in ("car", "truck", "bus", "motorcycle", "motor", "bicycle", "bike", "van", "suv", "vehicle"):
+            return "VEHICLE"
+        elif cn in ("bird", "cat", "dog", "horse", "sheep", "cow", "elephant", "bear", "zebra", "giraffe"):
+            return "ANIMAL"
+        else:
+            return "OBJECT"
+
+    def is_animal_capable(self) -> bool:
+        """Verifies whether the loaded model contains animal classes."""
+        if not self.is_loaded or not self.model or not hasattr(self.model, "names"):
+            return False
+        known_animals = {"bird", "cat", "dog", "horse", "sheep", "cow", "elephant", "bear", "zebra", "giraffe"}
+        model_classes = {str(name).lower() for name in self.model.names.values()}
+        return len(known_animals.intersection(model_classes)) > 0
+
     def detect(self, frame: np.ndarray, camera_id: Optional[str] = None) -> Dict[str, Any]:
         """
-        Execute real YOLO inference on an input frame.
+        Execute real YOLO inference on an input frame with multi-scale support and
+        coordinate inverse-mapping preservation.
 
         Returns structured detection output containing real bounding boxes,
-        confidence percentages, class labels, and inference latency.
+        confidence percentages, specific class labels, and high-level category labels.
         """
         if not self.is_loaded or self.model is None:
             raise RuntimeError("[YoloDetector] Model is not loaded. Call load_model() first.")
@@ -59,12 +85,13 @@ class YoloDetector:
 
         t_start = time.perf_counter()
 
-        # Run actual Ultralytics YOLO inference
+        # Run actual Ultralytics YOLO inference (Ultralytics internally letterboxes & inverts bboxes back to frame)
         results = self.model.predict(
             source=frame,
             imgsz=self.config.input_size,
             conf=self.config.confidence_threshold,
-            classes=list(self.config.target_classes.keys()),
+            iou=getattr(self.config, "iou_threshold", 0.45),
+            classes=list(self.config.target_classes.keys()) if self.config.target_classes else None,
             verbose=False,
         )
 
@@ -87,20 +114,22 @@ class YoloDetector:
                     conf_val = round(float(confs[i]), 4)
                     box = xyxy[i]
 
-                    # Clamp coordinates to frame boundaries
-                    x1 = max(0, int(box[0]))
-                    y1 = max(0, int(box[1]))
-                    x2 = min(w, int(box[2]))
-                    y2 = min(h, int(box[3]))
+                    # Clamp coordinates to actual frame boundaries
+                    x1 = max(0, min(w, int(box[0])))
+                    y1 = max(0, min(h, int(box[1])))
+                    x2 = max(0, min(w, int(box[2])))
+                    y2 = max(0, min(h, int(box[3])))
 
                     class_name = self.config.target_classes.get(
                         cls_id,
                         self.model.names.get(cls_id, f"class_{cls_id}")
                     )
+                    category = self.get_category_for_class(class_name)
 
                     detections.append({
                         "class_name": class_name,
                         "class_id": cls_id,
+                        "category": category,
                         "confidence": conf_val,
                         "bbox": {
                             "x1": x1,
@@ -118,6 +147,9 @@ class YoloDetector:
             "inference_ms": inference_time_ms,
             "detection_count": len(detections),
             "detections": detections,
+            "animal_detection_capable": self.is_animal_capable(),
+            "detection_mode": getattr(self.config, "detection_mode", "BALANCED"),
+            "imgsz": self.config.input_size,
         }
 
     def get_average_latency_ms(self) -> float:

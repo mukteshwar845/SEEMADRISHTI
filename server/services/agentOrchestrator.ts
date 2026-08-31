@@ -7,15 +7,15 @@ export const TACTICAL_AGENTS: TacticalAgentInfo[] = [
     name: 'Sentinel Vision',
     codename: 'SENTINEL-AI // AGENT-01',
     role: 'Perception & Threat Triage',
-    specialization: 'Spatial bounding boxes, thermal IR infrared extraction, false-alarm pruning, dwell timing',
+    specialization: 'Spatial bounding boxes, thermal IR extraction, false-alarm elimination, dwell timing',
     status: 'ANALYZING',
-    confidence: 99.1,
-    neuralLoad: 42,
+    confidence: 99.2,
+    neuralLoad: 44,
     latencyMs: 8,
     color: '#00f0ff',
     avatarIcon: 'Eye',
     lastAction: 'Filtered wildlife false-positive in Sector Bravo buffer zone',
-    actionCount: 1420,
+    actionCount: 1428,
   },
   {
     id: 'pathfinder',
@@ -24,13 +24,13 @@ export const TACTICAL_AGENTS: TacticalAgentInfo[] = [
     role: 'Spatial Trajectory & Homography',
     specialization: 'Cross-camera handover, ground-plane homography projection, velocity vectoring, evasive pathing',
     status: 'DELIBERATING',
-    confidence: 98.4,
-    neuralLoad: 58,
+    confidence: 98.6,
+    neuralLoad: 62,
     latencyMs: 12,
     color: '#ec4899',
     avatarIcon: 'Footprints',
     lastAction: 'Projected intercept vector for TRK-992 across CAM-02 -> CAM-03',
-    actionCount: 980,
+    actionCount: 994,
   },
   {
     id: 'commander',
@@ -39,13 +39,13 @@ export const TACTICAL_AGENTS: TacticalAgentInfo[] = [
     role: 'Engagement Rules & Field Dispatch',
     specialization: 'Defcon posture arbitration, Rapid QRT vector routing, spotlight lock-on, siren arming',
     status: 'DISPATCHING',
-    confidence: 97.6,
-    neuralLoad: 35,
+    confidence: 97.8,
+    neuralLoad: 38,
     latencyMs: 14,
     color: '#10b981',
     avatarIcon: 'ShieldAlert',
     lastAction: 'Dispatched Sector 4 QRT Patrol Unit to NW-04 coordinate perimeter',
-    actionCount: 654,
+    actionCount: 662,
   },
   {
     id: 'forensic',
@@ -55,12 +55,12 @@ export const TACTICAL_AGENTS: TacticalAgentInfo[] = [
     specialization: 'SHA-256 evidence hashing, millisecond UTC audit trails, tamper validation, courtroom dossiers',
     status: 'IDLE',
     confidence: 100.0,
-    neuralLoad: 22,
+    neuralLoad: 24,
     latencyMs: 5,
     color: '#a855f7',
     avatarIcon: 'Film',
     lastAction: 'Generated immutable cryptographic SHA-256 dossier for INC-001',
-    actionCount: 422,
+    actionCount: 435,
   },
 ];
 
@@ -276,6 +276,102 @@ export const PRESET_SCENARIOS: Record<string, MultiAgentPlan> = {
       },
     ],
   },
+
+  vehicle_checkpoint: {
+    incidentId: 'INC-AG-003',
+    scenarioTitle: 'High-Speed Vehicle Checkpoint Buffer Probe',
+    consensusScore: 97.4,
+    threatLevel: 'DEFCON-1',
+    targetTrackId: 'VEH-4820',
+    sector: 'Sector Charlie (Highway Checkpoint)',
+    summary:
+      'Multi-Agent Consensus reached with 97.4% agreement. Armored SUV ignored checkpoint deceleration barriers at 82 km/h. Automated spike strips armed, hydraulic tire bollards deployed, and ANPR flagged stolen plates.',
+    deliberationLog: [
+      {
+        id: 'msg-vc-01',
+        agentId: 'sentinel',
+        agentName: 'Sentinel Vision',
+        role: 'Perception & Triage',
+        color: '#00f0ff',
+        timestamp: '19:48:12.450',
+        thoughtTrace:
+          'High-speed optical flow vector detected on CAM-07. Dark utility SUV approaching checkpoint lane #2 at 82 km/h in 20 km/h restricted zone. Brake lights unilluminated.',
+        evidencePoints: [
+          'Approach velocity: 82.4 km/h (Violation +62 km/h)',
+          'ANPR Match: DL-04-TX-9982 (Stolen vehicle blacklist tag)',
+          'Target mass: ~2,400 kg',
+        ],
+        recommendedAction: 'Trigger Defcon-1 Checkpoint Lockdown and deploy road barriers.',
+        confidence: 99.8,
+      },
+      {
+        id: 'msg-vc-02',
+        agentId: 'pathfinder',
+        agentName: 'Pathfinder Re-ID',
+        role: 'Trajectory & Homography',
+        color: '#ec4899',
+        timestamp: '19:48:12.620',
+        thoughtTrace:
+          'Impact corridor calculation: vehicle will breach barrier gate in 3.8 seconds without deceleration. Emergency escape turnout road open on Right Vector.',
+        evidencePoints: [
+          'Time-to-Collision: 3.82 seconds',
+          'Vehicle trajectory vector straight on Gate Alpha-3',
+        ],
+        recommendedAction: 'Engage hydraulic wedge barrier and automated tire deflation spikes.',
+        confidence: 98.2,
+      },
+      {
+        id: 'msg-vc-03',
+        agentId: 'commander',
+        agentName: 'Tactical Commander',
+        role: 'Rules of Engagement',
+        color: '#10b981',
+        timestamp: '19:48:12.800',
+        thoughtTrace:
+          'Authorizing immediate activation of crash bollards and anti-ram wedge under Sector Charlie Force Protection Matrix.',
+        evidencePoints: [
+          'Level-3 Force Protection Protocol Active',
+          'Checkpost Sentries notified to take armored cover',
+        ],
+        recommendedAction: 'Deploy Hydraulic Bollards; alert Quick Reaction QRT Alpha.',
+        confidence: 99.0,
+      },
+      {
+        id: 'msg-vc-04',
+        agentId: 'forensic',
+        agentName: 'Lex Forensic',
+        role: 'Chain of Custody',
+        color: '#a855f7',
+        timestamp: '19:48:12.980',
+        thoughtTrace:
+          'ANPR camera snapshot, radar speed Doppler log, and multi-cam video evidence locked into emergency encrypted legal ledger.',
+        evidencePoints: [
+          'Radar Doppler velocity telemetry certified',
+          'SHA-256: 9b23f87c12586a...88310bc9',
+        ],
+        recommendedAction: 'Seal forensic incident report for Ministry of Home Affairs.',
+        confidence: 100.0,
+      },
+    ],
+    countermeasures: [
+      {
+        id: 'cm-vc-01',
+        label: 'Deploy Hydraulic Anti-Ram Wedge & Spike Strip',
+        status: 'READY',
+        assignedTo: 'Commander AI',
+        priority: 'CRITICAL',
+        actionPayload: 'Barrier Gate #3 Raised // Spikes Engaged',
+      },
+      {
+        id: 'cm-vc-02',
+        label: 'Trigger 130dB Perimeter Horn & Strobe Flasher',
+        status: 'READY',
+        assignedTo: 'Sentinel AI',
+        priority: 'HIGH',
+        actionPayload: 'Dual Xenon Red/Blue Strobe Pulse Active',
+      },
+    ],
+  },
 };
 
 export class AgentOrchestratorService {
@@ -292,12 +388,12 @@ export class AgentOrchestratorService {
 
   public deliberateScenario(scenarioKey: string): MultiAgentPlan {
     if (PRESET_SCENARIOS[scenarioKey]) {
-      this.currentPlan = { ...PRESET_SCENARIOS[scenarioKey] };
+      this.currentPlan = JSON.parse(JSON.stringify(PRESET_SCENARIOS[scenarioKey]));
       // Dynamically simulate neural load & latency
       this.agents.forEach((ag) => {
         ag.status = 'DELIBERATING';
-        ag.neuralLoad = Math.floor(Math.random() * 30 + 40);
-        ag.latencyMs = Math.floor(Math.random() * 10 + 6);
+        ag.neuralLoad = Math.floor(Math.random() * 25 + 50);
+        ag.latencyMs = Math.floor(Math.random() * 8 + 6);
         ag.actionCount += 1;
       });
       setTimeout(() => {
@@ -328,37 +424,51 @@ export class AgentOrchestratorService {
   }> {
     const q = query.toLowerCase();
 
-    if (q.includes('breach') || q.includes('intruder') || q.includes('scaling')) {
+    if (q.includes('breach') || q.includes('intruder') || q.includes('scaling') || q.includes('fence') || q.includes('nw')) {
       return {
         answer:
-          'Based on cross-agent deliberation: Target TRK-992 has reached the upper chainlink of NW-04. Sentinel confirms humanoid bio-signature (99.4%), Pathfinder projects landing in Sector Bravo in 8.5s, and Commander has designated QRT Delta-02 as primary intercept vector with 42s ETA.',
+          'Cross-Agent Consensus (98.6%): Target TRK-992 has reached the upper chainlink of NW-04. Sentinel confirms humanoid bio-signature (99.4%), Pathfinder projects landing in Sector Bravo in 8.5s, and Commander has designated QRT Delta-02 as primary intercept vector with 42s ETA.',
         consensusScore: 98.6,
         deliberations: [
-          { agent: 'SENTINEL-AI', perspective: 'Thermal IR confirms 36.8°C human core temperature. Motion classified as fence scaling.', confidence: 99.4 },
-          { agent: 'PATHFINDER-AI', perspective: 'Homography vectors indicate cross-over to CAM-03 blindspot in 1.4 seconds.', confidence: 98.6 },
-          { agent: 'COMMANDER-AI', perspective: 'SOP 14-B authorized non-lethal intercept. Delta-02 patrol en route.', confidence: 97.8 },
+          { agent: 'SENTINEL-AI', perspective: 'Thermal IR confirms 36.8°C human core temperature. Motion classified as fence scaling with 99.4% confidence.', confidence: 99.4 },
+          { agent: 'PATHFINDER-AI', perspective: 'Homography vectors indicate cross-over to CAM-03 blindspot in 1.4 seconds. Coordinates: X:142.4, Y:88.1.', confidence: 98.6 },
+          { agent: 'COMMANDER-AI', perspective: 'SOP 14-B authorized non-lethal intercept. Delta-02 patrol en route with 42s ETA.', confidence: 97.8 },
           { agent: 'LEX-AUDIT-AI', perspective: '60-second evidence container sealed with SHA-256: 7f83b165...26d9069.', confidence: 100.0 },
         ],
       };
     }
 
-    if (q.includes('fog') || q.includes('thermal') || q.includes('river')) {
+    if (q.includes('fog') || q.includes('thermal') || q.includes('river') || q.includes('water')) {
       return {
         answer:
-          'Sentinel and Pathfinder report 2 stealth-crawl targets in Sector Delta Riverine Marshland under 82% dense fog. Sonar acoustic confirmation matches human water disturbance. Marine Patrol Boat-03 has been silently vectored for apprehension.',
+          'Cross-Agent Consensus (95.2%): Sentinel and Pathfinder report 2 stealth-crawl targets in Sector Delta Riverine Marshland under 82% dense fog. Sonar acoustic confirmation matches human water disturbance. Marine Patrol Boat-03 has been silently vectored for apprehension.',
         consensusScore: 95.2,
         deliberations: [
-          { agent: 'SENTINEL-AI', perspective: 'Dual-spectrum FLIR contrast equalization penetrated dense mist; detected 2 crawling shapes.', confidence: 96.4 },
-          { agent: 'PATHFINDER-AI', perspective: 'Target velocity 0.4 m/s heading toward Boat Jetty North-2.', confidence: 94.8 },
-          { agent: 'COMMANDER-AI', perspective: 'Silent Intercept Protocol active to preserve tactical surprise.', confidence: 95.0 },
-          { agent: 'LEX-AUDIT-AI', perspective: 'Multi-spectral video & acoustic sonar timestamps sealed.', confidence: 100.0 },
+          { agent: 'SENTINEL-AI', perspective: 'Dual-spectrum FLIR contrast equalization penetrated dense mist; detected 2 crawling shapes with 37.1°C heat blooms.', confidence: 96.4 },
+          { agent: 'PATHFINDER-AI', perspective: 'Target creeping velocity 0.4 m/s heading toward Boat Jetty North-2 in Sector Delta.', confidence: 94.8 },
+          { agent: 'COMMANDER-AI', perspective: 'Silent Intercept Protocol active to preserve tactical surprise. Sirens suppressed.', confidence: 95.0 },
+          { agent: 'LEX-AUDIT-AI', perspective: 'Multi-spectral video & acoustic sonar timestamps sealed under SHA-256 tamper-proof ledger.', confidence: 100.0 },
+        ],
+      };
+    }
+
+    if (q.includes('vehicle') || q.includes('car') || q.includes('barrier') || q.includes('checkpoint') || q.includes('speed')) {
+      return {
+        answer:
+          'Cross-Agent Consensus (97.4%): High-speed vehicle violation at Sector Charlie Checkpoint. Vehicle VEH-4820 approaching barrier at 82 km/h. Automated hydraulic anti-ram wedge and spike strips deployed.',
+        consensusScore: 97.4,
+        deliberations: [
+          { agent: 'SENTINEL-AI', perspective: 'Speed detected 82.4 km/h in restricted 20 km/h corridor. Stolen license plate tag flagged.', confidence: 99.8 },
+          { agent: 'PATHFINDER-AI', perspective: 'Time to collision 3.8 seconds straight onto Gate Alpha-3.', confidence: 98.2 },
+          { agent: 'COMMANDER-AI', perspective: 'Authorized deployment of crash bollards and anti-ram wedge.', confidence: 99.0 },
+          { agent: 'LEX-AUDIT-AI', perspective: 'Radar speed Doppler and multi-cam video locked in legal ledger.', confidence: 100.0 },
         ],
       };
     }
 
     return {
       answer:
-        'All 4 autonomous agents are operational across 9 camera nodes and 4 border sectors. Current threat posture is NOMINAL (Defcon-4). Sensor towers and radar fusion arrays reporting zero hardware faults.',
+        `Lead Orchestrator reporting: All 4 autonomous agents are operational across 9 camera nodes. Global consensus health is 99.1%. Sentinel is processing live 60 FPS feeds, Pathfinder is updating cross-camera homography matrices, Commander has all QRT units checked in, and Lex Forensic confirms zero database tampering.`,
       consensusScore: 99.1,
       deliberations: [
         { agent: 'SENTINEL-AI', perspective: 'Perception pipeline processing 60 FPS RTSP streams with zero frame drops.', confidence: 99.5 },

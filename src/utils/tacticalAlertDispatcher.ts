@@ -113,9 +113,15 @@ class TacticalAlertDispatcher {
       const numOnly = cameraId.replace(/\D/g, '') || '1';
       const dbCamId = numOnly.length === 1 ? `cam-0${numOnly}` : `cam-${numOnly}`;
 
+      const token = typeof window !== 'undefined' ? localStorage.getItem('seemadrishti_auth_token') : null;
+      const headers: Record<string, string> = { 'Content-Type': 'application/json' };
+      if (token) {
+        headers['Authorization'] = `Bearer ${token}`;
+      }
+
       fetch('/api/alerts', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers,
         body: JSON.stringify({
           id: alertId,
           camera_id: dbCamId,

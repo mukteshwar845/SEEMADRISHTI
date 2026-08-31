@@ -56,19 +56,30 @@ async function request<T>(endpoint: string, options: RequestInit = {}): Promise<
 // Authentication Endpoints
 // ----------------------------------------------------------------------------
 
+export interface UserProfile {
+  id: string;
+  username: string;
+  name: string;
+  role: string;
+  email: string;
+  shift: string;
+  status: string;
+  assigned_sector: string;
+}
+
 export interface LoginResponse {
   success: boolean;
   token: string;
-  user: {
-    id: string;
-    username: string;
-    name: string;
-    role: string;
-    email: string;
-    shift: string;
-    status: string;
-    assigned_sector: string;
-  };
+  user: UserProfile;
+  message?: string;
+}
+
+export interface RoleInfo {
+  id: string;
+  title: string;
+  code: string;
+  description: string;
+  clearanceColor: string;
 }
 
 export async function loginOperator(username: string, password: string): Promise<LoginResponse> {
@@ -82,8 +93,50 @@ export async function loginOperator(username: string, password: string): Promise
   return res;
 }
 
-export async function getCurrentOperator(): Promise<{ success: boolean; user: any }> {
-  return request<any>('/auth/me');
+export interface RegisterPayload {
+  username: string;
+  password: string;
+  name: string;
+  email: string;
+  role: string;
+  shift?: string;
+  assigned_sector?: string;
+}
+
+export async function registerOperator(payload: RegisterPayload): Promise<LoginResponse> {
+  const res = await request<LoginResponse>('/auth/register', {
+    method: 'POST',
+    body: JSON.stringify(payload),
+  });
+  if (res.token) {
+    setAuthToken(res.token);
+  }
+  return res;
+}
+
+export async function fetchAuthRoles(): Promise<{ success: boolean; data: RoleInfo[] }> {
+  return request<{ success: boolean; data: RoleInfo[] }>('/auth/roles');
+}
+
+export async function getCurrentOperator(): Promise<{ success: boolean; user: UserProfile }> {
+  return request<{ success: boolean; user: UserProfile }>('/auth/me');
+}
+
+export interface UpdateProfilePayload {
+  name?: string;
+  email?: string;
+  shift?: string;
+  assigned_sector?: string;
+  password?: string;
+}
+
+export async function updateOperatorProfile(
+  payload: UpdateProfilePayload
+): Promise<{ success: boolean; user: UserProfile; message?: string }> {
+  return request<{ success: boolean; user: UserProfile; message?: string }>('/auth/profile', {
+    method: 'PUT',
+    body: JSON.stringify(payload),
+  });
 }
 
 export async function logoutOperator(): Promise<{ success: boolean }> {

@@ -622,3 +622,42 @@
   }
 }
 
+/* ============================================================================
+   DEVICE SECURITY & SENSITIVE DATA SHIELD
+   ============================================================================ */
+
+/* Blur coordinates, telemetry, track IDs when hideSensitiveData is active */
+.hide-sensitive-mode .sensitive-data,
+.hide-sensitive-mode [data-sensitive="true"] {
+  filter: blur(5px);
+  transition: filter 0.2s ease;
+  user-select: none;
+}
+
+.hide-sensitive-mode .sensitive-data:hover,
+.hide-sensitive-mode [data-sensitive="true"]:hover {
+  filter: blur(0px);
+}
+
+/* Obscure screen when window loses focus (Screenshot Protection) */
+@media screen {
+  .screenshot-protection-active {
+    position: relative;
+  }
+}
+
+@media print {
+  .screenshot-protection-active body {
+    display: none !important;
+  }
+}
+
+/* Dynamic theme font scaling */
+:root {
+  --font-scale-percent: 100%;
+}
+
+html {
+  font-size: var(--font-scale-percent, 100%);
+}
+

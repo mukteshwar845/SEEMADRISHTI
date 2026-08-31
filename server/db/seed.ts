@@ -4,10 +4,13 @@ import bcrypt from 'bcryptjs';
 export function seedDemoData(): void {
   const db = getDatabase();
 
-  // Check if already seeded
+  // Always ensure demo operator users exist and are up to date
+  seedDemoUsers();
+
+  // Check if cameras already seeded
   const countRow: any = db.prepare('SELECT COUNT(*) as count FROM cameras').get();
   if (countRow && countRow.count > 0) {
-    return; // Already populated
+    return; // Cameras and alerts already populated
   }
 
   const now = new Date().toISOString();
@@ -284,8 +287,11 @@ export function seedDemoData(): void {
         inc.created_at
       );
     }
+}
 
-  // 6. Seed Personnel & Operators (Users) with bcrypt hashed credentials
+export function seedDemoUsers(): void {
+  const db = getDatabase();
+  // Seed Personnel & Operators (Users) with bcrypt hashed credentials
   const insertUser = db.prepare(`
     INSERT INTO users (
       id, username, password_hash, name, role, email, shift, status, assigned_sector, created_at, updated_at

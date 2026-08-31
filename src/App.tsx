@@ -38,6 +38,13 @@ import { CameraCalibrationView } from './components/CameraCalibrationView';
 import { ReportsModal } from './components/ReportsModal';
 import { audioAlertEngine, triggerIntrusionAudioAlert } from './utils/audioAlert';
 import { ThemeProvider, useTheme } from './context/ThemeContext';
+import { AuthProvider, useAuth } from './context/AuthContext';
+import { SecurityProvider } from './context/SecurityContext';
+import { ScreenLockOverlay } from './components/security/ScreenLockOverlay';
+import { PinConfigModal } from './components/security/PinConfigModal';
+import { ProfileModal } from './components/profile/ProfileModal';
+import { LandingPage } from './components/landing/LandingPage';
+import { Auth3DView } from './components/auth/Auth3DView';
 import { webSocketService } from './services/websocketService';
 import { voiceCommandService } from './services/voiceCommandService';
 import { fetchAlerts, fetchCameras, fetchTelemetry } from './services/api';
@@ -472,13 +479,15 @@ function SeemadrishtiMainApp() {
           </div>
         </div>
 
-        {/* 2. Top Header */}
+        {/* 2. Top Header with Right Upper Corner Operator Profile */}
         <Header
           onToggleSidebarMobile={() => setIsMobileSidebarOpen(!isMobileSidebarOpen)}
           onRefresh={handleRefresh}
           isRefreshing={isRefreshing}
           activeAlertCount={alerts.length}
           onOpenDemoMode={() => setIsDemoGuideOpen(true)}
+          onOpenSettings={() => setCurrentView('settings')}
+          onOpenAlerts={() => setCurrentView('alerts')}
         />
 
         {/* Dynamic Main Body by Current View */}
@@ -749,14 +758,50 @@ function SeemadrishtiMainApp() {
         onClose={() => setIsDemoGuideOpen(false)}
         onNavigateToView={(v) => setCurrentView(v)}
       />
+
+      {/* Global Device Protection & Operator Profile Modals */}
+      <ScreenLockOverlay />
+      <PinConfigModal />
+      <ProfileModal />
     </div>
   );
+}
+
+function RootAppPortal() {
+  const { currentPortal, setPortal, enterDemoMode } = useAuth();
+
+  if (currentPortal === 'landing') {
+    return (
+      <LandingPage
+        onEnterAuth={() => setPortal('auth')}
+        onEnterDemo={async () => {
+          await enterDemoMode('Commander');
+          setPortal('app');
+        }}
+      />
+    );
+  }
+
+  if (currentPortal === 'auth') {
+    return (
+      <Auth3DView
+        initialMode="login"
+        onNavigateLanding={() => setPortal('landing')}
+      />
+    );
+  }
+
+  return <SeemadrishtiMainApp />;
 }
 
 export default function App() {
   return (
     <ThemeProvider>
-      <SeemadrishtiMainApp />
+      <AuthProvider>
+        <SecurityProvider>
+          <RootAppPortal />
+        </SecurityProvider>
+      </AuthProvider>
     </ThemeProvider>
   );
 }

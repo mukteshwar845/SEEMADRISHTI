@@ -17,8 +17,13 @@ import {
   Volume2,
   Sliders,
   CheckCircle,
+  LogOut,
+  User,
 } from 'lucide-react';
 import { useTheme } from '../context/ThemeContext';
+import { useAuth } from '../context/AuthContext';
+import { useSecurity } from '../context/SecurityContext';
+import { OperatorProfileDropdown } from './profile/OperatorProfileDropdown';
 import { webSocketService, WebSocketServiceState } from '../services/websocketService';
 import { voiceCommandService, VoiceServiceState } from '../services/voiceCommandService';
 
@@ -28,6 +33,8 @@ interface HeaderProps {
   isRefreshing?: boolean;
   activeAlertCount?: number;
   onOpenDemoMode?: () => void;
+  onOpenSettings?: () => void;
+  onOpenAlerts?: () => void;
 }
 
 export const Header: React.FC<HeaderProps> = ({
@@ -36,8 +43,12 @@ export const Header: React.FC<HeaderProps> = ({
   isRefreshing = false,
   activeAlertCount = 12,
   onOpenDemoMode,
+  onOpenSettings,
+  onOpenAlerts,
 }) => {
   const { theme, toggleTheme, isDaylight } = useTheme();
+  const { user, logout, setPortal, setIsProfileModalOpen } = useAuth();
+  const { lockNow } = useSecurity();
   const [dateString, setDateString] = useState('MON, SEP 16, 2026');
   const [timeString, setTimeString] = useState('10:45:22 AM');
   const [utcString, setUtcString] = useState('17:45:22 UTC');
@@ -365,6 +376,24 @@ export const Header: React.FC<HeaderProps> = ({
             className={`${isRefreshing ? 'animate-spin' : ''}`}
           />
         </button>
+
+        {/* SAMPLE OF PROFILE SETUP: Right Upper Corner (Matching Reference Design) */}
+        {user ? (
+          <div className="pl-2 border-l border-slate-700/50">
+            <OperatorProfileDropdown
+              onOpenSettings={onOpenSettings}
+              onOpenAlerts={onOpenAlerts}
+            />
+          </div>
+        ) : (
+          <button
+            onClick={() => setPortal('auth')}
+            className="p-1.5 px-3 rounded-xl border border-cyan-500/40 bg-cyan-950/50 hover:bg-cyan-900 text-cyan-300 text-xs font-bold flex items-center gap-1 cursor-pointer"
+          >
+            <Lock size={12} />
+            <span>SIGN IN</span>
+          </button>
+        )}
       </div>
     </header>
   );

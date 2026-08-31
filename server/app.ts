@@ -1,5 +1,6 @@
 import express, { Request, Response, NextFunction } from 'express';
 import path from 'path';
+import fs from 'fs';
 import { camerasRouter } from './routes/cameras';
 import { zonesRouter } from './routes/zones';
 import { eventsRouter } from './routes/events';
@@ -55,20 +56,47 @@ export function createApp(): express.Application {
     });
   });
 
-  // Static Serving for Evidence and Video Fixtures
-  app.use('/evidence', express.static(path.resolve(process.cwd(), 'evidence')));
-  app.use('/fixtures', express.static(path.resolve(process.cwd(), 'cv_service/tests/fixtures')));
+  // Static Serving for Evidence and Video Fixtures with Range and Cache control
+  app.use('/evidence', express.static(path.resolve(process.cwd(), 'evidence'), {
+    acceptRanges: true,
+    etag: true,
+    setHeaders: (res) => {
+      res.setHeader('Accept-Ranges', 'bytes');
+    },
+  }));
+  app.use('/fixtures', express.static(path.resolve(process.cwd(), 'cv_service/tests/fixtures'), {
+    acceptRanges: true,
+    etag: true,
+    setHeaders: (res) => {
+      res.setHeader('Accept-Ranges', 'bytes');
+    },
+  }));
+
+  // Favicon handler
+  app.get('/favicon.ico', (req: Request, res: Response) => {
+    const icoPath = path.resolve(process.cwd(), 'public/favicon.svg');
+    if (fs.existsSync(icoPath)) {
+      res.setHeader('Content-Type', 'image/svg+xml');
+      return res.sendFile(icoPath);
+    }
+    return res.status(204).end();
+  });
 
   // Priority 1 Security: Enforce authentication on all mutating API routes (POST, PUT, DELETE, PATCH)
   app.use('/api', (req: Request, res: Response, next: NextFunction) => {
-    // Whitelist login and read-only intelligence search queries from requiring a pre-existing token
+    // Whitelist login, register, read-only search, and automated tactical alert ingestion from requiring a pre-existing token
     if (
       req.path === '/auth/login' ||
       req.path === '/v1/auth/login' ||
+      req.path === '/auth/register' ||
+      req.path === '/v1/auth/register' ||
+      req.path === '/auth/roles' ||
+      req.path === '/v1/auth/roles' ||
       req.path === '/intelligence/search' ||
       req.path === '/v1/intelligence/search' ||
       req.path.startsWith('/intelligence/search') ||
-      req.path.startsWith('/v1/intelligence/search')
+      req.path.startsWith('/v1/intelligence/search') ||
+      (req.method === 'POST' && (req.path === '/alerts' || req.path === '/v1/alerts'))
     ) {
       return next();
     }

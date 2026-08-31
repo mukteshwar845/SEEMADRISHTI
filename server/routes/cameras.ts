@@ -536,3 +536,70 @@ camerasRouter.get('/:id/zones', (req: Request, res: Response, next: NextFunction
   }
 });
 
+// POST /api/cameras/homography/evaluate - Run real OpenCV homography evaluation between two camera feeds
+camerasRouter.post('/homography/evaluate', async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const { camA = 'cam-01', camB = 'cam-02' } = req.body;
+    const profiles = getCameraSourceProfiles();
+
+    const normA = String(camA).toLowerCase().replace(/^cam-0?/, 'cam-0');
+    const normB = String(camB).toLowerCase().replace(/^cam-0?/, 'cam-0');
+
+    let uriA = profiles[normA]?.source_uri || `cv_service/tests/fixtures/visdrone/${normA.toUpperCase().replace('CAM-0', 'CAM-')}.mp4`;
+    let uriB = profiles[normB]?.source_uri || `cv_service/tests/fixtures/visdrone/${normB.toUpperCase().replace('CAM-0', 'CAM-')}.mp4`;
+
+    const fullPathA = path.resolve(process.cwd(), uriA);
+    const fullPathB = path.resolve(process.cwd(), uriB);
+
+    if (!fs.existsSync(fullPathA) || !fs.existsSync(fullPathB)) {
+      return res.status(400).json({
+        success: false,
+        error: `Source video files not found for ${camA} or ${camB}`,
+        data: {
+          status: 'ERROR',
+          is_overlapping: false,
+          inlier_ratio: 0.0,
+        },
+      });
+    }
+
+    const { execFile } = await import('child_process');
+    const pythonScript = path.resolve(process.cwd(), 'cv_service/tools/evaluate_homography.py');
+
+    execFile('python', [pythonScript, fullPathA, fullPathB], { timeout: 15000 }, (error, stdout, stderr) => {
+      if (error) {
+        console.error('Homography evaluation error:', error, stderr);
+        return res.status(500).json({
+          success: false,
+          error: 'Homography computation failed',
+          details: stderr || error.message,
+          data: {
+            status: 'ERROR',
+            is_overlapping: false,
+            inlier_ratio: 0.0,
+          },
+        });
+      }
+
+      try {
+        const parsed = JSON.parse(stdout.trim());
+        return res.json({
+          success: true,
+          camA,
+          camB,
+          data: parsed,
+          timestamp: new Date().toISOString(),
+        });
+      } catch (parseErr) {
+        return res.status(500).json({
+          success: false,
+          error: 'Failed to parse homography output',
+          raw: stdout,
+        });
+      }
+    });
+  } catch (err) {
+    next(err);
+  }
+});
+

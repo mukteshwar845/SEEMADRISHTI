@@ -21,11 +21,14 @@ import {
   Sliders,
   Footprints,
   Flame,
+  Lock,
 } from 'lucide-react';
 import { ViewMode } from '../types';
 import { SeemadrishtiLogo } from './SeemadrishtiLogo';
 import { recordingEngine } from '../utils/recordingManager';
 import { useTheme } from '../context/ThemeContext';
+import { useAuth } from '../context/AuthContext';
+import { useSecurity } from '../context/SecurityContext';
 
 interface SidebarProps {
   currentView: ViewMode;
@@ -43,6 +46,8 @@ export const Sidebar: React.FC<SidebarProps> = ({
   onCloseMobile,
 }) => {
   const { isDaylight } = useTheme();
+  const { user, logout, setIsProfileModalOpen } = useAuth();
+  const { lockNow } = useSecurity();
   const [activeRecCount, setActiveRecCount] = useState(0);
   const [savedClipsCount, setSavedClipsCount] = useState(() => recordingEngine.getSavedClips().length);
 
@@ -262,7 +267,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
           </nav>
         </div>
 
-        {/* Footer Hardware & Security Info */}
+        {/* Footer Operator & Hardware Info */}
         <div
           className={`p-3 border-t space-y-2 ${
             isDaylight
@@ -270,6 +275,29 @@ export const Sidebar: React.FC<SidebarProps> = ({
               : 'bg-[#03060c] border-cyan-500/20'
           }`}
         >
+          {user && (
+            <div
+              onClick={() => setIsProfileModalOpen(true)}
+              className={`p-2.5 rounded-xl border text-left font-mono transition-all cursor-pointer hover:border-cyan-400 group ${
+                isDaylight
+                  ? 'bg-white border-slate-300 hover:bg-slate-50'
+                  : 'bg-black/80 border-cyan-500/30 hover:bg-cyan-950/30 shadow-[0_0_10px_rgba(0,240,255,0.1)]'
+              }`}
+              title="Click to view and edit Operator Profile"
+            >
+              <div className="flex items-center justify-between">
+                <span className="text-[9px] font-bold text-cyan-400 group-hover:text-cyan-300">
+                  OPERATOR PROFILE &bull; EDIT
+                </span>
+                <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-ping" />
+              </div>
+              <p className="text-xs font-black text-white truncate mt-0.5">{user.name}</p>
+              <p className="text-[9px] text-slate-400 truncate">
+                [{user.role}] &bull; {user.shift}
+              </p>
+            </div>
+          )}
+
           <div
             className={`px-2.5 py-1.5 rounded-lg flex items-center justify-between text-[9px] font-mono ${
               isDaylight
@@ -286,18 +314,34 @@ export const Sidebar: React.FC<SidebarProps> = ({
             <span className="text-emerald-600 dark:text-emerald-400 font-bold">41°C / OK</span>
           </div>
 
-          <button
-            id="nav-logout"
-            onClick={() => alert('Surveillance session locked. Military cipher keys verified.')}
-            className={`w-full flex items-center gap-2 px-2.5 py-1.5 rounded-lg transition-all cursor-pointer text-[11px] font-mono font-bold ${
-              isDaylight
-                ? 'text-slate-700 hover:text-rose-700 hover:bg-rose-50 border border-slate-300'
-                : 'text-slate-400 hover:text-rose-300 hover:bg-rose-950/30 hover:border-rose-500/40 border border-transparent'
-            }`}
-          >
-            <LogOut size={13} />
-            <span className="uppercase tracking-wider">Lock Session</span>
-          </button>
+          <div className="grid grid-cols-2 gap-1.5 pt-0.5">
+            <button
+              onClick={lockNow}
+              title="Lock Terminal Screen"
+              className={`flex items-center justify-center gap-1.5 px-2 py-2 rounded-lg transition-all cursor-pointer text-[10px] font-mono font-bold ${
+                isDaylight
+                  ? 'text-slate-700 hover:bg-slate-200 bg-slate-100 border border-slate-300'
+                  : 'text-slate-300 hover:bg-slate-800 bg-slate-900/80 border border-slate-700'
+              }`}
+            >
+              <Lock size={12} className="text-amber-400" />
+              <span>LOCK</span>
+            </button>
+
+            <button
+              id="nav-logout"
+              onClick={logout}
+              title="Terminate Session & Return to Landing Page"
+              className={`flex items-center justify-center gap-1.5 px-2 py-2 rounded-lg transition-all cursor-pointer text-[10px] font-mono font-bold ${
+                isDaylight
+                  ? 'text-rose-700 hover:bg-rose-100 bg-rose-50 border border-rose-300'
+                  : 'text-rose-400 hover:bg-rose-950/60 bg-rose-950/30 border border-rose-500/30 hover:border-rose-400'
+              }`}
+            >
+              <LogOut size={12} />
+              <span>LOGOUT</span>
+            </button>
+          </div>
         </div>
       </aside>
     </>

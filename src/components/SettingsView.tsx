@@ -870,7 +870,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
                         {tone.name}
                       </span>
                       <span className="text-[9px] font-mono px-1.5 py-0.5 rounded border border-slate-700 bg-slate-900 text-slate-400 font-bold">
-                        {tone.oscillatorType.toUpperCase()}
+                        {tone.category}
                       </span>
                     </div>
                     <p className="text-[10px] text-slate-400 leading-tight">{tone.description}</p>

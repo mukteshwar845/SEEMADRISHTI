@@ -8,15 +8,8 @@ import {
   LogOut,
   Bell,
   MessageSquare,
-  Award,
-  Star,
-  Layers,
-  Sparkles,
   MapPin,
   Clock,
-  Key,
-  HelpCircle,
-  Briefcase,
   Check,
 } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
@@ -56,18 +49,17 @@ export const OperatorProfileDropdown: React.FC<OperatorProfileDropdownProps> = (
   if (!user) return null;
 
   // Custom clearance styling
-  const roleBadges: Record<string, { label: string; ringColor: string; textColor: string; starCount: string }> = {
-    Commander: { label: 'SUPREME COMMAND (LVL-4)', ringColor: '#10b981', textColor: 'text-emerald-400', starCount: '9,420' },
-    'Surveillance Operator': { label: 'OPERATOR (LVL-3)', ringColor: '#00f0ff', textColor: 'text-cyan-400', starCount: '7,337' },
-    'Patrol Officer': { label: 'PATROL LEAD (LVL-2)', ringColor: '#10b981', textColor: 'text-emerald-400', starCount: '5,120' },
-    'AI Analyst': { label: 'AI ANALYST (LVL-3)', ringColor: '#a855f7', textColor: 'text-purple-400', starCount: '8,890' },
+  const roleBadges: Record<string, { label: string; ringColor: string; textColor: string }> = {
+    Commander: { label: 'SUPREME COMMAND (LVL-4)', ringColor: '#10b981', textColor: 'text-emerald-400' },
+    'Surveillance Operator': { label: 'OPERATOR (LVL-3)', ringColor: '#00f0ff', textColor: 'text-cyan-400' },
+    'Patrol Officer': { label: 'PATROL LEAD (LVL-2)', ringColor: '#10b981', textColor: 'text-emerald-400' },
+    'AI Analyst': { label: 'AI ANALYST (LVL-3)', ringColor: '#a855f7', textColor: 'text-purple-400' },
   };
 
   const badge = roleBadges[user.role] || {
     label: user.role.toUpperCase(),
     ringColor: '#00f0ff',
     textColor: 'text-cyan-400',
-    starCount: '7,337',
   };
 
   return (

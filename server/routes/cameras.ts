@@ -455,3 +455,84 @@ camerasRouter.post('/:id/control', (req: Request, res: Response, next: NextFunct
     next(err);
   }
 });
+
+// PRD Section 13: POST /api/v1/cameras/:id/zones - Save newly drawn geofence polygon for a specific camera
+camerasRouter.post('/:id/zones', (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const db = getDatabase();
+    const { id } = req.params;
+    const { name, type = 'RESTRICTED_ZONE', polygon, loiter_threshold_seconds = 15 } = req.body;
+
+    const cam = db.prepare('SELECT * FROM cameras WHERE id = ?').get(id);
+    if (!cam) {
+      throw new AppError(`Camera '${id}' not found`, 404);
+    }
+
+    if (!name || typeof name !== 'string' || name.trim() === '') {
+      throw new AppError('Zone name is required', 400);
+    }
+
+    if (!Array.isArray(polygon) || polygon.length < 2) {
+      throw new AppError('Zone polygon must be an array of coordinate points [[x, y], ...]', 400);
+    }
+
+    const zoneId = `zone-${id}-${Date.now()}`;
+    const now = new Date().toISOString();
+    const polygonJson = JSON.stringify(polygon);
+
+    db.prepare(`
+      INSERT INTO zones (id, camera_id, name, polygon, enabled, created_at, updated_at)
+      VALUES (?, ?, ?, ?, 1, ?, ?)
+    `).run(zoneId, id, name.trim(), polygonJson, now, now);
+
+    res.status(201).json({
+      success: true,
+      data: {
+        id: zoneId,
+        camera_id: id,
+        name: name.trim(),
+        type,
+        polygon,
+        loiter_threshold_seconds,
+        created_at: now,
+      },
+      message: 'Geofence zone registered successfully',
+      timestamp: now,
+    });
+  } catch (err) {
+    next(err);
+  }
+});
+
+// PRD Section 13: GET /api/v1/cameras/:id/zones - Retrieve zones for a specific camera
+camerasRouter.get('/:id/zones', (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const db = getDatabase();
+    const { id } = req.params;
+
+    const zones = db.prepare('SELECT * FROM zones WHERE camera_id = ?').all(id) as any[];
+    const parsed = zones.map((z) => {
+      let poly = [];
+      try {
+        poly = JSON.parse(z.polygon);
+      } catch {
+        poly = [];
+      }
+      return {
+        ...z,
+        enabled: Boolean(z.enabled),
+        polygon: poly,
+      };
+    });
+
+    res.json({
+      success: true,
+      data: parsed,
+      count: parsed.length,
+      timestamp: new Date().toISOString(),
+    });
+  } catch (err) {
+    next(err);
+  }
+});
+

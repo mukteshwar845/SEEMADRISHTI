@@ -324,14 +324,24 @@ export const getCameraTracks = (camId: string, camCode: string): SyntheticTrackD
     ];
   }
 
-  // CAM-01: Sector Alpha Main Gate
+  // CAM-01: Sector Alpha Main Gate (Real VisDrone Basketball Court Footage: 15+ Humans, 0 Vehicles, 0 Animals)
   if (norm.includes('1') || norm.includes('cam-01') || norm.includes('main gate')) {
     return [
-      { id: 1, label: 'INTRUDER', rawClass: 'intruder', baseNormX: 0.54, baseNormY: 0.40, ampX: 0.04, ampY: 0.10, speedFactor: 0.35, phase: 0.5, w: 0.058, h: 0.155, isThreat: true, trail: [], state: 'NORMAL', lastStateChange: 0 },
-      { id: 2, label: 'PERSON', rawClass: 'person', baseNormX: 0.32, baseNormY: 0.52, ampX: 0.05, ampY: 0.03, speedFactor: 0.20, phase: 1.6, w: 0.050, h: 0.140, isThreat: false, trail: [], state: 'NORMAL', lastStateChange: 0 },
-      { id: 3, label: 'PATROL OFFICER', rawClass: 'patrol', baseNormX: 0.44, baseNormY: 0.58, ampX: 0.04, ampY: 0.04, speedFactor: 0.22, phase: 3.1, w: 0.055, h: 0.150, isThreat: false, trail: [], state: 'NORMAL', lastStateChange: 0 },
-      { id: 4, label: 'K9 CANINE UNIT', rawClass: 'animal', baseNormX: 0.48, baseNormY: 0.60, ampX: 0.04, ampY: 0.03, speedFactor: 0.24, phase: 3.3, w: 0.038, h: 0.055, isThreat: false, trail: [], state: 'NORMAL', lastStateChange: 0 },
-      { id: 5, label: 'PATROL JEEP', rawClass: 'vehicle', baseNormX: 0.72, baseNormY: 0.62, ampX: 0.02, ampY: 0.02, speedFactor: 0.10, phase: 0.0, w: 0.095, h: 0.125, isThreat: false, trail: [], state: 'NORMAL', lastStateChange: 0 },
+      { id: 1, label: 'PLAYER #1', rawClass: 'person', baseNormX: 0.268, baseNormY: 0.635, ampX: 0.03, ampY: 0.04, speedFactor: 0.32, phase: 0.5, w: 0.034, h: 0.137, isThreat: false, trail: [], state: 'NORMAL', lastStateChange: 0 },
+      { id: 2, label: 'PLAYER #2', rawClass: 'person', baseNormX: 0.657, baseNormY: 0.397, ampX: 0.02, ampY: 0.03, speedFactor: 0.28, phase: 1.2, w: 0.020, h: 0.099, isThreat: false, trail: [], state: 'NORMAL', lastStateChange: 0 },
+      { id: 3, label: 'PLAYER #3', rawClass: 'person', baseNormX: 0.235, baseNormY: 0.776, ampX: 0.04, ampY: 0.02, speedFactor: 0.35, phase: 2.1, w: 0.048, h: 0.150, isThreat: false, trail: [], state: 'NORMAL', lastStateChange: 0 },
+      { id: 4, label: 'PLAYER #4', rawClass: 'person', baseNormX: 0.552, baseNormY: 0.560, ampX: 0.03, ampY: 0.05, speedFactor: 0.25, phase: 3.0, w: 0.032, h: 0.122, isThreat: false, trail: [], state: 'NORMAL', lastStateChange: 0 },
+      { id: 5, label: 'PLAYER #5', rawClass: 'person', baseNormX: 0.368, baseNormY: 0.635, ampX: 0.04, ampY: 0.03, speedFactor: 0.30, phase: 0.8, w: 0.035, h: 0.163, isThreat: false, trail: [], state: 'NORMAL', lastStateChange: 0 },
+      { id: 6, label: 'PLAYER #6', rawClass: 'person', baseNormX: 0.367, baseNormY: 0.877, ampX: 0.02, ampY: 0.02, speedFactor: 0.22, phase: 1.5, w: 0.045, h: 0.123, isThreat: false, trail: [], state: 'NORMAL', lastStateChange: 0 },
+      { id: 7, label: 'PLAYER #7', rawClass: 'person', baseNormX: 0.618, baseNormY: 0.433, ampX: 0.03, ampY: 0.04, speedFactor: 0.31, phase: 2.8, w: 0.023, h: 0.112, isThreat: false, trail: [], state: 'NORMAL', lastStateChange: 0 },
+      { id: 8, label: 'PLAYER #8', rawClass: 'person', baseNormX: 0.473, baseNormY: 0.493, ampX: 0.03, ampY: 0.03, speedFactor: 0.27, phase: 3.4, w: 0.033, h: 0.127, isThreat: false, trail: [], state: 'NORMAL', lastStateChange: 0 },
+      { id: 9, label: 'PLAYER #9', rawClass: 'person', baseNormX: 0.126, baseNormY: 0.724, ampX: 0.02, ampY: 0.02, speedFactor: 0.20, phase: 0.3, w: 0.040, h: 0.113, isThreat: false, trail: [], state: 'NORMAL', lastStateChange: 0 },
+      { id: 10, label: 'PLAYER #10', rawClass: 'person', baseNormX: 0.222, baseNormY: 0.645, ampX: 0.03, ampY: 0.04, speedFactor: 0.33, phase: 1.7, w: 0.031, h: 0.149, isThreat: false, trail: [], state: 'NORMAL', lastStateChange: 0 },
+      { id: 11, label: 'PLAYER #11', rawClass: 'person', baseNormX: 0.415, baseNormY: 0.879, ampX: 0.02, ampY: 0.02, speedFactor: 0.19, phase: 2.4, w: 0.043, h: 0.121, isThreat: false, trail: [], state: 'NORMAL', lastStateChange: 0 },
+      { id: 12, label: 'PLAYER #12', rawClass: 'person', baseNormX: 0.559, baseNormY: 0.953, ampX: 0.01, ampY: 0.01, speedFactor: 0.15, phase: 3.1, w: 0.045, h: 0.047, isThreat: false, trail: [], state: 'NORMAL', lastStateChange: 0 },
+      { id: 13, label: 'PLAYER #13', rawClass: 'person', baseNormX: 0.506, baseNormY: 0.452, ampX: 0.02, ampY: 0.03, speedFactor: 0.29, phase: 0.9, w: 0.022, h: 0.116, isThreat: false, trail: [], state: 'NORMAL', lastStateChange: 0 },
+      { id: 14, label: 'PLAYER #14', rawClass: 'person', baseNormX: 0.086, baseNormY: 0.520, ampX: 0.02, ampY: 0.02, speedFactor: 0.24, phase: 1.8, w: 0.026, h: 0.093, isThreat: false, trail: [], state: 'NORMAL', lastStateChange: 0 },
+      { id: 15, label: 'PLAYER #15', rawClass: 'person', baseNormX: 0.491, baseNormY: 0.411, ampX: 0.03, ampY: 0.04, speedFactor: 0.36, phase: 2.6, w: 0.027, h: 0.156, isThreat: false, trail: [], state: 'NORMAL', lastStateChange: 0 },
     ];
   }
 

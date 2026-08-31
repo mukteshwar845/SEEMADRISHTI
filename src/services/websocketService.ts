@@ -1099,13 +1099,11 @@ class WebSocketService {
     }>;
   } {
     switch (camIdx) {
-      case 1: // Sector Alpha Main Gate — border patrol scene
+      case 1: // Sector Alpha Main Gate / CAM-01: Basketball court footage (15+ people playing, 0 vehicles, 0 animals)
         return {
-          sceneType: 'BORDER_GATE',
+          sceneType: 'SPORTS_COURT',
           templates: [
-            { class_id: 0, class_name: 'person', minCount: 3, maxCount: 6, sizeRange: { wMin: 35, wMax: 60, hMin: 90, hMax: 160 }, yRange: { min: 200, max: 480 }, xRange: { min: 80, max: 900 }, confRange: { min: 0.82, max: 0.97 } },
-            { class_id: 2, class_name: 'car', minCount: 1, maxCount: 2, sizeRange: { wMin: 80, wMax: 130, hMin: 60, hMax: 100 }, yRange: { min: 300, max: 500 }, xRange: { min: 400, max: 900 }, confRange: { min: 0.85, max: 0.96 } },
-            { class_id: 16, class_name: 'dog', minCount: 0, maxCount: 1, sizeRange: { wMin: 30, wMax: 50, hMin: 25, hMax: 45 }, yRange: { min: 350, max: 500 }, xRange: { min: 200, max: 700 }, confRange: { min: 0.72, max: 0.88 } },
+            { class_id: 0, class_name: 'person', minCount: 15, maxCount: 19, sizeRange: { wMin: 22, wMax: 48, hMin: 55, hMax: 150 }, yRange: { min: 150, max: 520 }, xRange: { min: 50, max: 950 }, confRange: { min: 0.65, max: 0.98 } },
           ],
         };
       case 2: // East Perimeter

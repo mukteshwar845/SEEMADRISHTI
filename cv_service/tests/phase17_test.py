@@ -417,6 +417,8 @@ class TestPhase17IntelligentAlertsAndCounting(unittest.TestCase):
             for ev in evs:
                 if ev.event_type == "TRIPWIRE_CROSSING":
                     tripwire_events.append(ev)
+            if len(tripwire_events) >= 2:
+                break
 
         cap.release()
         self.assertGreater(len(tripwire_events), 0, "No real tripwire crossings detected in first 100 frames of CAM-01.mp4")
@@ -459,6 +461,8 @@ class TestPhase17IntelligentAlertsAndCounting(unittest.TestCase):
             for ev in evs:
                 if ev.event_type == "RESTRICTED_ZONE_ENTRY":
                     zone_events.append(ev)
+            if len(zone_events) >= 2:
+                break
 
         cap.release()
         self.assertGreater(len(zone_events), 0, "No real zone intrusions detected in first 80 frames of CAM-01.mp4")
@@ -637,7 +641,16 @@ class TestPhase17IntelligentAlertsAndCounting(unittest.TestCase):
         evidence_dir = os.path.join(PROJECT_ROOT, "evidence")
         mp4_files = [os.path.join(evidence_dir, f) for f in os.listdir(evidence_dir) if f.endswith(".mp4")] if os.path.exists(evidence_dir) else []
 
-        if not mp4_files:
+        target_mp4 = None
+        for f in mp4_files:
+            cap_test = cv2.VideoCapture(f)
+            if int(cap_test.get(cv2.CAP_PROP_FRAME_COUNT)) > 5:
+                target_mp4 = f
+                cap_test.release()
+                break
+            cap_test.release()
+
+        if not target_mp4:
             # Generate a test evidence clip from CAM-01 frames
             out_path = os.path.join(PROJECT_ROOT, "evidence_test_p17", "INC-TEST-01.mp4")
             os.makedirs(os.path.dirname(out_path), exist_ok=True)
@@ -665,8 +678,6 @@ class TestPhase17IntelligentAlertsAndCounting(unittest.TestCase):
             }
             writer.write_clip(frames, out_path, metadata)
             target_mp4 = out_path
-        else:
-            target_mp4 = mp4_files[0]
 
         cap = cv2.VideoCapture(target_mp4)
         total_frames = int(cap.get(cv2.CAP_PROP_FRAME_COUNT))

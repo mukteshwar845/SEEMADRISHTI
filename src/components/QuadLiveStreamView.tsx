@@ -588,11 +588,11 @@ export const QuadLiveStreamView: React.FC<QuadLiveStreamViewProps> = ({
                   <div className="flex items-center gap-2">
                     {/* Live Object Counts Pill */}
                     <div className="hidden lg:flex items-center gap-1.5 px-2 py-0.5 rounded bg-black/60 border border-white/10 text-[9px] font-mono text-slate-300">
-                      <span className="text-emerald-400 font-bold" title="Active Persons">👥 {camCountsMap[cam.id]?.persons || (cam.id.includes('8') ? 2 : 3)}</span>
+                      <span className="text-emerald-400 font-bold" title="Active Persons">👥 {camCountsMap[cam.id]?.persons ?? (cam.id.includes('1') || cam.id.includes('7') ? 15 : (cam.id.includes('8') ? 2 : 3))}</span>
                       <span className="text-slate-600">•</span>
-                      <span className="text-cyan-400 font-bold" title="Active Vehicles">🚗 {camCountsMap[cam.id]?.vehicles || (cam.id.includes('8') ? 5 : 1)}</span>
+                      <span className="text-cyan-400 font-bold" title="Active Vehicles">🚗 {camCountsMap[cam.id]?.vehicles ?? (cam.id.includes('1') || cam.id.includes('7') ? 0 : (cam.id.includes('8') ? 5 : 1))}</span>
                       <span className="text-slate-600">•</span>
-                      <span className="text-purple-400 font-bold" title="Active Animals">🐕 {camCountsMap[cam.id]?.animals || 1}</span>
+                      <span className="text-purple-400 font-bold" title="Active Animals">🐕 {camCountsMap[cam.id]?.animals ?? (cam.id.includes('1') || cam.id.includes('7') ? 0 : 1)}</span>
                     </div>
 
                     {/* Resolution & Bitrate */}

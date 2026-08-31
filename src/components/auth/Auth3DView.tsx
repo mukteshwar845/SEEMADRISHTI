@@ -187,7 +187,7 @@ export const Auth3DView: React.FC<Auth3DViewProps> = ({
                 SEEMADRISHTI AI
               </span>
               <span className="px-1.5 py-0.5 rounded bg-cyan-950/80 border border-cyan-500/30 text-[9px] font-bold text-cyan-300">
-                MIL-SPEC 256-BIT
+                AES 256-BIT
               </span>
             </div>
             <p className="text-[10px] text-slate-400 tracking-wider">

@@ -948,7 +948,7 @@ INTELLIGENCE GATEWAY: SEEMADRISHTI TACTICAL DEFENSE AI v2.0
 
             <div className="flex items-center justify-between pt-2">
               <span className="text-[10px] text-slate-500">
-                OFFICIAL BORDER SURVEILLANCE RECORD // MIL-SPEC ENCRYPTED
+                OFFICIAL BORDER SURVEILLANCE RECORD // ENCRYPTED 256-BIT
               </span>
               <div className="flex items-center gap-2">
                 <button

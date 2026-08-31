@@ -17,6 +17,7 @@ import { authRouter } from './routes/auth';
 import { behaviorChainsRouter } from './routes/behavior_chains';
 import { searchRouter } from './routes/search';
 import { intelligenceRouter } from './routes/intelligence';
+import { agentsRouter } from './routes/agents';
 import { errorHandler, notFoundHandler } from './middleware/errorHandler';
 import { requireAuth } from './middleware/auth';
 
@@ -96,6 +97,8 @@ export function createApp(): express.Application {
       req.path === '/v1/intelligence/search' ||
       req.path.startsWith('/intelligence/search') ||
       req.path.startsWith('/v1/intelligence/search') ||
+      req.path.startsWith('/agents') ||
+      req.path.startsWith('/v1/agents') ||
       (req.method === 'POST' && (req.path === '/alerts' || req.path === '/v1/alerts'))
     ) {
       return next();
@@ -123,6 +126,7 @@ export function createApp(): express.Application {
   app.use('/api/auth', authRouter);
   app.use('/api/behavior-chains', behaviorChainsRouter);
   app.use('/api/intelligence', intelligenceRouter);
+  app.use('/api/agents', agentsRouter);
 
   // V1 Alias Sub-Routers
   app.use('/api/v1/intelligence/search', searchRouter);
@@ -139,6 +143,7 @@ export function createApp(): express.Application {
   app.use('/api/v1/auth', authRouter);
   app.use('/api/v1/behavior-chains', behaviorChainsRouter);
   app.use('/api/v1/intelligence', intelligenceRouter);
+  app.use('/api/v1/agents', agentsRouter);
 
   // 404 for unhandled API routes only
   app.use('/api', notFoundHandler);

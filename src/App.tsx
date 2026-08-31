@@ -32,6 +32,7 @@ import { NotificationHistory } from './components/NotificationHistory';
 import { CameraHealthDiagnosticsView } from './components/CameraHealthDiagnosticsView';
 import { MissionControlView } from './components/MissionControlView';
 import { CameraFleetView } from './components/CameraFleetView';
+import { MultiAgentOrchestratorView } from './components/agents/MultiAgentOrchestratorView';
 import { EvidenceQueueView } from './components/EvidenceQueueView';
 import { SystemTimelineView } from './components/SystemTimelineView';
 import { CameraCalibrationView } from './components/CameraCalibrationView';
@@ -462,7 +463,7 @@ function SeemadrishtiMainApp() {
                 isDaylight ? 'text-emerald-700' : 'text-emerald-400'
               }`}
             >
-              [SEC_NET: MIL-SPEC ENCRYPTED 256-BIT]
+              [SEC_NET: ENCRYPTED 256-BIT]
             </span>
             <span className="text-slate-400">|</span>
             <span className="hidden sm:inline">
@@ -589,6 +590,8 @@ function SeemadrishtiMainApp() {
               onOpenDemo={() => setIsDemoGuideOpen(true)}
             />
           )}
+
+          {currentView === 'agents' && <MultiAgentOrchestratorView />}
 
           {currentView === 'camera-fleet' && (
             <CameraFleetView

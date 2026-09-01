@@ -32,6 +32,7 @@ import {
   FastForward,
   ArrowRight,
   TrendingUp,
+  Globe,
 } from 'lucide-react';
 import {
   TacticalAgentInfo,
@@ -220,6 +221,21 @@ const DEFAULT_AGENTS: TacticalAgentInfo[] = [
     avatarIcon: 'Film',
     lastAction: 'Generated immutable cryptographic SHA-256 dossier for INC-001',
     actionCount: 435,
+  },
+  {
+    id: 'awareness',
+    name: 'Situational Awareness',
+    codename: 'AWARENESS-AI // AGENT-05',
+    role: 'Environmental & Strategic Context Fusion',
+    specialization: 'Weather radar integration, thermal IR soil gradient mapping, multi-camera geospatial context, topographical risk modeling',
+    status: 'ANALYZING',
+    confidence: 99.1,
+    neuralLoad: 32,
+    latencyMs: 9,
+    color: '#f59e0b',
+    avatarIcon: 'Globe',
+    lastAction: 'Synthesized riverine fog & thermal contrast model across 9 sectors',
+    actionCount: 812,
   },
 ];
 
@@ -436,6 +452,8 @@ export const MultiAgentOrchestratorView: React.FC = () => {
         return ShieldAlert;
       case 'forensic':
         return Film;
+      case 'awareness':
+        return Globe;
       default:
         return Bot;
     }
@@ -463,11 +481,11 @@ export const MultiAgentOrchestratorView: React.FC = () => {
                 </h1>
                 <span className="px-2 py-0.5 rounded bg-emerald-950/80 border border-emerald-500/40 text-[9px] font-bold text-emerald-400 flex items-center gap-1.5">
                   <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-ping" />
-                  4 ACTIVE AGENTS &bull; PARALLEL WORK DISTRIBUTION READY
+                  5 ACTIVE AGENTS &bull; PARALLEL WORK DISTRIBUTION READY
                 </span>
               </div>
               <p className="text-xs text-slate-400 font-sans mt-0.5">
-                Centralized Autonomous Work Distribution: Heavy workloads are divided across 4 specialized AI agents executing concurrently in parallel for ultra-fast latency.
+                Centralized Autonomous Work Distribution: Heavy workloads are divided across 5 specialized AI agents executing concurrently in parallel for ultra-fast latency.
               </p>
             </div>
           </div>
@@ -496,8 +514,8 @@ export const MultiAgentOrchestratorView: React.FC = () => {
         </div>
       </div>
 
-      {/* 2. Swarm Agents Telemetry Grid (The 4 Autonomous Agents) */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+      {/* 2. Swarm Agents Telemetry Grid (The 5 Autonomous Agents) */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-4">
         {agents.map((agent) => {
           const Icon = getAgentIcon(agent.id);
           const isWorking =

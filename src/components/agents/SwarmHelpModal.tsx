@@ -20,6 +20,7 @@ import {
   ArrowRight,
   Shield,
   Search,
+  Globe,
 } from 'lucide-react';
 import { ParallelOrchestrationJob, ParallelSubTask, ViewMode } from '../../types';
 import { PRESET_PARALLEL_JOBS, agentOrchestrator } from '../../../server/services/agentOrchestrator';
@@ -90,6 +91,8 @@ export const SwarmHelpModal: React.FC<SwarmHelpModalProps> = ({
         return ShieldAlert;
       case 'forensic':
         return Film;
+      case 'awareness':
+        return Globe;
       default:
         return Bot;
     }

@@ -55,6 +55,18 @@ export const ThreatHeatmapView: React.FC<ThreatHeatmapViewProps> = ({
   const [cameraProfile, setCameraProfile] = useState<CameraThreatProfile | null>(null);
   const [isLoading, setIsLoading] = useState<boolean>(true);
   const [isLoadingProfile, setIsLoadingProfile] = useState<boolean>(false);
+  const [highlightProfile, setHighlightProfile] = useState<boolean>(false);
+
+  const handleDrillDown = useCallback((camId: string) => {
+    setSelectedCameraId(camId);
+    setHighlightProfile(true);
+    setTimeout(() => setHighlightProfile(false), 2200);
+
+    const profileEl = document.getElementById('node-threat-profile-panel');
+    if (profileEl) {
+      profileEl.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+    }
+  }, []);
 
   const loadHeatmap = useCallback(async () => {
     setIsLoading(true);
@@ -221,12 +233,27 @@ export const ThreatHeatmapView: React.FC<ThreatHeatmapViewProps> = ({
               </div>
             </div>
 
-            <button
-              onClick={() => setSelectedCameraId(hotspot.camera_id)}
-              className="px-3 py-2 rounded-lg bg-rose-600 hover:bg-rose-500 text-white font-bold text-xs cursor-pointer shadow-lg shadow-rose-950 transition-colors"
-            >
-              DRILL DOWN
-            </button>
+            <div className="flex items-center gap-2">
+              <button
+                onClick={() => handleDrillDown(hotspot.camera_id)}
+                className="px-3.5 py-2 rounded-lg bg-rose-600 hover:bg-rose-500 text-white font-bold text-xs cursor-pointer shadow-lg shadow-rose-950 transition-all flex items-center gap-1.5 active:scale-95"
+                title="Inspect Hotspot Node Details"
+              >
+                <Activity className="w-3.5 h-3.5" />
+                <span>DRILL DOWN</span>
+              </button>
+
+              {onSelectCamera && (
+                <button
+                  onClick={() => onSelectCamera(hotspot.camera_id)}
+                  className="px-3 py-2 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 font-bold text-xs cursor-pointer transition-all flex items-center gap-1.5"
+                  title="View Live Stream for this Hotspot"
+                >
+                  <Camera className="w-3.5 h-3.5 text-cyan-400" />
+                  <span className="hidden sm:inline">LIVE FEED</span>
+                </button>
+              )}
+            </div>
           </div>
         </div>
       )}
@@ -276,13 +303,13 @@ export const ThreatHeatmapView: React.FC<ThreatHeatmapViewProps> = ({
                   return (
                     <div
                       key={cam.camera_id}
-                      onClick={() => setSelectedCameraId(cam.camera_id)}
+                      onClick={() => handleDrillDown(cam.camera_id)}
                       className={`p-3 rounded-xl border cursor-pointer transition-all ${
                         isSelected
-                          ? 'bg-rose-950/40 border-rose-500 shadow-xl shadow-rose-950/50'
+                          ? 'bg-rose-950/40 border-rose-500 shadow-xl shadow-rose-950/50 ring-1 ring-rose-500/40'
                           : isTargetVisited
                           ? 'bg-cyan-950/30 border-cyan-500/70 shadow-lg shadow-cyan-950/40'
-                          : 'bg-slate-950/80 border-slate-800/80 hover:border-slate-700'
+                          : 'bg-slate-950/80 border-slate-800/80 hover:border-slate-700 hover:bg-slate-900/60'
                       }`}
                     >
                       <div className="flex items-center justify-between">
@@ -293,6 +320,11 @@ export const ThreatHeatmapView: React.FC<ThreatHeatmapViewProps> = ({
                           <span className="text-[10px] text-slate-500 block truncate max-w-[130px]">
                             {cam.sector}
                           </span>
+                          {isSelected && (
+                            <span className="inline-block mt-1 px-1.5 py-0.5 rounded bg-rose-500/20 text-rose-300 border border-rose-500/40 text-[8.5px] font-bold">
+                              ACTIVE PROFILE
+                            </span>
+                          )}
                         </div>
                         <div className="text-right">
                           <span className={`text-base font-black ${isCrit ? 'text-rose-400' : isHi ? 'text-amber-400' : isMed ? 'text-cyan-400' : 'text-slate-600'}`}>
@@ -415,7 +447,14 @@ export const ThreatHeatmapView: React.FC<ThreatHeatmapViewProps> = ({
         </div>
 
         {/* Right: Camera Threat Drill-Down Details Panel */}
-        <div className="lg:col-span-4 bg-slate-900/60 border border-slate-800 rounded-xl p-4 space-y-4 font-mono">
+        <div
+          id="node-threat-profile-panel"
+          className={`lg:col-span-4 bg-slate-900/60 border rounded-xl p-4 space-y-4 font-mono transition-all duration-300 ${
+            highlightProfile
+              ? 'border-rose-500 shadow-[0_0_25px_rgba(244,63,94,0.4)] ring-2 ring-rose-500/60 scale-[1.01]'
+              : 'border-slate-800'
+          }`}
+        >
           <div className="flex items-center justify-between pb-2 border-b border-slate-800">
             <span className="text-xs font-bold text-slate-300 uppercase tracking-wider">
               NODE THREAT PROFILE

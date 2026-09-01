@@ -33,6 +33,7 @@ import {
   ArrowRight,
   TrendingUp,
   Globe,
+  Loader2,
 } from 'lucide-react';
 import {
   TacticalAgentInfo,
@@ -43,8 +44,302 @@ import {
 } from '../../types';
 import { useTheme } from '../../context/ThemeContext';
 import { audioAlertEngine } from '../../utils/audioAlert';
-import { PRESET_PARALLEL_JOBS, agentOrchestrator } from '../../../server/services/agentOrchestrator';
 import { ThreatDemoButton } from '../demo/ThreatDemoButton';
+
+export const CLIENT_PRESET_PARALLEL_JOBS: Record<string, ParallelOrchestrationJob> = {
+  perimeter_sweep_9cam: {
+    id: 'JOB-SWARM-001',
+    title: '9-Sector Tactical Perimeter Sweep & Threat Decomposition',
+    category: 'PERIMETER_SWEEP',
+    status: 'COMPLETED',
+    totalSerialEstMs: 123,
+    actualParallelMs: 44,
+    speedupFactor: 2.8,
+    throughputPerSec: 90.9,
+    timestamp: 'JUST NOW',
+    consensusOutput:
+      'Parallel Multi-Agent sweep completed in 44ms (vs 123ms serial). 9 boundary sectors inspected concurrently. All optical tripwires nominal. Zero active breaches detected.',
+    subTasks: [
+      {
+        id: 'st-01',
+        agentId: 'sentinel',
+        agentName: 'Sentinel Vision',
+        role: 'Perception & Triage',
+        color: '#00f0ff',
+        taskTitle: 'Parallel 9-Channel YOLOv8 & Thermal FLIR Multi-Stream Scan',
+        details: 'Evaluated 9 active RTSP streams simultaneously. Processed 540 frames in parallel batch.',
+        status: 'COMPLETED',
+        progressPercent: 100,
+        durationMs: 38,
+        outputSummary: '0 human breaches, 2 wildlife thermal signatures suppressed in Sector Bravo.',
+        artifactsProduced: ['9x Sensor Bounding Heatmaps', 'Dual-Spectrum Contrast Equalization Profile'],
+      },
+      {
+        id: 'st-02',
+        agentId: 'pathfinder',
+        agentName: 'Pathfinder Re-ID',
+        role: 'Spatial Trajectory & Homography',
+        color: '#ec4899',
+        taskTitle: 'Ground-Plane Homography Matrix Transformation & Blindspot Audit',
+        details: 'Computed 9 planar homography projections and mapped overlap matrices across CAM-01 to CAM-09.',
+        status: 'COMPLETED',
+        progressPercent: 100,
+        durationMs: 42,
+        outputSummary: 'Zero unmonitored blindspots. Calibration error < 0.08px across fence baseline.',
+        artifactsProduced: ['9-Sector Homography Ground Mesh', 'Overlap Coverage Matrix (98.4%)'],
+      },
+      {
+        id: 'st-03',
+        agentId: 'commander',
+        agentName: 'Tactical Commander',
+        role: 'Rules of Engagement & Dispatch',
+        color: '#10b981',
+        taskTitle: 'QRT Patrol Unit Proximity Matrix & Rapid Intercept Route Pre-computation',
+        details: 'Polled GPS heartbeats of 6 patrol units and calculated 18 shortest intercept vectors.',
+        status: 'COMPLETED',
+        progressPercent: 100,
+        durationMs: 28,
+        outputSummary: 'Average QRT response time estimated at 38 seconds across all primary sectors.',
+        artifactsProduced: ['Patrol Grid Readiness Map', 'Shortest-Path Vector Table'],
+      },
+      {
+        id: 'st-04',
+        agentId: 'forensic',
+        agentName: 'Lex Forensic',
+        role: 'Chain-of-Custody & Audit',
+        color: '#a855f7',
+        taskTitle: 'Concurrent SHA-256 Telemetry Hashing & Immutable State Ledger Packaging',
+        details: 'Stamped millisecond UTC clock, hashed 9 video keyframes, and logged to audit SQLite database.',
+        status: 'COMPLETED',
+        progressPercent: 100,
+        durationMs: 15,
+        outputSummary: 'SHA-256: 3c8e9b10...9482bf1. Ledger record validated with 0 integrity errors.',
+        artifactsProduced: ['SHA-256 Integrity Certificate', 'Audit Snapshot Block #8820'],
+      },
+    ],
+  },
+  cross_cam_reid_recon: {
+    id: 'JOB-SWARM-002',
+    title: 'Cross-Camera Deep Re-ID & Spatial Corridor Graph Traversal',
+    category: 'REID_TRACKING',
+    status: 'COMPLETED',
+    totalSerialEstMs: 146,
+    actualParallelMs: 46,
+    speedupFactor: 3.2,
+    throughputPerSec: 86.9,
+    timestamp: '2 MINS AGO',
+    consensusOutput:
+      'Target TRK-992 re-identified on CAM-03 after 8.5s transit with 98.6% appearance match. Intercept coordinates dispatched to nearest QRT unit.',
+    subTasks: [
+      {
+        id: 'st-reid-01',
+        agentId: 'sentinel',
+        agentName: 'Sentinel Vision',
+        role: 'Perception & Triage',
+        color: '#00f0ff',
+        taskTitle: 'OSNet Deep Feature Vector Extraction Across CAM-01..CAM-04 Clips',
+        details: 'Extracted 512-dim L2-normalized deep appearance embeddings.',
+        status: 'COMPLETED',
+        progressPercent: 100,
+        durationMs: 34,
+        outputSummary: 'Matched 3 candidate bounding boxes with cosine similarity > 0.94.',
+        artifactsProduced: ['Deep Appearance Embeddings', 'Feature Heatmap Overlay'],
+      },
+      {
+        id: 'st-reid-02',
+        agentId: 'pathfinder',
+        agentName: 'Pathfinder Re-ID',
+        role: 'Spatial Trajectory & Homography',
+        color: '#ec4899',
+        taskTitle: 'Spatio-Temporal Graph Handover Search Across CAM-01..CAM-09 Feeds',
+        details: 'Searched cross-camera time windows +/- 60s along physical transit corridors.',
+        status: 'COMPLETED',
+        progressPercent: 100,
+        durationMs: 46,
+        outputSummary: 'Found 1 positive match on CAM-03 (East Road) with spatial-temporal score 0.986.',
+        artifactsProduced: ['Target Journey Path Graph', 'Velocity Vector (4.2 m/s @ 34°)'],
+      },
+      {
+        id: 'st-reid-03',
+        agentId: 'commander',
+        agentName: 'Tactical Commander',
+        role: 'Rules of Engagement & Dispatch',
+        color: '#10b981',
+        taskTitle: 'Virtual Roadblock Buffer Optimization & QRT Intercept Vectoring',
+        details: 'Calculated perimeter choke points along East Road transit corridor.',
+        status: 'COMPLETED',
+        progressPercent: 100,
+        durationMs: 29,
+        outputSummary: 'Assigned QRT Delta-02 to Roadblock Point Alpha-4. Intercept ETA: 42s.',
+        artifactsProduced: ['Roadblock Deployment Order', 'Automated Sentry Dispatch Signal'],
+      },
+      {
+        id: 'st-reid-04',
+        agentId: 'forensic',
+        agentName: 'Lex Forensic',
+        role: 'Chain-of-Custody & Audit',
+        color: '#a855f7',
+        taskTitle: 'Forensic Journey Dossier Sealing & Cryptographic Hash Stamp',
+        details: 'Packaged 2 synchronized video clips, trajectory coordinates, and operator audit trail.',
+        status: 'COMPLETED',
+        progressPercent: 100,
+        durationMs: 18,
+        outputSummary: 'SHA-256: 7f83b165...26d9069 certified and deposited into Evidence Vault.',
+        artifactsProduced: ['Courtroom Evidence Dossier PDF', 'Cryptographic Watermark File'],
+      },
+    ],
+  },
+  defcon1_lockdown: {
+    id: 'JOB-SWARM-003',
+    title: 'Defcon-1 Automated Sector Lockdown & Sensor Tripwire Verification',
+    category: 'EMERGENCY_LOCKDOWN',
+    status: 'COMPLETED',
+    totalSerialEstMs: 112,
+    actualParallelMs: 41,
+    speedupFactor: 2.7,
+    throughputPerSec: 97.5,
+    timestamp: '5 MINS AGO',
+    consensusOutput:
+      'Defcon-1 Sector Lockdown executed in 41ms across 4 parallel threads. Automated barriers raised, acoustic sirens armed, and emergency alert broadcast to HQ.',
+    subTasks: [
+      {
+        id: 'st-lock-01',
+        agentId: 'sentinel',
+        agentName: 'Sentinel Vision',
+        role: 'Perception & Triage',
+        color: '#00f0ff',
+        taskTitle: 'Multi-Spectral Laser Tripwire & Radar Plane Breach Verification',
+        details: 'Simultaneously audited 7 boundary tower laser tripwires and radar Doppler returns.',
+        status: 'COMPLETED',
+        progressPercent: 100,
+        durationMs: 32,
+        outputSummary: 'Confirmed breach at Tower #04 (Sector Bravo). Physical intrusion verified.',
+        artifactsProduced: ['Tripwire Status Bitmap', 'Doppler Radar Scan File'],
+      },
+      {
+        id: 'st-lock-02',
+        agentId: 'pathfinder',
+        agentName: 'Pathfinder Re-ID',
+        role: 'Spatial Trajectory & Homography',
+        color: '#ec4899',
+        taskTitle: 'Buffer Zone Clearance Rate & Evasive Route Simulation',
+        details: 'Simulated 100 intruder escape vectors through outer brush terrain.',
+        status: 'COMPLETED',
+        progressPercent: 100,
+        durationMs: 39,
+        outputSummary: 'Buffer zone containment probability: 96.8% when Gate Alpha-2 is sealed.',
+        artifactsProduced: ['Containment Probability Iso-surface', 'Evasion Heatmap Grid'],
+      },
+      {
+        id: 'st-lock-03',
+        agentId: 'commander',
+        agentName: 'Tactical Commander',
+        role: 'Rules of Engagement & Dispatch',
+        color: '#10b981',
+        taskTitle: 'Automated Hydraulic Crash Barrier, Sound Cannons & Siren Arming',
+        details: 'Sent serial PLC bus command to physical perimeter gate actuators.',
+        status: 'COMPLETED',
+        progressPercent: 100,
+        durationMs: 25,
+        outputSummary: 'Hydraulic bollards raised. 120dB directional acoustic sirens armed on Commander confirmation.',
+        artifactsProduced: ['PLC Barrier Actuator Log', 'Siren Activation Sequence'],
+      },
+      {
+        id: 'st-lock-04',
+        agentId: 'forensic',
+        agentName: 'Lex Forensic',
+        role: 'Chain-of-Custody & Audit',
+        color: '#a855f7',
+        taskTitle: 'Lockdown State Cryptographic Anchor & Legal Audit Block Packaging',
+        details: 'Generated SHA-256 state seal across all 9 camera sensors.',
+        status: 'COMPLETED',
+        progressPercent: 100,
+        durationMs: 14,
+        outputSummary: 'SHA-256: 8a4c11b2...319fa04 sealed into ledger.',
+        artifactsProduced: ['Lockdown Audit Record', 'Section 65B Signed Affidavit'],
+      },
+    ],
+  },
+};
+
+function generateLocalParallelJob(query: string): ParallelOrchestrationJob {
+  if (CLIENT_PRESET_PARALLEL_JOBS[query]) {
+    const job = JSON.parse(JSON.stringify(CLIENT_PRESET_PARALLEL_JOBS[query]));
+    job.timestamp = new Date().toLocaleTimeString();
+    return job;
+  }
+  const cleanTitle = query.length > 55 ? `${query.slice(0, 55)}...` : query;
+  return {
+    id: `JOB-SWARM-${Math.floor(Math.random() * 8999 + 1000)}`,
+    title: cleanTitle,
+    category: 'CUSTOM_PIPELINE',
+    status: 'COMPLETED',
+    totalSerialEstMs: 138,
+    actualParallelMs: 41,
+    speedupFactor: 3.4,
+    throughputPerSec: 104.2,
+    timestamp: new Date().toLocaleTimeString(),
+    consensusOutput: `Parallel Multi-Agent Work Distribution complete for "${cleanTitle}". Task decomposed across 4 agents and executed concurrently in 41ms with 3.4x parallel acceleration.`,
+    subTasks: [
+      {
+        id: 'dyn-st-01',
+        agentId: 'sentinel',
+        agentName: 'Sentinel Vision',
+        role: 'Perception & Triage',
+        color: '#00f0ff',
+        taskTitle: `Perception Scan: Extract Visual/Thermal Signatures for "${query.slice(0, 28)}"`,
+        details: 'Filtered noise, equalized contrast, and identified target regions of interest.',
+        status: 'COMPLETED',
+        progressPercent: 100,
+        durationMs: 34,
+        outputSummary: 'Visual analysis verified. 0 false-alarms detected in field of view.',
+        artifactsProduced: ['Filtered Bounding Grid', 'Thermal Feature Mask'],
+      },
+      {
+        id: 'dyn-st-02',
+        agentId: 'pathfinder',
+        agentName: 'Pathfinder Re-ID',
+        role: 'Spatial Trajectory & Homography',
+        color: '#ec4899',
+        taskTitle: 'Spatial Alignment: Homography Grid & Velocity Trajectory Mapping',
+        details: 'Aligned ground plane coordinates and calculated prospective motion corridor.',
+        status: 'COMPLETED',
+        progressPercent: 100,
+        durationMs: 38,
+        outputSummary: 'Homography transformed to UTM coordinate matrix. Route mapped.',
+        artifactsProduced: ['UTM Ground Projection', 'Handover Graph Node'],
+      },
+      {
+        id: 'dyn-st-03',
+        agentId: 'commander',
+        agentName: 'Tactical Commander',
+        role: 'Rules of Engagement & Dispatch',
+        color: '#10b981',
+        taskTitle: 'Tactical Arbitration: Evaluate ROE & Optimize Response Unit Assets',
+        details: 'Evaluated active Defcon rules and calculated optimal asset allocation.',
+        status: 'COMPLETED',
+        progressPercent: 100,
+        durationMs: 26,
+        outputSummary: 'Response plan validated under Border Force Standard Operating Procedures.',
+        artifactsProduced: ['Tactical Action Matrix', 'QRT Allocation Profile'],
+      },
+      {
+        id: 'dyn-st-04',
+        agentId: 'forensic',
+        agentName: 'Lex Forensic',
+        role: 'Chain-of-Custody & Audit',
+        color: '#a855f7',
+        taskTitle: 'Cryptographic Certification: SHA-256 Ledger Signing & Vault Package',
+        details: 'Generated millisecond UTC audit trail and signed cryptographic proof block.',
+        status: 'COMPLETED',
+        progressPercent: 100,
+        durationMs: 14,
+        outputSummary: 'SHA-256 cryptographic stamp validated with 0 integrity errors.',
+        artifactsProduced: ['SHA-256 Digest', 'Courtroom Legal Certificate'],
+      },
+    ],
+  };
+}
 
 // Default initial plan so the UI is immediately populated even before network load
 const DEFAULT_INITIAL_PLAN: MultiAgentPlan = {
@@ -323,22 +618,25 @@ export const MultiAgentOrchestratorView: React.FC = () => {
         setActiveJob(data.job);
         if (data.agents) setAgents(data.agents);
       } else {
-        const localJob = agentOrchestrator.orchestrateParallelJob(jobKeyOrQuery);
+        const localJob = generateLocalParallelJob(jobKeyOrQuery);
         setActiveJob(localJob);
       }
     } catch {
-      const localJob = agentOrchestrator.orchestrateParallelJob(jobKeyOrQuery);
+      const localJob = generateLocalParallelJob(jobKeyOrQuery);
       setActiveJob(localJob);
     } finally {
-      setTimeout(() => setIsDispatchingParallel(false), 450);
+      setTimeout(() => {
+        setIsDispatchingParallel(false);
+        document.getElementById('worker-subtasks-heading')?.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+      }, 750);
     }
   };
 
-  const handleCustomTaskSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!customTaskInput.trim()) return;
-    handleDispatchParallelJob(customTaskInput.trim());
-    setCustomTaskInput('');
+  const handleCustomTaskSubmit = (e?: React.FormEvent) => {
+    if (e) e.preventDefault();
+    const taskToRun = customTaskInput.trim() || 'Scan Sector Delta for night infiltrators and dispatch nearest boat patrol';
+    setCustomTaskInput(taskToRun);
+    handleDispatchParallelJob(taskToRun);
   };
 
   // Trigger Swarm Deliberation on a scenario
@@ -739,7 +1037,7 @@ export const MultiAgentOrchestratorView: React.FC = () => {
           </div>
 
           {/* Subtask Worker Pipeline Cards (4 Agents Executing Concurrently) */}
-          <div className="space-y-3">
+          <div className="space-y-3" id="worker-subtasks-heading">
             <div className="flex items-center justify-between text-xs font-bold text-slate-400 uppercase tracking-wider">
               <span className="flex items-center gap-2">
                 <Layers size={14} className="text-cyan-400" />
@@ -821,27 +1119,61 @@ export const MultiAgentOrchestratorView: React.FC = () => {
             </p>
           </div>
 
-          {/* Custom Task Decomposer Input */}
-          <form
-            onSubmit={handleCustomTaskSubmit}
-            className="p-4 rounded-2xl bg-black/60 border border-slate-800 flex flex-col sm:flex-row items-center gap-3"
-          >
-            <input
-              type="text"
-              value={customTaskInput}
-              onChange={(e) => setCustomTaskInput(e.target.value)}
-              placeholder="Enter custom task: 'Scan Sector Delta for night infiltrators and dispatch nearest boat patrol'..."
-              className="flex-1 w-full px-4 py-2.5 rounded-xl bg-black/80 border border-slate-700 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-cyan-500/60 font-mono"
-            />
-            <button
-              type="submit"
-              disabled={isDispatchingParallel || !customTaskInput.trim()}
-              className="w-full sm:w-auto px-5 py-2.5 rounded-xl bg-cyan-500 hover:bg-cyan-400 text-black font-bold text-xs flex items-center justify-center gap-1.5 cursor-pointer transition-all disabled:opacity-50 shrink-0"
+          {/* Custom Task Decomposer Input & Quick Workload Pills */}
+          <div className="space-y-2.5">
+            <form
+              onSubmit={handleCustomTaskSubmit}
+              className="p-4 rounded-2xl bg-black/60 border border-slate-800 flex flex-col sm:flex-row items-center gap-3 transition-all focus-within:border-cyan-500/60"
             >
-              <Zap size={14} />
-              <span>DECOMPOSE &amp; RUN FAST</span>
-            </button>
-          </form>
+              <input
+                type="text"
+                value={customTaskInput}
+                onChange={(e) => setCustomTaskInput(e.target.value)}
+                placeholder="Enter custom task: 'Scan Sector Delta for night infiltrators and dispatch nearest boat patrol'..."
+                className="flex-1 w-full px-4 py-2.5 rounded-xl bg-black/80 border border-slate-700 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-cyan-500/60 font-mono"
+              />
+              <button
+                type="submit"
+                disabled={isDispatchingParallel}
+                className="w-full sm:w-auto px-5 py-2.5 rounded-xl bg-cyan-500 hover:bg-cyan-400 text-black font-bold text-xs flex items-center justify-center gap-1.5 cursor-pointer transition-all disabled:opacity-75 shrink-0 shadow-[0_0_15px_rgba(0,240,255,0.3)]"
+              >
+                {isDispatchingParallel ? (
+                  <>
+                    <Loader2 size={14} className="animate-spin text-black" />
+                    <span>DECOMPOSING ACROSS 4 AGENTS...</span>
+                  </>
+                ) : (
+                  <>
+                    <Zap size={14} />
+                    <span>DECOMPOSE &amp; RUN FAST</span>
+                  </>
+                )}
+              </button>
+            </form>
+
+            {/* Quick Workload Pills */}
+            <div className="flex flex-wrap items-center gap-1.5 px-1 font-mono text-[11px]">
+              <span className="text-slate-500 text-[9.5px] uppercase font-bold mr-1">QUICK WORKLOADS:</span>
+              {[
+                'Scan Sector Delta for night infiltrators',
+                'Defcon-1 Sector Alpha Lock & Arm Sirens',
+                'Re-ID Target 992 Across CAM-02 to CAM-06',
+                'Correlate Thermal Fog across 9 Sectors',
+              ].map((taskPrompt, pIdx) => (
+                <button
+                  key={pIdx}
+                  type="button"
+                  onClick={() => {
+                    setCustomTaskInput(taskPrompt);
+                    handleDispatchParallelJob(taskPrompt);
+                  }}
+                  className="px-2.5 py-1 rounded-lg bg-black/60 hover:bg-cyan-950/60 text-slate-300 hover:text-cyan-300 border border-slate-800 hover:border-cyan-500/40 text-[10.5px] transition-all cursor-pointer"
+                >
+                  ⚡ {taskPrompt}
+                </button>
+              ))}
+            </div>
+          </div>
         </div>
       )}
 

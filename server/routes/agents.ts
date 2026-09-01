@@ -1,5 +1,6 @@
 import { Router, Request, Response } from 'express';
 import { agentOrchestrator } from '../services/agentOrchestrator';
+import { simulationEngine } from '../services/simulationEngine';
 
 export const agentsRouter = Router();
 
@@ -101,3 +102,35 @@ agentsRouter.post('/copilot', async (req: Request, res: Response) => {
     res.status(500).json({ success: false, error: err.message });
   }
 });
+
+// ── Simulation Demo Engine ──────────────────────────────────────────────────
+
+// POST /api/v1/agents/simulation/start -> Kick off autonomous threat demo scenario
+agentsRouter.post('/simulation/start', (req: Request, res: Response) => {
+  try {
+    const status = simulationEngine.startScenario();
+    res.json({ success: true, ...status });
+  } catch (err: any) {
+    res.status(500).json({ success: false, error: err.message });
+  }
+});
+
+// POST /api/v1/agents/simulation/stop -> Cancel active simulation
+agentsRouter.post('/simulation/stop', (req: Request, res: Response) => {
+  try {
+    const status = simulationEngine.stopScenario();
+    res.json({ success: true, ...status });
+  } catch (err: any) {
+    res.status(500).json({ success: false, error: err.message });
+  }
+});
+
+// GET /api/v1/agents/simulation/status -> Current simulation phase
+agentsRouter.get('/simulation/status', (req: Request, res: Response) => {
+  try {
+    res.json({ success: true, ...simulationEngine.getStatus() });
+  } catch (err: any) {
+    res.status(500).json({ success: false, error: err.message });
+  }
+});
+

@@ -44,6 +44,7 @@ import {
 import { useTheme } from '../../context/ThemeContext';
 import { audioAlertEngine } from '../../utils/audioAlert';
 import { PRESET_PARALLEL_JOBS, agentOrchestrator } from '../../../server/services/agentOrchestrator';
+import { ThreatDemoButton } from '../demo/ThreatDemoButton';
 
 // Default initial plan so the UI is immediately populated even before network load
 const DEFAULT_INITIAL_PLAN: MultiAgentPlan = {
@@ -600,6 +601,9 @@ export const MultiAgentOrchestratorView: React.FC = () => {
           );
         })}
       </div>
+
+      {/* 2b. SIH DEMO: Autonomous Threat Simulation Engine */}
+      <ThreatDemoButton />
 
       {/* 3. Main Navigation Subtabs: Workload Distribution vs Deliberation Chamber vs Copilot */}
       <div className="flex items-center gap-2 border-b border-slate-800 pb-3 flex-wrap">

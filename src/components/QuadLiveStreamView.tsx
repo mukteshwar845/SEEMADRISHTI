@@ -2,6 +2,7 @@ import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { CameraFeed, AlertItem } from '../types';
 import { CameraFeedCanvas } from './CameraFeedCanvas';
 import { tacticalAlertDispatcher } from '../utils/tacticalAlertDispatcher';
+import { audioAlertEngine } from '../utils/audioAlert';
 import {
   Grid2X2,
   Maximize,
@@ -443,8 +444,14 @@ export const QuadLiveStreamView: React.FC<QuadLiveStreamViewProps> = ({
 
           {/* Global Video Audio Mute/Unmute */}
           <button
-            onClick={() => setIsVideoMuted((prev) => !prev)}
-            title={isVideoMuted ? 'Unmute video audio' : 'Mute video audio'}
+            onClick={() => {
+              const next = !isVideoMuted;
+              setIsVideoMuted(next);
+              setIsVoiceMuted(next);
+              tacticalAlertDispatcher.setVoiceMuted(next);
+              audioAlertEngine.setMuted(next);
+            }}
+            title={isVideoMuted ? 'Unmute all audio (Video + Voice + Alerts)' : 'Mute all audio'}
             className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-mono font-bold tracking-wide border transition-all cursor-pointer ${
               isVideoMuted
                 ? 'bg-white/[0.04] text-slate-400 border-white/[0.08] hover:bg-white/[0.08]'
@@ -499,7 +506,9 @@ export const QuadLiveStreamView: React.FC<QuadLiveStreamViewProps> = ({
             onClick={() => {
               const next = !isVoiceMuted;
               setIsVoiceMuted(next);
+              setIsVideoMuted(next);
               tacticalAlertDispatcher.setVoiceMuted(next);
+              audioAlertEngine.setMuted(next);
             }}
             className={`px-2.5 py-1 rounded border text-[10px] font-bold flex items-center gap-1.5 cursor-pointer transition-colors ${
               isVoiceMuted

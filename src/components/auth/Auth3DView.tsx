@@ -21,7 +21,6 @@ import {
 import { useAuth, DEMO_OPERATOR_PRESETS } from '../../context/AuthContext';
 import { Auth3DCanvas } from './Auth3DCanvas';
 import { SeemadrishtiLogo } from '../SeemadrishtiLogo';
-import confetti from 'canvas-confetti';
 
 interface Auth3DViewProps {
   initialMode?: 'login' | 'signup';
@@ -105,19 +104,6 @@ export const Auth3DView: React.FC<Auth3DViewProps> = ({
     'Standard HQ Hours (0900 - 1700)',
   ];
 
-  const triggerCelebration = () => {
-    try {
-      confetti({
-        particleCount: 65,
-        spread: 70,
-        origin: { y: 0.7 },
-        colors: ['#00f0ff', '#10b981', '#ec4899', '#38bdf8'],
-      });
-    } catch {
-      // ignore
-    }
-  };
-
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setErrorMessage(null);
@@ -130,7 +116,6 @@ export const Auth3DView: React.FC<Auth3DViewProps> = ({
           throw new Error('Please enter both operator username and password.');
         }
         await login(username.trim(), password);
-        triggerCelebration();
         setSuccessMessage('Credentials authenticated. Initializing Tactical Matrix...');
       } else {
         if (!username.trim() || !password || !name.trim() || !email.trim()) {
@@ -148,7 +133,6 @@ export const Auth3DView: React.FC<Auth3DViewProps> = ({
           assigned_sector: assignedSector,
           shift,
         });
-        triggerCelebration();
         setSuccessMessage('Personnel successfully registered and clearance granted.');
       }
     } catch (err: any) {
@@ -165,7 +149,6 @@ export const Auth3DView: React.FC<Auth3DViewProps> = ({
     setIsSubmitting(true);
     try {
       await enterDemoMode(preset.role);
-      triggerCelebration();
     } catch (err: any) {
       setErrorMessage(err.message || 'Quick demo login failed.');
       setIsSubmitting(false);

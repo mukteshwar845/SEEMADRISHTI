@@ -19,11 +19,10 @@ export function HelpBotWidget() {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [messages, isLoading]);
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!input.trim() || isLoading) return;
+  const sendQuery = async (queryText: string) => {
+    if (!queryText.trim() || isLoading) return;
 
-    const userMsg: ChatMessage = { id: Date.now().toString(), role: 'user', text: input.trim() };
+    const userMsg: ChatMessage = { id: Date.now().toString(), role: 'user', text: queryText.trim() };
     setMessages(prev => [...prev, userMsg]);
     setInput('');
     setIsLoading(true);
@@ -72,9 +71,9 @@ export function HelpBotWidget() {
                     m.id === botMsgId ? { ...m, text: m.text + parsed.text } : m
                   ));
                 } else if (parsed.error) {
-                    setMessages(prev => prev.map(m => 
-                        m.id === botMsgId ? { ...m, text: m.text + '\n[Error: ' + parsed.error + ']' } : m
-                    ));
+                  setMessages(prev => prev.map(m => 
+                    m.id === botMsgId ? { ...m, text: m.text + '\n' + parsed.error } : m
+                  ));
                 }
               } catch (e) {
                 console.error("Error parsing SSE data", e);
@@ -85,11 +84,31 @@ export function HelpBotWidget() {
       }
     } catch (error) {
       console.error('Chat error:', error);
-      setMessages(prev => [...prev, { id: Date.now().toString(), role: 'model', text: 'Sorry, I encountered an error. Please try again.' }]);
+      setMessages(prev => [
+        ...prev,
+        {
+          id: Date.now().toString(),
+          role: 'model',
+          text: 'I am experiencing high network traffic. Please try asking again or select one of the suggested tactical topics.'
+        }
+      ]);
     } finally {
       setIsLoading(false);
     }
   };
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    await sendQuery(input);
+  };
+
+  const SUGGESTED_QUESTIONS = [
+    'What is Seemadrishti?',
+    'What is Camera Fleet?',
+    'Explain the 5 Swarm Agents',
+    'How does Target Journey work?',
+    'Explain Stream Diagnostics',
+  ];
 
   return (
     <div className="fixed bottom-6 right-6 z-50 flex flex-col items-end">
@@ -124,14 +143,25 @@ export function HelpBotWidget() {
             {/* Messages Area */}
             <div className="flex-1 overflow-y-auto p-4 space-y-4 bg-gray-900/50">
               {messages.length === 0 ? (
-                <div className="h-full flex flex-col items-center justify-center text-center px-4">
-                  <div className="w-12 h-12 bg-gray-800 rounded-full flex items-center justify-center mb-3">
-                    <Bot className="w-6 h-6 text-gray-400" />
+                <div className="h-full flex flex-col items-center justify-center text-center px-4 py-3">
+                  <div className="w-10 h-10 bg-indigo-950/60 border border-indigo-500/30 rounded-full flex items-center justify-center mb-2 text-indigo-400">
+                    <Bot className="w-5 h-5" />
                   </div>
-                  <h4 className="text-gray-200 font-medium mb-1">How can I help?</h4>
-                  <p className="text-xs text-gray-500">
-                    Ask me about the Sentinel, Commander, Lex Forensic, or Pathfinder agents.
+                  <h4 className="text-gray-100 font-bold text-sm mb-1 font-mono">SEEMADRISHTI TACTICAL AI</h4>
+                  <p className="text-[11px] text-gray-400 max-w-[280px] mb-3">
+                    Ask any question about border sectors, swarm agents, or computer vision diagnostics:
                   </p>
+                  <div className="flex flex-wrap gap-1.5 justify-center max-w-sm">
+                    {SUGGESTED_QUESTIONS.map((q, idx) => (
+                      <button
+                        key={idx}
+                        onClick={() => sendQuery(q)}
+                        className="px-2.5 py-1 text-[11px] rounded-lg bg-gray-800/80 hover:bg-indigo-900/40 text-cyan-300 border border-cyan-500/20 hover:border-cyan-400 transition-all text-left font-mono cursor-pointer"
+                      >
+                        {q}
+                      </button>
+                    ))}
+                  </div>
                 </div>
               ) : (
                 messages.map(msg => (

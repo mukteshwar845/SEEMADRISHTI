@@ -12,6 +12,7 @@ interface CameraFeedCanvasProps {
   onSimulateThreat?: () => void;
   className?: string;
   onCountsUpdate?: (counts: { persons: number; vehicles: number; animals: number; total: number }) => void;
+  muted?: boolean;
 }
 
 export interface DetectionStyleConfig {
@@ -397,10 +398,12 @@ export const CameraFeedCanvas: React.FC<CameraFeedCanvasProps> = ({
   camera,
   showAiBoxes = true,
   showZones = true,
-  showMotionTrails = true,
+  showMotionTrails = false,
   isNightVision = false,
+  onSimulateThreat,
   className = '',
   onCountsUpdate,
+  muted = true,
 }) => {
   const containerRef = useRef<HTMLDivElement | null>(null);
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
@@ -891,7 +894,7 @@ export const CameraFeedCanvas: React.FC<CameraFeedCanvasProps> = ({
         src={videoUrl}
         autoPlay
         loop
-        muted
+        muted={muted}
         playsInline
         onLoadedData={() => {
           setVideoLoaded(true);

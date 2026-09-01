@@ -77,6 +77,7 @@ export const QuadLiveStreamView: React.FC<QuadLiveStreamViewProps> = ({
   const [camCountsMap, setCamCountsMap] = useState<Record<string, { persons: number; vehicles: number; animals: number; total: number }>>({});
   const [recentTacticalAlert, setRecentTacticalAlert] = useState<AlertItem | null>(null);
   const [isVoiceMuted, setIsVoiceMuted] = useState(false);
+  const [isVideoMuted, setIsVideoMuted] = useState(true);
 
   useEffect(() => {
     const unsubAlert = tacticalAlertDispatcher.subscribe((alert) => {
@@ -440,6 +441,20 @@ export const QuadLiveStreamView: React.FC<QuadLiveStreamViewProps> = ({
             </button>
           )}
 
+          {/* Global Video Audio Mute/Unmute */}
+          <button
+            onClick={() => setIsVideoMuted((prev) => !prev)}
+            title={isVideoMuted ? 'Unmute video audio' : 'Mute video audio'}
+            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-mono font-bold tracking-wide border transition-all cursor-pointer ${
+              isVideoMuted
+                ? 'bg-white/[0.04] text-slate-400 border-white/[0.08] hover:bg-white/[0.08]'
+                : 'bg-blue-500/20 text-blue-300 border-blue-500/40 shadow-[0_0_10px_rgba(59,130,246,0.2)]'
+            }`}
+          >
+            {isVideoMuted ? <VolumeX size={14} /> : <Volume2 size={14} />}
+            <span className="hidden sm:inline">{isVideoMuted ? 'MUTED' : 'AUDIO ON'}</span>
+          </button>
+
           {/* Fullscreen */}
           <button
             onClick={toggleFullscreen}
@@ -638,6 +653,7 @@ export const QuadLiveStreamView: React.FC<QuadLiveStreamViewProps> = ({
                       showAiBoxes={globalAiBoxes}
                       showZones={globalZones}
                       isNightVision={isNight}
+                      muted={isVideoMuted}
                       onCountsUpdate={(counts) => {
                         setCamCountsMap((prev) => ({ ...prev, [cam.id]: counts }));
                       }}
@@ -861,6 +877,7 @@ export const QuadLiveStreamView: React.FC<QuadLiveStreamViewProps> = ({
                 showAiBoxes={globalAiBoxes}
                 showZones={globalZones}
                 isNightVision={nightVisionMap[activeFocusCam.id] || false}
+                muted={isVideoMuted}
                 onCountsUpdate={(counts) => {
                   setCamCountsMap((prev) => ({ ...prev, [activeFocusCam.id]: counts }));
                 }}
@@ -924,6 +941,7 @@ export const QuadLiveStreamView: React.FC<QuadLiveStreamViewProps> = ({
                       showAiBoxes={globalAiBoxes}
                       showZones={globalZones}
                       isNightVision={nightVisionMap[cam.id] || false}
+                      muted={isVideoMuted}
                     />
                     <div className="absolute inset-0 bg-black/30 hover:bg-transparent transition-colors flex items-center justify-center opacity-0 hover:opacity-100">
                       <span className="px-3 py-1.5 rounded-lg bg-blue-600 text-white text-[11px] font-mono font-bold shadow-[0_0_12px_rgba(59,130,246,0.5)]">
@@ -988,6 +1006,7 @@ export const QuadLiveStreamView: React.FC<QuadLiveStreamViewProps> = ({
                   showAiBoxes={globalAiBoxes}
                   showZones={globalZones}
                   isNightVision={nightVisionMap[activeFocusCam.id] || false}
+                  muted={isVideoMuted}
                   onCountsUpdate={(counts) => {
                     setCamCountsMap((prev) => ({ ...prev, [activeFocusCam.id]: counts }));
                   }}

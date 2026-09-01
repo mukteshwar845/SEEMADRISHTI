@@ -121,7 +121,7 @@ export const CLIENT_PRESET_PARALLEL_JOBS: Record<string, ParallelOrchestrationJo
   cross_cam_reid_recon: {
     id: 'JOB-SWARM-002',
     title: 'Cross-Camera Deep Re-ID & Spatial Corridor Graph Traversal',
-    category: 'REID_TRACKING',
+    category: 'TARGET_REID',
     status: 'COMPLETED',
     totalSerialEstMs: 146,
     actualParallelMs: 46,
@@ -546,7 +546,7 @@ export const MultiAgentOrchestratorView: React.FC = () => {
 
   // Parallel Workload Engine State
   const [activeJob, setActiveJob] = useState<ParallelOrchestrationJob>(
-    PRESET_PARALLEL_JOBS.perimeter_sweep_9cam
+    CLIENT_PRESET_PARALLEL_JOBS.perimeter_sweep_9cam
   );
   const [isDispatchingParallel, setIsDispatchingParallel] = useState(false);
   const [customTaskInput, setCustomTaskInput] = useState('');

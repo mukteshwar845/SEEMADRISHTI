@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { AlertItem } from '../types';
+import { fetchWithAuth } from '../utils/fetchWithAuth';
 import {
   X,
   ShieldAlert,
@@ -149,7 +150,7 @@ export const AlertDetailModal: React.FC<AlertDetailModalProps> = ({
 
   const handleAcknowledge = async () => {
     try {
-      await fetch(`/api/incidents/${incId}/acknowledge`, {
+      await fetchWithAuth(`/api/incidents/${incId}/acknowledge`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ operator: 'Officer IQ100', notes: notes || 'Incident acknowledged' }),
@@ -162,7 +163,7 @@ export const AlertDetailModal: React.FC<AlertDetailModalProps> = ({
 
   const handleDispatch = async () => {
     try {
-      await fetch(`/api/incidents/${incId}/dispatch`, {
+      await fetchWithAuth(`/api/incidents/${incId}/dispatch`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ operator: 'Tactical Dispatcher', unit: 'Quick Reaction Team Alpha', notes }),
@@ -179,7 +180,7 @@ export const AlertDetailModal: React.FC<AlertDetailModalProps> = ({
 
   const handleInvestigate = async () => {
     try {
-      await fetch(`/api/incidents/${incId}/investigate`, {
+      await fetchWithAuth(`/api/incidents/${incId}/investigate`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ operator: 'Surveillance Analyst', notes }),
@@ -192,7 +193,7 @@ export const AlertDetailModal: React.FC<AlertDetailModalProps> = ({
 
   const handleResolve = async () => {
     try {
-      await fetch(`/api/incidents/${incId}/resolve`, {
+      await fetchWithAuth(`/api/incidents/${incId}/resolve`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ operator: 'Commander IQ100', disposition: 'THREAT_NEUTRALIZED', notes }),

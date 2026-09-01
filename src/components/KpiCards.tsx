@@ -16,23 +16,21 @@ import { CrossCameraHandoverPanel } from './CrossCameraHandoverPanel';
 
 interface KpiCardsProps {
   onFilterChange?: (filter: string) => void;
+  totalCameras?: number;
+  activeCameras?: number;
+  alertsToday?: number;
+  totalDetections?: string | number;
+  onCardClick?: (type: string) => void;
+  alerts?: any[];
 }
 
-export const KpiCards: React.FC<KpiCardsProps> = () => {
+export const KpiCards: React.FC<KpiCardsProps> = ({ alerts = [] }) => {
   const [fleet, setFleet] = useState<FleetCounts>({
-    activePersons: 0,
-    activeVehicles: 0,
-    activeObjects: 0,
-    activeTracks: 0,
-    uniquePersons: 0,
-    uniqueVehicles: 0,
-    uniqueObjects: 0,
-    uniqueTracks: 0,
-    zoneBreaches: 0,
-    tripwireEvents: 0,
-    loiteringEvents: 0,
-    highRiskAlerts: 0,
-    lastUpdate: Date.now(),
+    visibleTotal: 0,
+    personTotal: 0,
+    vehicleTotal: 0,
+    uniqueSessionTotal: 0,
+    perCamera: {},
   });
 
   const [handoverCount, setHandoverCount] = useState<number>(0);
@@ -75,10 +73,28 @@ export const KpiCards: React.FC<KpiCardsProps> = () => {
     };
   }, []);
 
-  const activePersons = fleet.activePersons || 0;
-  const activeVehicles = fleet.activeVehicles || 0;
-  const activeObjects = fleet.activeObjects || (activePersons + activeVehicles);
-  const activeTracks = fleet.activeTracks || activeObjects;
+  const activePersons = fleet.personTotal || 0;
+  const activeVehicles = fleet.vehicleTotal || 0;
+  const activeObjects = fleet.visibleTotal || (activePersons + activeVehicles);
+  const activeTracks = activeObjects; // Track count matches visible total objects
+
+  const entries = alerts.filter(a => {
+    const text = (String(a.title || '') + String(a.type || '')).toLowerCase();
+    return text.includes('enter') || text.includes('breach') || text.includes('cross') || text.includes('intrusion');
+  }).length;
+
+  const exits = alerts.filter(a => {
+    const text = (String(a.title || '') + String(a.type || '')).toLowerCase();
+    return text.includes('exit') || text.includes('leave');
+  }).length;
+
+  const loiteringEvents = alerts.filter(a => {
+    const text = (String(a.title || '') + String(a.type || '')).toLowerCase();
+    return text.includes('loiter');
+  }).length;
+
+  const highRiskAlerts = alerts.filter(a => a.severity === 'High' || a.severity === 'Critical').length;
+
 
   return (
     <div id="kpi-command-centre-container" className="space-y-3 font-mono">
@@ -142,7 +158,7 @@ export const KpiCards: React.FC<KpiCardsProps> = () => {
             <span className="text-[9px] text-slate-400 uppercase">ENTRIES // EXITS</span>
             <div className="flex items-baseline justify-between mt-1">
               <span className="text-sm font-black text-emerald-400">
-                +{fleet.zoneBreaches || 4} <span className="text-slate-500 font-normal">/</span> -{fleet.tripwireEvents || 2}
+                +{entries} <span className="text-slate-500 font-normal">/</span> -{exits}
               </span>
               <LogIn size={13} className="text-emerald-400" />
             </div>
@@ -153,7 +169,7 @@ export const KpiCards: React.FC<KpiCardsProps> = () => {
             <span className="text-[9px] text-slate-400 uppercase">NET OCCUPANCY</span>
             <div className="flex items-baseline justify-between mt-1">
               <span className="text-xl font-black text-amber-400">
-                +{Math.max(0, (fleet.zoneBreaches || 4) - (fleet.tripwireEvents || 2))}
+                +{Math.max(0, entries - exits)}
               </span>
               <Crosshair size={13} className="text-amber-400" />
             </div>
@@ -193,7 +209,7 @@ export const KpiCards: React.FC<KpiCardsProps> = () => {
           <div className="bg-slate-900/80 p-2 rounded-lg border border-slate-800 flex flex-col justify-between">
             <span className="text-[9px] text-slate-400 uppercase">RESTRICTED BREACHES</span>
             <div className="flex items-baseline justify-between mt-0.5">
-              <span className="text-lg font-black text-rose-400">{(fleet.zoneBreaches || 1).toString().padStart(2, '0')}</span>
+              <span className="text-lg font-black text-rose-400">{entries.toString().padStart(2, '0')}</span>
               <ShieldAlert size={12} className="text-rose-400" />
             </div>
           </div>
@@ -202,7 +218,7 @@ export const KpiCards: React.FC<KpiCardsProps> = () => {
           <div className="bg-slate-900/80 p-2 rounded-lg border border-slate-800 flex flex-col justify-between">
             <span className="text-[9px] text-slate-400 uppercase">LOITERING TARGETS</span>
             <div className="flex items-baseline justify-between mt-0.5">
-              <span className="text-lg font-black text-amber-400">{(fleet.loiteringEvents || 0).toString().padStart(2, '0')}</span>
+              <span className="text-lg font-black text-amber-400">{loiteringEvents.toString().padStart(2, '0')}</span>
               <Activity size={12} className="text-amber-400" />
             </div>
           </div>
@@ -211,7 +227,7 @@ export const KpiCards: React.FC<KpiCardsProps> = () => {
           <div className="bg-slate-900/80 p-2 rounded-lg border border-slate-800 flex flex-col justify-between">
             <span className="text-[9px] text-slate-400 uppercase">HIGH / CRITICAL DEFCON</span>
             <div className="flex items-baseline justify-between mt-0.5">
-              <span className="text-lg font-black text-rose-500">{(fleet.highRiskAlerts || 1).toString().padStart(2, '0')}</span>
+              <span className="text-lg font-black text-rose-500">{highRiskAlerts.toString().padStart(2, '0')}</span>
               <span className="text-[8px] bg-rose-950 px-1 py-0.5 rounded text-rose-400 border border-rose-500/40 font-bold">CRITICAL</span>
             </div>
           </div>

@@ -294,13 +294,14 @@ behaviorChainsRouter.post('/', (req: Request, res: Response, next: NextFunction)
 
     const stmt = db.prepare(`
       INSERT INTO behavior_chains (
-        id, chain_id, track_id, correlation_id, camera_id, camera_ids,
+        id, chain_id, track_id, class_name, correlation_id, camera_id, camera_ids,
         status, started_at, updated_at, events, risk_score, risk_level,
         behavior_pattern, confidence, confidence_label, evidence,
         explanation, risk_contributions, incident_id, created_at
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
       ON CONFLICT(chain_id) DO UPDATE SET
         track_id = excluded.track_id,
+        class_name = excluded.class_name,
         correlation_id = excluded.correlation_id,
         camera_id = excluded.camera_id,
         camera_ids = excluded.camera_ids,
@@ -322,6 +323,7 @@ behaviorChainsRouter.post('/', (req: Request, res: Response, next: NextFunction)
       id,
       body.chain_id,
       Number(body.track_id),
+      body.class_name || 'person',
       body.correlation_id || null,
       body.camera_id.toLowerCase(),
       cameraIdsStr,

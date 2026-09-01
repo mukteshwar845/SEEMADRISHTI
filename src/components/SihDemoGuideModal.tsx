@@ -17,6 +17,7 @@ import {
   Sparkles,
   Zap,
 } from 'lucide-react';
+import { fetchWithAuth } from '../utils/fetchWithAuth';
 import { ViewMode } from '../types';
 
 export interface SihDemoStep {
@@ -350,7 +351,7 @@ export const SihDemoGuideModal: React.FC<SihDemoGuideModalProps> = ({
   const handleResetDemo = async () => {
     try {
       setIsResetting(true);
-      const res = await fetch('/api/system/demo/reset', { method: 'POST' });
+      const res = await fetchWithAuth('/api/system/demo/reset', { method: 'POST' });
       if (res.ok) {
         setResetMessage('DEMO SESSION RESET EXECUTED');
         setTimeout(() => setResetMessage(null), 3000);

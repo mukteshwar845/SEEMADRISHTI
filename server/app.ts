@@ -18,6 +18,7 @@ import { behaviorChainsRouter } from './routes/behavior_chains';
 import { searchRouter } from './routes/search';
 import { intelligenceRouter } from './routes/intelligence';
 import { agentsRouter } from './routes/agents';
+import { chatRouter } from './routes/chat';
 import { errorHandler, notFoundHandler } from './middleware/errorHandler';
 import { requireAuth } from './middleware/auth';
 
@@ -99,6 +100,8 @@ export function createApp(): express.Application {
       req.path.startsWith('/v1/intelligence/search') ||
       req.path.startsWith('/agents') ||
       req.path.startsWith('/v1/agents') ||
+      req.path.startsWith('/chat') ||
+      req.path.startsWith('/v1/chat') ||
       (req.method === 'POST' && (req.path === '/alerts' || req.path === '/v1/alerts'))
     ) {
       return next();
@@ -127,6 +130,7 @@ export function createApp(): express.Application {
   app.use('/api/behavior-chains', behaviorChainsRouter);
   app.use('/api/intelligence', intelligenceRouter);
   app.use('/api/agents', agentsRouter);
+  app.use('/api/chat', chatRouter);
 
   // V1 Alias Sub-Routers
   app.use('/api/v1/intelligence/search', searchRouter);

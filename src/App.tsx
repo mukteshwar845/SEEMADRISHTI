@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
+import { BrowserRouter, useNavigate, useLocation } from 'react-router-dom';
 import { ViewMode, AlertItem, CameraFeed, MatrixCameraFeed } from './types';
 import {
   initialAlerts,
@@ -34,6 +35,7 @@ import { MissionControlView } from './components/MissionControlView';
 import { CameraFleetView } from './components/CameraFleetView';
 import { MultiAgentOrchestratorView } from './components/agents/MultiAgentOrchestratorView';
 import { SwarmHelpModal } from './components/agents/SwarmHelpModal';
+import { HelpBotWidget } from './components/chat/HelpBotWidget';
 import { EvidenceQueueView } from './components/EvidenceQueueView';
 import { SystemTimelineView } from './components/SystemTimelineView';
 import { CameraCalibrationView } from './components/CameraCalibrationView';
@@ -54,7 +56,15 @@ import { Siren, ShieldAlert } from 'lucide-react';
 
 function SeemadrishtiMainApp() {
   const { theme, isDaylight } = useTheme();
-  const [currentView, setCurrentView] = useState<ViewMode>('dashboard');
+  const navigate = useNavigate();
+  const location = useLocation();
+  const pathView = location.pathname.substring(1);
+  const currentView: ViewMode = (pathView || 'dashboard') as ViewMode;
+
+  const setCurrentView = useCallback((view: string) => {
+    navigate(`/${view}`);
+  }, [navigate]);
+
   const [isMobileSidebarOpen, setIsMobileSidebarOpen] = useState(false);
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [isAudioMuted, setIsAudioMuted] = useState(false);
@@ -537,6 +547,7 @@ function SeemadrishtiMainApp() {
                 totalCameras={(telemetry as any)?.database?.totalCameras ?? matrixCameras.length}
                 activeCameras={matrixCameras.filter((c) => c.status === 'Online').length}
                 alertsToday={alerts.length}
+                alerts={alerts}
                 totalDetections={(telemetry as any)?.database?.totalEvents ? (telemetry as any).database.totalEvents.toLocaleString() : '4,892'}
                 onCardClick={(type) => {
                   if (type === 'cameras' || type === 'active') setCurrentView('cameras');
@@ -783,6 +794,7 @@ function SeemadrishtiMainApp() {
       <ScreenLockOverlay />
       <PinConfigModal />
       <ProfileModal />
+      <HelpBotWidget />
     </div>
   );
 }
@@ -816,13 +828,15 @@ function RootAppPortal() {
 
 export default function App() {
   return (
-    <ThemeProvider>
-      <AuthProvider>
-        <SecurityProvider>
-          <RootAppPortal />
-        </SecurityProvider>
-      </AuthProvider>
-    </ThemeProvider>
+    <BrowserRouter>
+      <ThemeProvider>
+        <AuthProvider>
+          <SecurityProvider>
+            <RootAppPortal />
+          </SecurityProvider>
+        </AuthProvider>
+      </ThemeProvider>
+    </BrowserRouter>
   );
 }
 

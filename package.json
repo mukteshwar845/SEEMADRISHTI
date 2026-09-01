@@ -30,6 +30,7 @@
     "pdfkit": "^0.20.1",
     "react": "^19.0.1",
     "react-dom": "^19.0.1",
+    "react-router-dom": "^7.18.3",
     "recharts": "^3.10.1",
     "three": "^0.185.1",
     "vite": "^6.2.3",

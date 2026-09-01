@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
+import { fetchWithAuth } from '../utils/fetchWithAuth';
 import {
   Sliders,
   Save,
@@ -177,7 +178,7 @@ export const CameraCalibrationView: React.FC = () => {
 
     try {
       for (const z of zones) {
-        await fetch('/api/zones', {
+        await fetchWithAuth('/api/zones', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({

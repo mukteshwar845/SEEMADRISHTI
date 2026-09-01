@@ -411,6 +411,13 @@ export const CameraFeedCanvas: React.FC<CameraFeedCanvasProps> = ({
   const [videoLoaded, setVideoLoaded] = useState(false);
   const [videoError, setVideoError] = useState(false);
 
+  // Fix for React video muted attribute not updating reactively
+  useEffect(() => {
+    if (videoRef.current) {
+      videoRef.current.muted = muted;
+    }
+  }, [muted]);
+
   const liveDetectionsRef = useRef<RealYoloDetection[]>([]);
   const liveTracksRef = useRef<TrackItem[]>([]);
   const lastWsUpdateTimeRef = useRef<number>(0);

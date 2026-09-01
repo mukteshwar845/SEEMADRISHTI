@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef, useMemo } from 'react';
+import React, { useState, useEffect, useRef, useMemo, useCallback } from 'react';
 import { CameraFeed, AlertItem } from '../types';
 import { CameraFeedCanvas } from './CameraFeedCanvas';
 import { tacticalAlertDispatcher } from '../utils/tacticalAlertDispatcher';

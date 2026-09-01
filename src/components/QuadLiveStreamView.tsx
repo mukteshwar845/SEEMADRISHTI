@@ -91,6 +91,22 @@ export const QuadLiveStreamView: React.FC<QuadLiveStreamViewProps> = ({
     return unsubAlert;
   }, []);
 
+  const handleCountsUpdate = useCallback((camId: string, counts: { persons: number; vehicles: number; animals: number; total: number }) => {
+    setCamCountsMap((prev) => {
+      const existing = prev[camId];
+      if (
+        existing &&
+        existing.persons === counts.persons &&
+        existing.vehicles === counts.vehicles &&
+        existing.animals === counts.animals &&
+        existing.total === counts.total
+      ) {
+        return prev;
+      }
+      return { ...prev, [camId]: counts };
+    });
+  }, []);
+
   const dynamicFleetCounts = useMemo(() => {
     let persons = 0;
     let vehicles = 0;
@@ -663,9 +679,7 @@ export const QuadLiveStreamView: React.FC<QuadLiveStreamViewProps> = ({
                       showZones={globalZones}
                       isNightVision={isNight}
                       muted={isVideoMuted}
-                      onCountsUpdate={(counts) => {
-                        setCamCountsMap((prev) => ({ ...prev, [cam.id]: counts }));
-                      }}
+                      onCountsUpdate={(counts) => handleCountsUpdate(cam.id, counts)}
                     />
                   </div>
 
@@ -887,9 +901,7 @@ export const QuadLiveStreamView: React.FC<QuadLiveStreamViewProps> = ({
                 showZones={globalZones}
                 isNightVision={nightVisionMap[activeFocusCam.id] || false}
                 muted={isVideoMuted}
-                onCountsUpdate={(counts) => {
-                  setCamCountsMap((prev) => ({ ...prev, [activeFocusCam.id]: counts }));
-                }}
+                onCountsUpdate={(counts) => handleCountsUpdate(activeFocusCam.id, counts)}
               />
 
               <div className="absolute top-3 left-3 flex items-center gap-2 z-20 pointer-events-none">
@@ -1016,9 +1028,7 @@ export const QuadLiveStreamView: React.FC<QuadLiveStreamViewProps> = ({
                   showZones={globalZones}
                   isNightVision={nightVisionMap[activeFocusCam.id] || false}
                   muted={isVideoMuted}
-                  onCountsUpdate={(counts) => {
-                    setCamCountsMap((prev) => ({ ...prev, [activeFocusCam.id]: counts }));
-                  }}
+                  onCountsUpdate={(counts) => handleCountsUpdate(activeFocusCam.id, counts)}
                 />
               </div>
 

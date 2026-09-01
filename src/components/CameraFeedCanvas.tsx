@@ -451,6 +451,11 @@ export const CameraFeedCanvas: React.FC<CameraFeedCanvasProps> = ({
   }, [camera.id, camera.code]);
 
   // Compute and report counts to parent QuadLiveStreamView
+  const onCountsUpdateRef = useRef(onCountsUpdate);
+  useEffect(() => {
+    onCountsUpdateRef.current = onCountsUpdate;
+  });
+
   useEffect(() => {
     const tracks = simState.current.syntheticTracks;
     let persons = 0;
@@ -464,13 +469,13 @@ export const CameraFeedCanvas: React.FC<CameraFeedCanvasProps> = ({
       else if (c === 'animal' || c === 'dog' || c === 'canine' || c === 'wildlife' || c === 'cattle') animals++;
     });
 
-    onCountsUpdate?.({
+    onCountsUpdateRef.current?.({
       persons,
       vehicles,
       animals,
       total: tracks.length,
     });
-  }, [camera.id, onCountsUpdate]);
+  }, [camera.id]);
 
   const syncCanvasDimensions = useCallback(() => {
     const container = containerRef.current;

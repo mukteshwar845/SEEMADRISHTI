@@ -68,6 +68,21 @@ export const TACTICAL_AGENTS: TacticalAgentInfo[] = [
     lastAction: 'Generated immutable cryptographic SHA-256 dossier for INC-001',
     actionCount: 435,
   },
+  {
+    id: 'awareness',
+    name: 'Situational Awareness',
+    codename: 'AWARENESS-AI // AGENT-05',
+    role: 'Environmental & Strategic Context Fusion',
+    specialization: 'Weather radar integration, thermal IR soil gradient mapping, multi-camera geospatial context, topographical risk modeling',
+    status: 'ANALYZING',
+    confidence: 99.1,
+    neuralLoad: 32,
+    latencyMs: 9,
+    color: '#f59e0b',
+    avatarIcon: 'Globe',
+    lastAction: 'Synthesized riverine fog & thermal contrast model across 9 sectors',
+    actionCount: 812,
+  },
 ];
 
 // Pre-computed Orchestration Scenarios for instant real-time deliberation

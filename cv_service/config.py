@@ -16,6 +16,7 @@ class CVConfig:
     # COCO Class IDs:
     # Humans: 0: person
     # Vehicles: 1: bicycle, 2: car, 3: motorcycle, 5: bus, 7: truck
+    # Weapons / Blades: 43: knife, 76: scissors
     # Animals: 14: bird, 15: cat, 16: dog, 17: horse, 18: sheep, 19: cow, 20: elephant, 21: bear, 22: zebra, 23: giraffe
     # Objects/Luggage: 24: backpack, 26: handbag, 28: suitcase
     target_classes: Dict[int, str] = field(
@@ -39,6 +40,8 @@ class CVConfig:
             24: "backpack",
             26: "handbag",
             28: "suitcase",
+            43: "knife",
+            76: "scissors",
         }
     )
 
@@ -51,9 +54,16 @@ class CVConfig:
     max_detections: int = int(os.getenv("MAX_DETECTIONS", "50"))
 
     # Backend Connection
-    ws_url: str = os.getenv("BACKEND_WS_URL", "ws://127.0.0.1:8000/ws")
-    http_backend_url: str = os.getenv("BACKEND_HTTP_URL", "http://127.0.0.1:8000")
+    ws_url: str = os.getenv("BACKEND_WS_URL", "ws://127.0.0.1:3000/ws")
+    http_backend_url: str = os.getenv("BACKEND_HTTP_URL", "http://127.0.0.1:3000")
     camera_id: str = os.getenv("CAMERA_ID", "cam-01")
+    cv_token: str = os.getenv("CV_SERVICE_TOKEN", os.getenv("API_KEY", "seemadrishti_cv_token_2026"))
+
+    def __post_init__(self):
+        # Auto-append authentication token if missing in ws_url
+        if self.cv_token and "token=" not in self.ws_url:
+            separator = "&" if "?" in self.ws_url else "?"
+            self.ws_url = f"{self.ws_url}{separator}token={self.cv_token}"
 
     # ByteTrack Tracking Configuration
     tracker_type: str = os.getenv("TRACKER_TYPE", "bytetrack")

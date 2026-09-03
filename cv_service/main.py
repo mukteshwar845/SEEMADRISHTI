@@ -10,6 +10,10 @@ VIDEO ➔ OpenCV ➔ YOLOv8n ➔ ByteTrack ➔ Centroid ➔ Polygon Geometry ➔
 
 import os
 import sys
+
+# Prevent OpenMP multiple runtime collision on Windows
+os.environ["KMP_DUPLICATE_LIB_OK"] = "TRUE"
+
 import time
 import argparse
 from typing import Dict, Set
@@ -41,6 +45,8 @@ from cv_service.environment.night_movement import NightMovementDetector
 from cv_service.adaptive.adaptive_sampler import AdaptiveSampler
 from cv_service.analytics.engine import MovementAnalyticsEngine
 from cv_service.output.detection_publisher import DetectionPublisher
+from cv_service.video.mjpeg_server import MJPEGStreamServer
+from cv_service.behavior.suspicious_detector import SuspiciousActivityDetector
 
 
 def parse_args():
@@ -174,6 +180,17 @@ def parse_args():
         action="store_true",
         help="Disable Phase 10 movement and traffic flow analytics",
     )
+    parser.add_argument(
+        "--stream-port",
+        type=int,
+        default=8085,
+        help="Port for live HTTP MJPEG stream server for browser matrix (default: 8085)",
+    )
+    parser.add_argument(
+        "--no-stream",
+        action="store_true",
+        help="Disable live HTTP MJPEG streamer",
+    )
     return parser.parse_args()
 
 
@@ -186,7 +203,6 @@ def main():
         model_name=args.model,
         confidence_threshold=args.conf,
         frame_skip=args.frame_skip,
-        ws_url="ws://127.0.0.1:8000/ws",
         loitering_threshold_seconds=args.loitering_threshold,
         loitering_grace_period_seconds=args.loitering_grace_period,
         evidence_pre_event_seconds=args.pre_event_seconds,
@@ -262,7 +278,8 @@ def main():
             sys.exit(1)
 
     # 4. Initialize Intrusion, Loitering & Risk Detectors & Load Zones
-    intrusion_detector = IntrusionDetector(api_base_url="http://127.0.0.1:8000/api")
+    api_url = f"{config.http_backend_url.rstrip('/')}/api"
+    intrusion_detector = IntrusionDetector(api_base_url=api_url)
     loaded_count = intrusion_detector.load_zones_from_backend(config.camera_id)
     if loaded_count == 0:
         # Fallback default perimeter zone for Sector Alpha
@@ -284,7 +301,7 @@ def main():
             threshold_seconds=config.loitering_threshold_seconds,
             grace_period_seconds=config.loitering_grace_period_seconds,
             target_classes=config.loitering_target_classes,
-            api_base_url="http://127.0.0.1:8000/api",
+            api_base_url=api_url,
         )
         loitering_detector.zones = intrusion_detector.zones
 
@@ -298,7 +315,7 @@ def main():
             persistence_min_seconds=config.risk_persistence_min_seconds,
             max_score=config.risk_max_score,
             target_classes=config.loitering_target_classes,
-            api_base_url="http://127.0.0.1:8000/api",
+            api_base_url=api_url,
             alert_threshold=config.risk_alert_threshold,
         )
 
@@ -398,7 +415,8 @@ def main():
     behavior_chain_engine = BehaviorChainEngine()
     incident_fusion_engine = IncidentFusionEngine()
     health_tracker = SystemHealthTracker()
-    print(f"[CV-Service] Initialized Phase 19 Intelligence, Behavior & Fusion Engines for {config.camera_id}")
+    suspicious_detector = SuspiciousActivityDetector(camera_id=config.camera_id, fps=meta.get("fps", 25.0) or 25.0)
+    print(f"[CV-Service] Initialized Phase 19 Intelligence, Suspicious Activity & Fusion Engines for {config.camera_id}")
 
     # 6. Processing Loop
     frame_counter = 0
@@ -437,6 +455,15 @@ def main():
     t_start = time.perf_counter()
     last_log_time = time.perf_counter()
 
+    # Initialize Live HTTP MJPEG Stream Server for Browser Matrix View
+    stream_server = None
+    if not args.no_stream:
+        try:
+            stream_server = MJPEGStreamServer(port=args.stream_port)
+            stream_server.start()
+        except Exception as e:
+            print(f"[CV-Service] Warning: Could not start MJPEG streamer: {e}")
+
     try:
         print("[CV-Service] Video tracking, intrusion, loitering & risk monitoring running. Press Ctrl+C to stop.")
         while True:
@@ -449,6 +476,10 @@ def main():
             if not ret or frame is None:
                 print("[CV-Service] End of video stream reached.")
                 break
+
+            # Broadcast latest frame over HTTP MJPEG for live dashboard matrix
+            if stream_server:
+                stream_server.update_frame(frame, camera_id=config.camera_id)
 
             # Handle MP4 loop event: reset trackers and memory to prevent ghost tracks across loops
             if getattr(source, "did_loop", False):
@@ -689,9 +720,39 @@ def main():
                     active_anomalies = an_res.get("anomalies", [])
                     active_groups = an_res.get("groups", [])
 
-                    if publisher:
-                        if an_res.get("movement_events"):
-                            for mve in an_res["movement_events"]:
+                # Step D.1: Real-Time Suspicious Activity, Vehicle Rule Violations & Infiltration Engine
+                if suspicious_detector:
+                    suspicious_violations = suspicious_detector.update(
+                        tracks=output["tracks"],
+                        zones=list(intrusion_detector.zones.values()) if intrusion_detector else None,
+                        now=current_frame_time,
+                    )
+                    if suspicious_violations:
+                        for viol in suspicious_violations:
+                            print(f"[{viol['tag']}] {viol['description']} on {config.camera_id}")
+                            if publisher:
+                                publisher.publish(viol, message_type="suspicious_activity_alert")
+                                alert_payload = {
+                                    "id": f"ALT-SUSP-{int(time.time()*1000)%1000000}",
+                                    "camera_id": config.camera_id,
+                                    "timestamp": datetime.datetime.now(datetime.timezone.utc).isoformat(),
+                                    "title": f"{viol.get('tag', 'SUSPICIOUS ACTIVITY')}: Camera {config.camera_id.upper()}",
+                                    "description": viol.get("description", "Suspicious behavioral policy violation detected"),
+                                    "severity": viol.get("severity", "HIGH"),
+                                    "risk_score": viol.get("risk_score", 80),
+                                    "event_type": viol.get("type", "SUSPICIOUS_BEHAVIOR"),
+                                    "track_id": viol.get("track_id"),
+                                    "audio_triggered": True,
+                                }
+                                publisher.publish(alert_payload, message_type="alert_created")
+                            for trk in output["tracks"]:
+                                if trk.get("track_id") == viol.get("track_id"):
+                                    trk["violation_tag"] = viol.get("tag")
+                                    trk["violation_desc"] = viol.get("description")
+
+                if analytics_engine and publisher:
+                    if an_res.get("movement_events"):
+                        for mve in an_res["movement_events"]:
                                 publisher.publish(mve, message_type="movement_update")
                                 total_movement_events_count += 1
                         if an_res.get("occupancy") and (frame_counter % 15 == 0):
@@ -1086,6 +1147,8 @@ def main():
         source.release()
         if publisher:
             publisher.close()
+        if stream_server:
+            stream_server.stop()
 
         # Performance Summary Table
         avg_fps = round(processed_counter / total_time, 2) if total_time > 0 else 0.0

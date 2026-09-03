@@ -1,3 +1,4 @@
+import http from 'http';
 import fs from 'fs';
 import path from 'path';
 import { Router, Request, Response, NextFunction } from 'express';
@@ -128,6 +129,32 @@ camerasRouter.get('/:id/video', (req: Request, res: Response, next: NextFunction
   } catch (err) {
     next(err);
   }
+});
+
+// GET /api/cameras/:id/stream - Live stream endpoint (proxies live MJPEG stream or falls back to video)
+camerasRouter.get('/:id/stream', (req: Request, res: Response) => {
+  const { id } = req.params;
+  const normKey = id.toLowerCase().replace(/^cam-0?/, 'cam-0');
+  const cvStreamUrl = `http://127.0.0.1:8085/stream/${normKey}`;
+
+  const proxyReq = http.get(cvStreamUrl, (cvRes) => {
+    if (cvRes.statusCode === 200) {
+      res.writeHead(200, cvRes.headers);
+      cvRes.pipe(res);
+    } else if (!res.headersSent) {
+      res.redirect(`/api/cameras/${id}/video`);
+    }
+  });
+
+  proxyReq.on('error', () => {
+    if (!res.headersSent) {
+      res.redirect(`/api/cameras/${id}/video`);
+    }
+  });
+
+  req.on('close', () => {
+    proxyReq.destroy();
+  });
 });
 
 // GET /api/cameras - List cameras (optional ?status= filter)

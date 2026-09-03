@@ -16,7 +16,7 @@ export const initialMatrixCameras: MatrixCameraFeed[] = [
   {
     id: 1,
     tag: 'CAM-01',
-    name: 'Sector Alpha Main Gate',
+    name: 'Sector Alpha Main Gate (Laptop / Desktop Live Camera)',
     src: '/api/cameras/cam-01/video',
     status: 'Online',
     batteryLevel: 94,
@@ -32,7 +32,7 @@ export const initialMatrixCameras: MatrixCameraFeed[] = [
   {
     id: 2,
     tag: 'CAM-02',
-    name: 'Sector Alpha East Perimeter',
+    name: 'Sector Alpha East (Mobile Phone Live Camera)',
     src: '/api/cameras/cam-02/video',
     status: 'Online',
     batteryLevel: 88,

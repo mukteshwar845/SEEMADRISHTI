@@ -266,11 +266,13 @@ function SeemadrishtiMainApp() {
         return [incomingAlert, ...prev];
       });
 
-      if (incomingAlert.severity === 'High') {
+      const sev = String(incomingAlert.severity || '').toLowerCase();
+      if (sev === 'high' || sev === 'critical' || incomingAlert.audioTriggered) {
         triggerGlobalFlash();
-        if (incomingAlert.audioTriggered) {
-          triggerIntrusionAudioAlert(incomingAlert);
-        }
+        triggerIntrusionAudioAlert({
+          ...incomingAlert,
+          confidence: incomingAlert.confidence || 95,
+        });
       }
     });
 

@@ -527,3 +527,41 @@ systemRouter.post('/demo/reset', (req: Request, res: Response, next: NextFunctio
     next(err);
   }
 });
+
+// GET /api/system/network - Network interfaces and LAN IP for mobile phone camera connections
+systemRouter.get('/network', (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const nets = os.networkInterfaces();
+    const addresses: { iface: string; ip: string }[] = [];
+    let primaryIp = '127.0.0.1';
+
+    for (const name of Object.keys(nets)) {
+      for (const net of nets[name] || []) {
+        if (net.family === 'IPv4' && !net.internal) {
+          addresses.push({ iface: name, ip: net.address });
+          if (primaryIp === '127.0.0.1') {
+            primaryIp = net.address;
+          }
+        }
+      }
+    }
+
+    const port = process.env.PORT || 3000;
+    const mobileCamUrl = `http://${primaryIp}:${port}/mobile-cam.html?cam=cam-02`;
+
+    res.json({
+      success: true,
+      data: {
+        hostname: os.hostname(),
+        primaryIp,
+        addresses,
+        port: Number(port),
+        mobileCamUrl,
+        wsUrl: `ws://${primaryIp}:${port}/ws`,
+      },
+      timestamp: new Date().toISOString(),
+    });
+  } catch (err) {
+    next(err);
+  }
+});

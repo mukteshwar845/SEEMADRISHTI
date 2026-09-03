@@ -1,90 +1,75 @@
 <div align="center">
 
-# 👁️ SEEMADRISHTI AI
-### Next-Gen Tactical Multi-Camera CCTV Surveillance & Threat Intelligence Command Matrix
+# 👁️ SEEMADRISHTI AI (सीमा दृष्टि)
+### Next-Gen Tactical Video Analytics & Autonomous Threat Intelligence Platform for Defense Surveillance
+#### *Smart India Hackathon (SIH26187) — Ministry of Home Affairs*
 
 [![React](https://img.shields.io/badge/React-18.3.1-61DAFB?style=for-the-badge&logo=react&logoColor=black)](https://react.dev/)
 [![TypeScript](https://img.shields.io/badge/TypeScript-5.5-3178C6?style=for-the-badge&logo=typescript&logoColor=white)](https://www.typescriptlang.org/)
-[![Tailwind CSS](https://img.shields.io/badge/Tailwind_CSS-4.0-38B2AC?style=for-the-badge&logo=tailwind-css&logoColor=white)](https://tailwindcss.com/)
-[![Vite](https://img.shields.io/badge/Vite-6.0-646CFF?style=for-the-badge&logo=vite&logoColor=white)](https://vitejs.dev/)
-[![Canvas 60FPS](https://img.shields.io/badge/Render_Engine-60_FPS_Canvas-00f0ff?style=for-the-badge&logo=html5&logoColor=black)](#-graphics--rendering-engine)
+[![Python](https://img.shields.io/badge/Python-3.10+-3776AB?style=for-the-badge&logo=python&logoColor=white)](https://python.org/)
+[![Ultralytics YOLOv8](https://img.shields.io/badge/YOLOv8-Border_Detection-00FFFF?style=for-the-badge&logo=yolo&logoColor=black)](https://github.com/ultralytics/ultralytics)
+[![ByteTrack](https://img.shields.io/badge/ByteTrack-MOT_Tracker-FF6B6B?style=for-the-badge)](https://github.com/ifzhang/ByteTrack)
+[![WebSocket](https://img.shields.io/badge/WebSocket-Realtime_Gateway-4EBA6F?style=for-the-badge&logo=websocket&logoColor=white)](https://developer.mozilla.org/en-US/docs/Web/API/WebSockets_API)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg?style=for-the-badge)](https://opensource.org/licenses/MIT)
 
 <p align="center">
-  <b>A high-performance, real-time 9-channel tactical video analytics and surveillance command matrix with hardware-accelerated computer vision overlays, automatic license plate recognition (ANPR), virtual tripwire breach detection, and dual-mode live/recorded telemetry scrubbing.</b>
+  <b>A zero-cost, open-source, edge-deployable AI surveillance platform transforming existing CCTV camera networks into an intelligent, real-time threat-detection matrix with 60 FPS neural HUDs, multi-vehicle tracking, weapons detection, crawling/sprinting infiltration alerts, and tactical audio sirens.</b>
 </p>
 
-[Key Features](#-key-features) • [System Architecture](#-system-architecture) • [Matrix Layouts](#-tactical-matrix-layouts) • [Quick Start](#-quick-start) • [Module Directory](#-project-structure) • [Security](#-security--privacy-policy)
+[Key Capabilities](#-key-capabilities) • [System Architecture](#-system-architecture) • [Live Camera Ingestion](#-live-camera-ingestion) • [Threat & Violation Engine](#-behavioral-threat--violation-engine) • [Quick Start](#-quick-start) • [API & Gateway](#-api--telemetry-gateway)
 
 ---
 
 ```
-┌─────────────────────────────────────────────────────────────────────────────────────────────┐
-│ SEEMADRISHTI TACTICAL SURVEILLANCE MATRIX v4.2.0                    ● LIVE RTSP [9/9 ACTIVE]    │
-├───────────────────────────────┬───────────────────────────────┬─────────────────────────────┤
-│ [CAM-01] URBAN ARTERIAL       │ [CAM-02] AERIAL BOX JUNCTION  │ [CAM-03] FLYOVER JUNCTION   │
-│ 🚗 MERCEDES E300 [22 MPH]     │ 🟨 YELLOW BOX CLEARANCE: 100% │ 🚌 BMTA BUS [ROUTE 504]     │
-│ 🎯 ANPR: LD19 XKV             │ 🛸 MONOCHROME UAV OVERHEAD    │ 🏍️ MOTORBIKE SQUADRON       │
-├───────────────────────────────┼───────────────────────────────┼─────────────────────────────┤
-│ [CAM-04] TRAM PROMENADE       │ [CAM-05] CITADEL CORNER       │ [CAM-06] ARMORY LOGISTICS   │
-│ 🚊 CITADIS TRAM [18 KM/H]     │ 🚐 TRANSIT VAN [26 KM/H]      │ 🛡️ SECURE VAULT ACCESS      │
-│ 🚶 PEDESTRIAN [DWELL: 00:42]  │ 🎯 ANPR: EF18 UTY             │ 👥 BIOMETRIC VERIFICATION   │
-├───────────────────────────────┼───────────────────────────────┼─────────────────────────────┤
-│ [CAM-07] PATROL SPEED TRAP    │ [CAM-08] WATCHTOWER 360 APEX  │ [CAM-09] FORWARD RECON      │
-│ ⚡ RADAR: 48 KM/H (POST-G)    │ 📡 360° RADAR SWEEP           │ 🚨 LASER TRIPWIRE BREACH    │
-│ 🌙 NIGHT VISION IR ACTIVE     │ 🔭 HORIZON DRONE DETECT       │ 🟣 THERMAL IR HIGH-THREAT   │
-└───────────────────────────────┴───────────────────────────────┴─────────────────────────────┘
+┌─────────────────────────────────────────────────────────────────────────────────────────────────────────────┐
+│ 👁️ SEEMADRISHTI DEFENSE COMMAND MATRIX v4.2                                    ● LIVE SECURE GATEWAY [ONLINE] │
+├──────────────────────────────────────┬──────────────────────────────────────┬───────────────────────────────┤
+│ [CAM-01] SECTOR ALPHA MAIN GATE      │ [CAM-02] SECTOR ALPHA EAST (MOBILE)  │ [CAM-03] ACCESS ROAD FLYOVER  │
+│ 💻 LAPTOP / DESKTOP LIVE WEBCAM      │ 📱 SMARTPHONE QR STREAM INGESTION    │ 🚌 BMTA BUS [46.5 KM/H ← W]   │
+│ 🚗 SUV #04 [42.5 KM/H → IN]          │ 🏃 PATROL #12 [4.8 KM/H → S-SE]      │ 🏍️ MOTORCYCLE #11 [61.8 KM/H] │
+│ 🚨 WEAPON DETECTED: KNIFE // 91%     │ 🚨 OVERSPEED // 58.4 KM/H (LIMIT 50) │ 🚨 WRONG WAY // ID:18 (FLOW)  │
+├──────────────────────────────────────┼──────────────────────────────────────┼───────────────────────────────┤
+│ [CAM-04] PROMENADE & TRAMWAY         │ [CAM-05] CITADEL RAMPART JUNCTION    │ [CAM-06] WATCHTOWER APEX      │
+│ 🚊 ELECTRIC TRAM #02 [28.4 KM/H]     │ 🚗 SEDAN #07 [44.2 KM/H ↗ NE]        │ 🛡️ SENTRY #02 [ACTIVE WATCH]  │
+│ ⏳ LOITERING 24S // [UNATTENDED BAG] │ 🚨 PRONE CRAWLING // RISK 92 CRIT    │ 🚨 WEAPON DETECTED: RIFLE #06 │
+├──────────────────────────────────────┼──────────────────────────────────────┼───────────────────────────────┤
+│ [CAM-07] RIVERINE BORDER CROSSING    │ [CAM-08] HIGH-ALTITUDE OUTPOST       │ [CAM-09] FORWARD RECON HQ     │
+│ 🚤 PATROL BOAT #01 [24.8 KM/H → SE]  │ 🛡️ ARMORED CARRIER #03 [32.5 KM/H]   │ 🚛 HEAVY TRUCK #19 [36.4 KM/H]│
+│ 🚨 RESTRICTED WATERWAY BREACH #14    │ 🔭 SNIPER OUTPOST SENTRY #05         │ 🚨 LASER TRIPWIRE BREACH #28  │
+└──────────────────────────────────────┴──────────────────────────────────────┴───────────────────────────────┘
 ```
 
 </div>
 
 ---
 
-## ⚡ Key Features
+## ⚡ Key Capabilities
 
-<table>
-  <thead>
-    <tr>
-      <th width="30%">Feature Category</th>
-      <th width="70%">Capabilities & Highlights</th>
-    </tr>
-  </thead>
-  <tbody>
-    <tr>
-      <td><b>🎯 60 FPS Neural HUD</b></td>
-      <td>
-        • Real-time bounding boxes with class confidence percentages.<br/>
-        • Dynamic velocity vectors and optical trajectory tracking.<br/>
-        • Automatic Number Plate Recognition (<b>ANPR</b>) overlay engine.<br/>
-        • Pulsating red laser tripwires with instantaneous breach alarms.
-      </td>
-    </tr>
-    <tr>
-      <td><b>🎛️ Dual-Mode Playback Engine</b></td>
-      <td>
-        • <b>● LIVE Mode</b>: Real-time multi-angle streaming simulation with live timestamping.<br/>
-        • <b>RECORDED Mode</b>: Interactive timeline scrubber, pause/play, 1x/2x/4x high-speed playback, and incident bookmarking.
-      </td>
-    </tr>
-    <tr>
-      <td><b>🔬 Sensor Simulation Filters</b></td>
-      <td>
-        • <b>Night Vision (NV-IR)</b>: Green phosphor high-contrast spectral amplification.<br/>
-        • <b>Thermal IR</b>: Ironbow/white-hot heat distribution palette simulation.<br/>
-        • <b>Digital Zoom</b>: Up to 3.0x magnification with smooth viewport pan & snapshot capture.
-      </td>
-    </tr>
-    <tr>
-      <td><b>📊 Intelligence & Forensic Hub</b></td>
-      <td>
-        • <b>Incident Inspector</b>: Deep forensic triage with video bookmarking.<br/>
-        • <b>Multi-Cam Stitching</b>: Wide-angle continuous perimeter reconstruction.<br/>
-        • <b>Analytics Dashboard</b>: Radar risk vectors, anomaly heatmaps, and hourly vehicle flow density charts.<br/>
-        • <b>Live Telemetry Gauges</b>: FPS counters, neural inference latency (ms), GPU compute load, and VRAM utilization.
-      </td>
-    </tr>
-  </tbody>
-</table>
+### 1. 🎯 60 FPS Autonomous Defense Vision HUD
+* **Real-Time Bounding Reticles**: High-contrast, color-coded tactical reticles (Crimson for weapons/critical, Sky Blue for vehicles, Emerald for friendly/guards, Warm Amber for wildlife, Purple for luggage).
+* **Speed & Flow Gauges**: Calibrated pixel-to-metric velocity calculation ($km/h$) with directional orientation arrows (`→ IN`, `← OUT`, `↗ NE`, `← W`).
+* **Velocity Vector & Trajectory Trails**: Polyline path history with smooth fading alpha trails illustrating target movement vectors.
+* **Virtual Geofences & Tripwires**: Point-in-Polygon restricted zones and ray-casting laser tripwires with instantaneous breach animations.
+
+### 2. 🚨 Behavioral Threat & Violation Engine
+* **🔫 Weapon Threat Identification**: Real-time detection of blades, knives, firearms, rifles, pistols, and scissors with instant critical alerts.
+* **🚗 Multi-Vehicle Rule Violations**:
+  * `WRONG_WAY_VEHICLE`: Vector dot product against designated lane flow.
+  * `VEHICLE_OVERSPEED`: Real-time velocity computation against sector limits ($> 50\text{ km/h}$).
+  * `ILLEGAL_VEHICLE_STOP`: Dwell accumulation for stopped vehicles ($< 5\text{ px/s}$) in Keep-Clear zones.
+* **🏃 Suspicious Human Activity**:
+  * `PRONE_CRAWLING_INFILTRATION`: Aspect ratio evaluation ($w/h > 1.6$) and low ground plane elevation.
+  * `RAPID_SPRINT_EVASION`: Sprinting speed detection ($> 18\text{ km/h}$) towards boundaries.
+  * `PERSISTENT_LOITERING`: Dwell accumulator ($> 20\text{s}$) triggering automated escalation.
+  * `UNATTENDED_PACKAGE`: Stationary backpacks and luggage in security zones ($> 15\text{s}$).
+
+### 3. 🔊 Tactical Audio Siren Alarm System
+* Real-time Web Audio API frequency synthesis (Warble Siren, High-Defcon Klaxon Pulse, Tactical Sonar Radar Ping, Electronic Radar Chirp).
+* Automatically activates with screen flashes upon detecting high/critical threats, armed intruders, or perimeter breaches.
+
+### 4. 📲 Dual Live Hardware Ingestion
+* **CAM-01 (Laptop / Desktop Live Webcam)**: Defaults safely to **OFF**; powers on on-demand via the `💻 DESKTOP CAM` button and streams live computer vision tracking.
+* **CAM-02 (Mobile Phone Ingestion)**: Dynamic QR Code link allows any iPhone or Android phone to broadcast its camera feed directly into Camera 2 over WebSocket at 25 FPS.
 
 ---
 
@@ -92,54 +77,42 @@
 
 ```mermaid
 flowchart TD
-    subgraph Video Ingress & Streams
-        S1[CAM-01: Urban Arterial]
-        S2[CAM-02: Box Junction UAV]
-        S3[CAM-03: Flyover Bridge]
-        S4[CAM-04: Tram Promenade]
-        S5[CAM-05: Citadel Corner]
-        S6[CAM-06: Armory Logistics]
-        S7[CAM-07: Highway Patrol]
-        S8[CAM-08: Watchtower 360]
-        S9[CAM-09: Forward Recon]
+    subgraph Edge Sensor Ingestion
+        C1[CAM-01: Desktop/Laptop Webcam]
+        C2[CAM-02: Mobile Smartphone Stream]
+        C3to9[CAM-03 to CAM-09: CCTV RTSP / Video Feeds]
     end
 
-    subgraph Core Processing Pipeline
-        VPU[Video Processing Unit] --> Canvas[60 FPS HTML5 Canvas Engine]
-        VPU --> AI[Object Detection & ANPR Classifier]
-        AI --> Trk[Trajectory & Velocity Tracker]
-        Trk --> Trip[Virtual Tripwire & Threat Evaluator]
+    subgraph Zero-Cost AI Core (Python cv_service)
+        YOLO[YOLOv8 Object Detector]
+        BYTE[ByteTrack Multi-Object MOT]
+        SUSP[SuspiciousActivityDetector]
+        INTRUS[Intrusion & Geofence Engine]
+        RISK[Explainable Threat Risk Engine 0-100]
+        FLOW[Movement & Traffic Analytics Engine]
     end
 
-    subgraph UI & Tactical Controls
-        Layout[Dynamic Layout Switcher] --> M3[3x3 Full Matrix]
-        Layout --> M2[2x2 Quad Focus]
-        Layout --> M1[1+8 Spotlight View]
-        
-        Playback[Playback Engine] --> Live[● LIVE RTSP Stream]
-        Playback --> Archive[Archival Timeline Scrubber]
-        
-        Filters[Sensor Pipeline] --> NV[NV-IR Night Vision]
-        Filters --> TH[Thermal Heatmap]
-        Filters --> REC[RTSP Stream Recorder]
+    subgraph Tactical Edge Gateway (Node.js / Express / SQLite)
+        WS[WebSocket Gateway ws://0.0.0.0:3000/ws]
+        REST[REST API /api/health /api/cameras /api/alerts]
+        DB[(SQLite Persistent Storage)]
     end
 
-    S1 & S2 & S3 & S4 & S5 & S6 & S7 & S8 & S9 --> VPU
-    Trip --> Layout
-    Canvas --> Layout
+    subgraph Command & Control HUD (React / TypeScript / Canvas)
+        Canvas[60 FPS Canvas AI Overlay Engine]
+        Matrix[3x3 Matrix / 2x2 Quad / Spotlight View]
+        Audio[Web Audio Siren & Sonar Engine]
+        Heatmap[Live Threat Heatmap & Re-ID Handover]
+    end
+
+    C1 & C2 & C3to9 --> YOLO
+    YOLO --> BYTE
+    BYTE --> SUSP & INTRUS & FLOW
+    SUSP & INTRUS & FLOW --> RISK
+    RISK --> WS
+    WS --> Canvas & Audio & Heatmap
+    WS --> DB
 ```
-
----
-
-## 🔲 Tactical Matrix Layouts
-
-SEEMADRISHTI allows operators to switch viewport layouts dynamically with one click:
-
-| Layout Mode | Description | Best For |
-| :--- | :--- | :--- |
-| **`3x3 Matrix`** | Displays all 9 sector cameras simultaneously in synchronized grid cells. | High-level situational awareness across entire facility. |
-| **`2x2 Quad View`** | Focuses on 4 high-resolution feeds with pagination controls. | Focused monitoring during medium-density operations. |
-| **`Spotlight (1+8)`** | 1 large primary viewport (3 columns wide) with 8 scrollable side thumbnails. | Detailed incident investigation & forensic tracking. |
 
 ---
 
@@ -147,91 +120,85 @@ SEEMADRISHTI allows operators to switch viewport layouts dynamically with one cl
 
 ### Prerequisites
 - **Node.js**: v18.0.0 or higher
-- **Package Manager**: npm, yarn, pnpm, or bun
+- **Python**: v3.10 or higher (optional, for native Python CV service)
 
-### 1. Clone & Install
+### 1. Installation
 ```bash
 # Clone the repository
-git clone https://github.com/<your-username>/seemadrishti-ai-surveillance.git
+git clone https://github.com/mukteshwar845/SEEMADRISHTI.git
 
 # Navigate to the project root
-cd seemadrishti-ai-surveillance
+cd SEEMADRISHTI
 
-# Install dependencies
+# Install frontend and server dependencies
 npm install
 ```
 
-### 2. Launch Local Dev Server
+### 2. Launch the Platform
 ```bash
+# Start the SEEMADRISHTI server and Vite frontend
 npm run dev
 ```
-Open [http://localhost:3000](http://localhost:3000) in your browser.
+Open **[http://localhost:3000](http://localhost:3000)** in your browser.
 
-### 3. Production Build
+### 3. (Optional) Run Python AI CV Engine
 ```bash
-npm run build
+# Install Python dependencies
+pip install -r cv_service/requirements.txt
+
+# Run full self-diagnostic test
+python cv_service/tools/verify_all_ai.py
+
+# Launch live webcam detection service on CAM-01
+python cv_service/main.py --source 0 --camera-id cam-01
 ```
-The optimized bundle will be created in the `dist/` directory.
 
 ---
 
-## 📁 Project Structure
+## 📁 Repository Structure
 
 ```text
-seemadrishti-ai/
-├── src/
+SEEMADRISHTI/
+├── cv_service/                     # Zero-cost Python Computer Vision Engine
+│   ├── behavior/
+│   │   └── suspicious_detector.py # Real-time Wrong-Way, Overspeed, Crawling & Weapon rules
+│   ├── detection/
+│   │   └── yolo_detector.py       # Ultralytics YOLO inference wrapper
+│   ├── tracking/
+│   │   └── byte_tracker.py        # ByteTrack persistent multi-object tracking
+│   ├── intrusion/                 # Polygon Point-in-Polygon & Tripwires
+│   ├── risk/                      # Multi-factor 0-100 explainable threat scoring
+│   ├── analytics/                 # Speed calculation, trajectory & directional flow
+│   ├── tools/
+│   │   └── verify_all_ai.py       # Comprehensive 8-engine AI self-diagnostic suite
+│   └── main.py                    # Pipeline execution & MJPEG stream server
+├── server/                         # Backend Edge Gateway
+│   ├── routes/                    # REST APIs (cameras, alerts, incidents, health)
+│   ├── services/
+│   │   └── websocket.ts           # Real-time WebSocket broadcast & phone frame router
+│   └── db/                        # SQLite schema & persistence
+├── src/                            # Tactical Command Frontend (React + TypeScript)
 │   ├── components/
-│   │   ├── MatrixCameraCell.tsx     # Individual 60 FPS CCTV stream player & HUD engine
-│   │   ├── TacticalMatrixView.tsx   # 3x3, 2x2, and Spotlight layout orchestrator
-│   │   ├── CameraFeedCanvas.tsx     # Canvas rendering engine for optical flow vectors
-│   │   ├── MultiCamStitchingView.tsx# Wide-angle panoramic multi-stream composite
-│   │   ├── AnalyticsDashboard.tsx   # Traffic radar & anomaly density visualizers
-│   │   ├── IncidentInspectorView.tsx# Deep forensic incident examination tool
-│   │   ├── AlertsManagementView.tsx # Threat dispatch & triage manager
-│   │   ├── SystemGauges.tsx         # GPU/VRAM hardware telemetry meters
-│   │   ├── Header.tsx               # Top command bar with global record toggle
-│   │   └── Sidebar.tsx              # Modular navigation between sub-systems
-│   ├── data/
-│   │   └── mockData.ts              # 9 pre-configured CCTV sectors & synthetic alerts
+│   │   ├── MatrixCameraCell.tsx   # 60 FPS Canvas HUD, trajectories, speed & reticles
+│   │   ├── TacticalMatrixView.tsx # 3x3, 2x2, and Spotlight grid orchestrator
+│   │   ├── ThreatHeatmapView.tsx  # Sector-wise risk intensity visualizer
+│   │   ├── MultiCamStitchingView.tsx # Panoramic composite view
+│   │   ├── IncidentInspectorView.tsx # Forensic video evidence triaging
+│   │   └── matrix/
+│   │       ├── CameraControlsBar.tsx # On-demand Desktop/Phone camera controls
+│   │       └── PhoneCameraModal.tsx  # Dynamic QR Code mobile connector
 │   ├── utils/
-│   │   ├── audioAlert.ts            # Dynamic tactical siren & breach sound synthesizer
-│   │   └── recordingManager.ts      # Multi-channel RTSP recording session manager
-│   ├── App.tsx                      # Root application lifecycle & state controller
-│   ├── types.ts                     # TypeScript interfaces & schema definitions
-│   └── main.tsx                     # React application entry point
-├── public/                          # Static assets
-├── vite.config.ts                   # Vite build configuration
-└── package.json                     # Project manifest & dependencies
+│   │   └── audioAlert.ts          # Web Audio API tactical alarm synthesizer
+│   └── App.tsx                    # Root state & real-time alert dispatcher
+├── public/
+│   └── mobile-cam.html            # Mobile Patrol WebRTC / WebSocket streaming node
+├── server.ts                      # Unified Express + Vite development server
+└── README.md                      # Project documentation
 ```
 
 ---
 
-## ⌨️ Tactical Controls & Hotkeys
+## 🛡️ License & Acknowledgements
 
-| Action | Control Button | Description |
-| :--- | :---: | :--- |
-| **Switch Live / Recorded** | `LIVE` / `RECORDED` | Toggle real-time feed vs archived timeline scrubber |
-| **Toggle Night Vision** | `NV-IR` | Activates green phosphor spectral contrast filter |
-| **Toggle Thermal Sensor** | `THERMAL` | Inverts colors and applies high-intensity thermal IR palette |
-| **Digital Zoom** | `+` / `-` | Up to 3x digital zoom on active optical feed |
-| **Capture Snapshot** | 📷 | Downloads full-resolution HUD snapshot as `.png` |
-| **Sector Record** | ⏺ | Records current stream into the local tactical evidence vault |
-| **Global Record All** | `REC ALL 9` | Starts concurrent recording across all 9 matrix channels |
-
----
-
-## 🔒 Security & Privacy Policy
-
-- **Zero Hardcoded Secrets**: This codebase contains **zero** private API keys, authentication tokens, passwords, or personal credentials.
-- **Client-Side Simulation**: All video streams, license plates, operator profiles (`@surveillance.seemadrishti.gov`), and sensor telemetry use synthetic, privacy-safe simulation data.
-- **Production-Ready Hygiene**: Environment templates (`.env.example`) contain only generic configuration variables.
-
----
-
-## 📜 License
-
-Distributed under the **MIT License**. See `LICENSE` for more information.
-
-<div align="center">
-  <sub>Built with ❤️ for advanced tactical computer vision, surveillance analytics, and defense technology dashboards.</sub>
-</div>
+Developed for **Smart India Hackathon (SIH26187)** under the **Ministry of Home Affairs**.
+Licensed under the **MIT License**.

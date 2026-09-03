@@ -71,6 +71,8 @@ export function initializeWebSocketServer(server: http.Server): WebSocketServer 
               timestamp: Date.now(),
             }));
           }
+        } else if (msg.type === 'phone_stream_frame' || msg.type === 'phone_stream_status') {
+          broadcastWebSocketMessage(msg.type, msg.data);
         } else if (
           msg.type === 'detection' ||
           msg.type === 'tracking' ||

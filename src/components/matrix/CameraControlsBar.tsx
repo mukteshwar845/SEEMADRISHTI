@@ -9,6 +9,8 @@ import {
   Camera,
   Play,
   Pause,
+  Video,
+  Smartphone,
 } from 'lucide-react';
 
 interface CameraControlsBarProps {
@@ -36,6 +38,11 @@ interface CameraControlsBarProps {
   setPlaybackTimeOffset: (val: number) => void;
   playbackSpeed: number;
   setPlaybackSpeed: React.Dispatch<React.SetStateAction<number>>;
+  isWebcamActive?: boolean;
+  onToggleWebcam?: () => void;
+  cameraId?: string | number;
+  phoneStreamingActive?: boolean;
+  onOpenPhoneModal?: () => void;
 }
 
 export const CameraControlsBar: React.FC<CameraControlsBarProps> = ({
@@ -63,7 +70,15 @@ export const CameraControlsBar: React.FC<CameraControlsBarProps> = ({
   setPlaybackTimeOffset,
   playbackSpeed,
   setPlaybackSpeed,
+  isWebcamActive = false,
+  onToggleWebcam,
+  cameraId = 1,
+  phoneStreamingActive = false,
+  onOpenPhoneModal,
 }) => {
+  const isCam01 = String(cameraId) === '1' || String(cameraId).toLowerCase().includes('cam-01');
+  const isCam02 = String(cameraId) === '2' || String(cameraId).toLowerCase().includes('cam-02');
+
   return (
     <>
       {/* Recorded Timeline Scrubber (When in RECORDED Mode) */}
@@ -98,6 +113,38 @@ export const CameraControlsBar: React.FC<CameraControlsBarProps> = ({
       {/* Floating Tactical Action Bar (Appears on Hover) */}
       <div className="absolute bottom-2 inset-x-2 flex items-center justify-between px-2 py-1 bg-slate-950/90 border border-slate-700/60 rounded-lg backdrop-blur-md opacity-0 group-hover:opacity-100 transition-opacity z-20">
         <div className="flex items-center gap-1">
+          {/* Mobile Phone Camera Connector (EXCLUSIVELY for Camera 2) */}
+          {isCam02 && onOpenPhoneModal && (
+            <button
+              onClick={onOpenPhoneModal}
+              title="Connect Mobile Phone Camera (QR Code / RTSP)"
+              className={`px-1.5 py-0.5 rounded text-[9px] font-mono font-bold transition-all cursor-pointer flex items-center gap-1 ${
+                phoneStreamingActive
+                  ? 'bg-purple-600 text-white animate-pulse'
+                  : 'bg-purple-950 text-purple-300 border border-purple-500/60 hover:bg-purple-900 hover:text-white'
+              }`}
+            >
+              <Smartphone size={9} />
+              {phoneStreamingActive ? 'PHONE: LIVE' : '📱 CONNECT PHONE'}
+            </button>
+          )}
+
+          {/* Desktop Laptop Webcam Toggle (EXCLUSIVELY for Camera 1) */}
+          {isCam01 && onToggleWebcam && (
+            <button
+              onClick={onToggleWebcam}
+              title={isWebcamActive ? 'Disconnect Desktop Camera' : 'Connect Laptop / Desktop Webcam'}
+              className={`px-1.5 py-0.5 rounded text-[9px] font-mono font-bold transition-all cursor-pointer flex items-center gap-1 ${
+                isWebcamActive
+                  ? 'bg-rose-600 text-white animate-pulse'
+                  : 'bg-cyan-950 text-cyan-300 border border-cyan-500/60 hover:bg-cyan-900 hover:text-white'
+              }`}
+            >
+              <Video size={9} />
+              {isWebcamActive ? 'DESKTOP: LIVE' : '💻 DESKTOP CAM'}
+            </button>
+          )}
+
           {/* Blackout Mode Toggle */}
           <button
             onClick={() => setIsBlackout(!isBlackout)}

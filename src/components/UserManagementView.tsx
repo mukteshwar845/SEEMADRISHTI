@@ -368,7 +368,7 @@ export const UserManagementView: React.FC = () => {
             {/* Quick Demo Credentials helper chips */}
             <div className="p-3 bg-slate-900/80 border border-slate-800 rounded-xl space-y-2">
               <span className="text-[10px] font-mono text-slate-400 uppercase tracking-wider block font-semibold">
-                QUICK SEED CREDENTIALS (FOR JUDGES):
+                TACTICAL RBAC OPERATOR PRESETS:
               </span>
               <div className="grid grid-cols-2 gap-1.5">
                 {[

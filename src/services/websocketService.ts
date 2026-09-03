@@ -530,6 +530,14 @@ class WebSocketService {
     };
   }
 
+  public onPhoneStreamFrame(listener: (payload: { camera_id: string; frame: string; timestamp: number }) => void): () => void {
+    return this.subscribe('phone_stream_frame', listener);
+  }
+
+  public onPhoneStreamStatus(listener: (payload: { camera_id: string; connected: boolean; device?: string; resolution?: string }) => void): () => void {
+    return this.subscribe('phone_stream_status', listener);
+  }
+
   public toggleEmulation(enabled: boolean) {
     this.isEmulationEnabled = enabled;
     this.notifyState();

@@ -360,10 +360,10 @@ const DEFAULT_INITIAL_PLAN: MultiAgentPlan = {
       color: '#00f0ff',
       timestamp: '14:22:01.102',
       thoughtTrace:
-        'Thermal signature confirms bipedal humanoid with height 1.78m. Aspect ratio and velocity exclude local wildlife (boar/nilgai). Target has gripped upper chainlink wire at elevation +2.1m.',
+        'Optical signature confirms bipedal humanoid. Aspect ratio and velocity exclude local wildlife (boar/nilgai). Target has gripped upper chainlink wire at elevation +2.1m.',
       evidencePoints: [
         'Bounding Box confidence: 99.4%',
-        'Thermal IR heat gradient: 36.8°C core body heat',
+        'Environmental Visibility: Optical Stream (Thermal/IR Input: Not Connected)',
         'Tripwire plane breach confirmed on CAM-02',
       ],
       recommendedAction: 'Trigger Tier-1 Immediate Intrusion Alarm and hand over to Pathfinder for vectoring.',

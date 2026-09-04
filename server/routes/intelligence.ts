@@ -168,30 +168,16 @@ intelligenceRouter.get('/journey/:trackId', (req: Request, res: Response, next: 
       });
     });
 
-    // Fallback if target is a demo preset or empty
+    // Eliminate fake fallback: if no records exist, return honest empty state
     if (timelineEvents.length === 0) {
-      const defaultCam = tid % 2 === 0 ? 'cam-02' : 'cam-01';
-      camerasTraversed.add(defaultCam);
-      timelineEvents.push({
-        camera_id: defaultCam,
-        timestamp: new Date(Date.now() - 120000).toISOString(),
-        event: 'INITIAL_DETECTION',
-        description: `Target #${tid} (person | HUMAN) acquired by Edge YOLOv8 on ${defaultCam.toUpperCase()}`,
-        risk_score: 55,
-        risk_level: 'MEDIUM',
+      return res.json({
+        success: true,
+        data: null,
+        status: 'NO_LIVE_DATA',
+        track_id: tid,
+        message: `No active spatial journey recorded for Target #${tid}. Target is not active in sector memory.`,
+        timestamp: new Date().toISOString(),
       });
-      if (tid === 992 || tid === 1) {
-        const nextCam = 'cam-02';
-        camerasTraversed.add(nextCam);
-        timelineEvents.push({
-          camera_id: nextCam,
-          timestamp: new Date(Date.now() - 45000).toISOString(),
-          event: 'CROSS_CAMERA_HANDOVER',
-          description: `Spatial corridor transit verified: ${defaultCam.toUpperCase()} ➔ ${nextCam.toUpperCase()} (Appearance Sim: 0.88)`,
-          risk_score: 85,
-          risk_level: 'HIGH',
-        });
-      }
     }
 
     timelineEvents.sort((a, b) => new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime());
@@ -199,15 +185,23 @@ intelligenceRouter.get('/journey/:trackId', (req: Request, res: Response, next: 
     const uniqueCamsList = Array.from(camerasTraversed);
     const handovers: any[] = [];
     for (let i = 0; i < uniqueCamsList.length - 1; i++) {
+      const fromEv = timelineEvents[i];
+      const toEv = timelineEvents[Math.min(i + 1, timelineEvents.length - 1)];
+      const deltaSec = Math.max(1, Math.round((new Date(toEv.timestamp).getTime() - new Date(fromEv.timestamp).getTime()) / 1000));
+      // Calibrated temporal feasibility score (nominal corridor transit: 15-45s)
+      const temporalFeasibility = Math.max(0.40, Math.min(0.96, 1.0 - Math.abs(deltaSec - 25) / 75));
+      const calculatedConf = Math.round(temporalFeasibility * 100) / 100;
+      const confPct = Math.round(calculatedConf * 100);
+
       handovers.push({
         from_camera: uniqueCamsList[i],
         to_camera: uniqueCamsList[i + 1],
-        timestamp: timelineEvents[Math.min(i + 1, timelineEvents.length - 1)].timestamp,
-        confidence: 0.88,
-        confidence_percent: 88,
-        confidence_display: '88%',
-        verified: true,
-        reason: `Corridor transition ${uniqueCamsList[i].toUpperCase()} ➔ ${uniqueCamsList[i + 1].toUpperCase()} verified via topological transit window and HSV appearance histogram match`,
+        timestamp: toEv.timestamp,
+        confidence: calculatedConf,
+        confidence_percent: confPct,
+        confidence_display: `${confPct}%`,
+        verified: calculatedConf >= 0.60,
+        reason: `Corridor transition ${uniqueCamsList[i].toUpperCase()} ➔ ${uniqueCamsList[i + 1].toUpperCase()} evaluated across ${deltaSec}s transit window (Temporal feasibility: ${confPct}%)`,
       });
     }
 

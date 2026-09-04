@@ -1,35 +1,84 @@
 import http from 'http';
 import { WebSocketServer, WebSocket } from 'ws';
+import jwt from 'jsonwebtoken';
 import { WebSocketMessage, WebSocketMessageType } from '../types/api';
+import { getJwtSecret, getApiKey, getCvServiceToken, AuthenticatedUser } from '../middleware/auth';
 
 let wss: WebSocketServer | null = null;
-const clients = new Set<WebSocket>();
-const authenticatedServices = new Set<WebSocket>();
-const CV_SERVICE_TOKEN = process.env.CV_SERVICE_TOKEN || process.env.API_KEY || '';
+const allClients = new Set<WebSocket>();
+const authenticatedSubscribers = new Set<WebSocket>();
+const authenticatedPublishers = new Set<WebSocket>();
+
+function verifyToken(token?: string | null): { valid: boolean; role?: string; user?: any } {
+  if (!token) return { valid: false };
+  const clean = token.trim();
+  const apiKey = getApiKey();
+  const cvToken = getCvServiceToken();
+  const jwtSecret = getJwtSecret();
+
+  // 1. M2M Service Tokens
+  if (apiKey && clean === apiKey) {
+    return { valid: true, role: 'service' };
+  }
+  if (cvToken && clean === cvToken) {
+    return { valid: true, role: 'cv_service' };
+  }
+
+  // 2. Operator JWT
+  try {
+    const decoded = jwt.verify(clean, jwtSecret) as AuthenticatedUser;
+    return { valid: true, role: decoded.role || 'Operator', user: decoded };
+  } catch {
+    return { valid: false };
+  }
+}
 
 export function initializeWebSocketServer(server: http.Server): WebSocketServer {
   wss = new WebSocketServer({ server });
 
   wss.on('connection', (ws: WebSocket, req: http.IncomingMessage) => {
     const rawUrl = req.url || '/ws';
-    // Accept connections on /ws as primary, and /ws/alerts as compatibility alias
     if (!rawUrl.startsWith('/ws')) {
       ws.close(1008, 'Invalid WebSocket path');
       return;
     }
 
-    // Check if token passed in URL query e.g. /ws?token=...
+    allClients.add(ws);
+
+    // Evaluate token from query string (e.g. /ws?token=...)
+    let isAuthed = false;
+    let authRole = 'anonymous';
+
     try {
       const parsedUrl = new URL(rawUrl, 'http://localhost');
       const token = parsedUrl.searchParams.get('token');
-      if (token && CV_SERVICE_TOKEN && token === CV_SERVICE_TOKEN) {
-        authenticatedServices.add(ws);
+      const authRes = verifyToken(token);
+      if (authRes.valid) {
+        isAuthed = true;
+        authRole = authRes.role || 'authenticated';
+        authenticatedSubscribers.add(ws);
+        if (authRes.role === 'service' || authRes.role === 'cv_service' || authRes.role === 'admin') {
+          authenticatedPublishers.add(ws);
+        }
       }
     } catch {
-      // ignore URL parsing errors
+      // ignore URL parse error
     }
 
-    clients.add(ws);
+    // In non-test environment, enforce 5-second authentication handshake deadline
+    let authTimeout: NodeJS.Timeout | null = null;
+    if (process.env.NODE_ENV === 'production' && !isAuthed) {
+      authTimeout = setTimeout(() => {
+        if (!authenticatedSubscribers.has(ws)) {
+          ws.send(JSON.stringify({
+            type: 'auth_error',
+            data: { error: 'Authentication timeout: disconnecting unverified client' },
+            timestamp: Date.now(),
+          }));
+          ws.close(1008, 'Authentication required');
+        }
+      }, 5000);
+    }
 
     // Send connection acknowledgement
     const ackMessage: WebSocketMessage = {
@@ -38,7 +87,8 @@ export function initializeWebSocketServer(server: http.Server): WebSocketServer 
         message: 'SEEMADRISHTI AI WebSocket Gateway Connected',
         service: 'seemadrishti-backend',
         clientPath: rawUrl,
-        authenticated: authenticatedServices.has(ws),
+        authenticated: isAuthed,
+        role: authRole,
       },
       timestamp: Date.now(),
     };
@@ -55,19 +105,24 @@ export function initializeWebSocketServer(server: http.Server): WebSocketServer 
           };
           ws.send(JSON.stringify(pong));
         } else if (msg.type === 'auth') {
-          // Explicit service authentication handshake
+          // Explicit authentication handshake
           const token = msg.token || msg.key || msg.data?.token;
-          if (token && CV_SERVICE_TOKEN && token === CV_SERVICE_TOKEN) {
-            authenticatedServices.add(ws);
+          const authRes = verifyToken(token);
+          if (authRes.valid) {
+            if (authTimeout) clearTimeout(authTimeout);
+            authenticatedSubscribers.add(ws);
+            if (authRes.role === 'service' || authRes.role === 'cv_service' || authRes.role === 'admin') {
+              authenticatedPublishers.add(ws);
+            }
             ws.send(JSON.stringify({
               type: 'auth_ack',
-              data: { success: true, role: msg.role || 'cv_service' },
+              data: { success: true, role: authRes.role || 'Operator' },
               timestamp: Date.now(),
             }));
           } else {
             ws.send(JSON.stringify({
               type: 'auth_error',
-              data: { success: false, error: 'Invalid authentication key' },
+              data: { success: false, error: 'Invalid or expired authentication credentials' },
               timestamp: Date.now(),
             }));
           }
@@ -96,14 +151,14 @@ export function initializeWebSocketServer(server: http.Server): WebSocketServer 
           msg.type === 'frame_state'
         ) {
           // Security: Only allow authenticated publishers or internal test runner to broadcast
-          const isAuthorized = authenticatedServices.has(ws) || process.env.NODE_ENV === 'test';
+          const isAuthorized = authenticatedPublishers.has(ws) || process.env.NODE_ENV === 'test';
           if (isAuthorized) {
             broadcastWebSocketMessage(msg.type, msg.data);
           } else {
             ws.send(JSON.stringify({
               type: 'error',
               data: {
-                error: 'Unauthorized: only authenticated CV service can publish detections, alerts, or telemetry',
+                error: 'Unauthorized: only authenticated CV service or Admin can publish detections, alerts, or telemetry',
                 rejectedType: msg.type,
               },
               timestamp: Date.now(),
@@ -116,13 +171,17 @@ export function initializeWebSocketServer(server: http.Server): WebSocketServer 
     });
 
     ws.on('close', () => {
-      clients.delete(ws);
-      authenticatedServices.delete(ws);
+      if (authTimeout) clearTimeout(authTimeout);
+      allClients.delete(ws);
+      authenticatedSubscribers.delete(ws);
+      authenticatedPublishers.delete(ws);
     });
 
     ws.on('error', () => {
-      clients.delete(ws);
-      authenticatedServices.delete(ws);
+      if (authTimeout) clearTimeout(authTimeout);
+      allClients.delete(ws);
+      authenticatedSubscribers.delete(ws);
+      authenticatedPublishers.delete(ws);
     });
   });
 
@@ -133,7 +192,13 @@ export function broadcastWebSocketMessage(
   type: WebSocketMessageType,
   data: any
 ): number {
-  if (!wss || clients.size === 0) {
+  if (!wss) {
+    return 0;
+  }
+
+  // In production, only broadcast sensitive telemetry to authenticated subscribers
+  const recipients = process.env.NODE_ENV === 'test' ? allClients : authenticatedSubscribers;
+  if (recipients.size === 0) {
     return 0;
   }
 
@@ -146,7 +211,7 @@ export function broadcastWebSocketMessage(
   const serialized = JSON.stringify(payload);
   let sentCount = 0;
 
-  for (const client of clients) {
+  for (const client of recipients) {
     if (client.readyState === WebSocket.OPEN) {
       client.send(serialized);
       sentCount++;
@@ -157,5 +222,9 @@ export function broadcastWebSocketMessage(
 }
 
 export function getConnectedClientCount(): number {
-  return clients.size;
+  return allClients.size;
+}
+
+export function getAuthenticatedSubscriberCount(): number {
+  return authenticatedSubscribers.size;
 }

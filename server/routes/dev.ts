@@ -4,6 +4,18 @@ import { WebSocketMessageType } from '../types/api';
 
 export const devRouter = Router();
 
+// Security: Disable development routes completely in production
+devRouter.use((_req: Request, res: Response, next: NextFunction) => {
+  if (process.env.NODE_ENV === 'production') {
+    return res.status(403).json({
+      success: false,
+      error: 'Forbidden: Development endpoints are strictly disabled in production mode',
+      timestamp: new Date().toISOString(),
+    });
+  }
+  next();
+});
+
 // POST /api/dev/broadcast - Manually trigger a WebSocket broadcast message for testing
 devRouter.post('/broadcast', (req: Request, res: Response, next: NextFunction) => {
   try {

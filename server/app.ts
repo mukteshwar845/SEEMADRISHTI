@@ -28,8 +28,9 @@ export function createApp(): express.Application {
   // JSON Body Parser
   app.use(express.json());
 
-  // CORS Middleware
-  const allowedOrigin = process.env.CORS_ORIGIN || '*';
+  // CORS Middleware (Restricted origins in production)
+  const isProd = process.env.NODE_ENV === 'production';
+  const allowedOrigin = process.env.CORS_ORIGIN || (isProd ? 'http://localhost:3000' : '*');
   app.use((req: Request, res: Response, next: NextFunction) => {
     res.header('Access-Control-Allow-Origin', allowedOrigin);
     res.header('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, PATCH, OPTIONS');
@@ -38,6 +39,15 @@ export function createApp(): express.Application {
       res.sendStatus(200);
       return;
     }
+    next();
+  });
+
+  // Security Headers Middleware
+  app.use((_req: Request, res: Response, next: NextFunction) => {
+    res.setHeader('X-Content-Type-Options', 'nosniff');
+    res.setHeader('X-Frame-Options', 'SAMEORIGIN');
+    res.setHeader('Referrer-Policy', 'strict-origin-when-cross-origin');
+    res.setHeader('X-XSS-Protection', '1; mode=block');
     next();
   });
 
@@ -84,31 +94,49 @@ export function createApp(): express.Application {
     return res.status(204).end();
   });
 
-  // Priority 1 Security: Enforce authentication on all mutating API routes (POST, PUT, DELETE, PATCH)
+  // Priority 1 Security: Enforce authentication on all mutating and sensitive API routes
   app.use('/api', (req: Request, res: Response, next: NextFunction) => {
-    // Whitelist login, register, read-only search, and automated tactical alert ingestion from requiring a pre-existing token
+    const p = req.path;
+
+    // 1. Whitelist Public Endpoints
     if (
-      req.path === '/auth/login' ||
-      req.path === '/v1/auth/login' ||
-      req.path === '/auth/register' ||
-      req.path === '/v1/auth/register' ||
-      req.path === '/auth/roles' ||
-      req.path === '/v1/auth/roles' ||
-      req.path === '/intelligence/search' ||
-      req.path === '/v1/intelligence/search' ||
-      req.path.startsWith('/intelligence/search') ||
-      req.path.startsWith('/v1/intelligence/search') ||
-      req.path.startsWith('/agents') ||
-      req.path.startsWith('/v1/agents') ||
-      req.path.startsWith('/chat') ||
-      req.path.startsWith('/v1/chat') ||
-      (req.method === 'POST' && (req.path === '/alerts' || req.path === '/v1/alerts'))
+      p === '/health' ||
+      p === '/v1/health' ||
+      p === '/auth/login' ||
+      p === '/v1/auth/login' ||
+      p === '/auth/register' ||
+      p === '/v1/auth/register' ||
+      p === '/auth/roles' ||
+      p === '/v1/auth/roles' ||
+      p === '/intelligence/search' ||
+      p === '/v1/intelligence/search' ||
+      p.startsWith('/intelligence/search') ||
+      p.startsWith('/v1/intelligence/search') ||
+      p.startsWith('/agents') ||
+      p.startsWith('/v1/agents') ||
+      p.startsWith('/chat') ||
+      p.startsWith('/v1/chat') ||
+      // Browser video element streams (allows streaming without breaking HTML5 video elements)
+      (req.method === 'GET' && (p.includes('/video') || p.includes('/stream')))
     ) {
       return next();
     }
+
+    // 2. All Mutating Operations require authentication (POST /api/alerts is strictly protected)
     if (['POST', 'PUT', 'DELETE', 'PATCH'].includes(req.method)) {
       return requireAuth(req, res, next);
     }
+
+    // 3. Sensitive Intelligence, Incidents, Zones, Events, Alerts, Users, System require authentication
+    if (
+      p.startsWith('/intelligence/journey') ||
+      p.startsWith('/v1/intelligence/journey') ||
+      p.startsWith('/users') ||
+      p.startsWith('/v1/users')
+    ) {
+      return requireAuth(req, res, next);
+    }
+
     next();
   });
 

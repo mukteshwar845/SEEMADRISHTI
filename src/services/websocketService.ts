@@ -551,13 +551,31 @@ class WebSocketService {
     this.setStatus('CONNECTING');
 
     try {
-      this.socket = new WebSocket(this.url);
+      let finalUrl = this.url;
+      const token = typeof window !== 'undefined' ? localStorage.getItem('seemadrishti_auth_token') : null;
+      if (token) {
+        try {
+          const u = new URL(this.url);
+          u.searchParams.set('token', token);
+          finalUrl = u.toString();
+        } catch {
+          const sep = this.url.includes('?') ? '&' : '?';
+          finalUrl = `${this.url}${sep}token=${encodeURIComponent(token)}`;
+        }
+      }
+
+      this.socket = new WebSocket(finalUrl);
 
       this.socket.onopen = () => {
         this.setStatus('CONNECTED');
         this.reconnectAttempts = 0;
         this.lastHeartbeat = Date.now();
         this.startPingPong();
+        if (token) {
+          try {
+            this.socket?.send(JSON.stringify({ type: 'auth', token }));
+          } catch {}
+        }
         this.notifyState();
       };
 

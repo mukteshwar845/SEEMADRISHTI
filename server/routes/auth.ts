@@ -3,10 +3,11 @@ import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
 import { getDatabase } from '../db/database';
 import { AppError } from '../middleware/errorHandler';
+import { getJwtSecret } from '../middleware/auth';
 
 export const authRouter = Router();
 
-export const JWT_SECRET = process.env.JWT_SECRET || process.env.API_KEY || 'seemadrishti-jwt-fallback-secret-2026';
+export const JWT_SECRET = getJwtSecret();
 
 export interface AuthPayload {
   id: string;
@@ -68,7 +69,7 @@ authRouter.post('/login', (req: Request, res: Response, next: NextFunction) => {
       assigned_sector: user.assigned_sector,
     };
 
-    const jwtSecret = process.env.JWT_SECRET || process.env.API_KEY || 'seemadrishti-jwt-fallback-secret-2026';
+    const jwtSecret = getJwtSecret();
     const token = jwt.sign(payload, jwtSecret, { expiresIn: '12h' });
 
     res.json({
@@ -104,7 +105,7 @@ authRouter.get('/me', (req: Request, res: Response, next: NextFunction) => {
     }
 
     const token = authHeader.substring(7).trim();
-    const jwtSecret = process.env.JWT_SECRET || process.env.API_KEY || 'seemadrishti-jwt-fallback-secret-2026';
+    const jwtSecret = getJwtSecret();
     try {
       const decoded = jwt.verify(token, jwtSecret) as AuthPayload;
       const db = getDatabase();
@@ -151,7 +152,7 @@ authRouter.put('/profile', (req: Request, res: Response, next: NextFunction) => 
     }
 
     const token = authHeader.substring(7).trim();
-    const jwtSecret = process.env.JWT_SECRET || process.env.API_KEY || 'seemadrishti-jwt-fallback-secret-2026';
+    const jwtSecret = getJwtSecret();
     let decoded: AuthPayload;
     try {
       decoded = jwt.verify(token, jwtSecret) as AuthPayload;
@@ -275,7 +276,7 @@ authRouter.post('/register', (req: Request, res: Response, next: NextFunction) =
       assigned_sector: assignedSector,
     };
 
-    const jwtSecret = process.env.JWT_SECRET || process.env.API_KEY || 'seemadrishti-jwt-fallback-secret-2026';
+    const jwtSecret = getJwtSecret();
     const token = jwt.sign(payload, jwtSecret, { expiresIn: '12h' });
 
     res.status(201).json({

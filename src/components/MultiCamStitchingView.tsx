@@ -742,7 +742,7 @@ export const MultiCamStitchingView: React.FC = () => {
         </div>
       </div>
 
-      {/* Panoramic Stitched Canvas Viewport Container */}
+      {/* Synchronized Spatial Canvas Viewport Container */}
       <div className="bg-[#0a0f1d] border border-white/[0.08] rounded-2xl p-3 sm:p-4 shadow-[0_4px_30px_rgba(0,0,0,0.8)] space-y-3">
         {/* Top Control Strip (Vision Modes & Utilities) */}
         <div className="flex flex-wrap items-center justify-between gap-3 text-xs font-mono">

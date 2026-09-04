@@ -283,7 +283,7 @@ INTELLIGENCE GATEWAY: SEEMADRISHTI TACTICAL DEFENSE AI v2.0
         <div className="flex flex-wrap items-center gap-2">
           <span className="text-[11px] text-slate-400 font-bold uppercase tracking-wider flex items-center gap-1">
             <Zap className="w-3.5 h-3.5 text-cyan-400" />
-            HIGH-THREAT PRESETS:
+            TACTICAL PLAYBACK / DEMO PRESETS:
           </span>
           {DEMO_PRESETS.map((preset) => {
             const isSelected = selectedTrackId === preset.id;
@@ -492,10 +492,10 @@ INTELLIGENCE GATEWAY: SEEMADRISHTI TACTICAL DEFENSE AI v2.0
             <div className="p-16 text-center bg-slate-900/40 border border-slate-800 rounded-xl">
               <AlertTriangle className="w-8 h-8 text-amber-400 mx-auto mb-2" />
               <div className="text-sm font-mono font-bold text-slate-300">
-                INSUFFICIENT DATA
+                NO LIVE TRAJECTORY DATA IN SECTOR MEMORY
               </div>
               <p className="text-xs text-slate-500 mt-1 font-sans">
-                {journey?.status_note || 'No telemetry or corridor handover records found for this target.'}
+                {journey?.status_note || 'Target has no active corridor handovers or detection events recorded in the current surveillance session.'}
               </p>
             </div>
           ) : (

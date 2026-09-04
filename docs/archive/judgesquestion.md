@@ -71,8 +71,8 @@
   > *"SEEMADRISHTI employs **Multi-Spectral Dual-Band Fusion**:*
   >
   > *- **Dense Fog / Rain**: Optical visible-spectrum cameras suffer from light scattering. Our pipeline automatically blends optical video with **Long-Wave Infrared (LWIR) Thermal FLIR sensors (8–14 µm)**, which penetrate mist because thermal wavelengths are larger than water aerosol droplet diameters.*
-  > *- **Night Operations**: We apply dynamic **Contrast-Limited Adaptive Histogram Equalization (CLAHE)** and uncooled thermal core heat extraction. A human emits a distinctive $36.5^\circ\text{C} - 37.5^\circ\text{C}$ thermal heat gradient that stands out against $12^\circ\text{C} - 20^\circ\text{C}$ background soil.*
-  > *- In our pre-loaded 'Riverine Fog' scenario, the system demonstrates successful tracking of 2 prone crawlers in 82% fog density."*
+  > *- **Night Operations**: We apply dynamic **Contrast-Limited Adaptive Histogram Equalization (CLAHE)** on edge feeds to maximize local luminance contrast and extract human silhouettes against dark terrain without requiring expensive uncooled thermal cores.*
+  > *- In our pre-loaded 'Riverine Fog' scenario, the system demonstrates successful tracking of 2 prone crawlers in adverse atmospheric conditions."*
 
 ---
 

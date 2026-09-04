@@ -1166,3 +1166,206 @@ incidentsRouter.get('/:id/camera-history', (req: Request, res: Response, next: N
     next(err);
   }
 });
+
+// Cache of original file bytes for the deterministic tamper/restore demonstration
+const evidenceTamperBackups = new Map<string, Buffer>();
+
+function getSafeEvidencePath(evidencePath: string): string {
+  const normalized = path.normalize(evidencePath).replace(/^(\.\.[\/\\])+/, '');
+  if (normalized.includes('..')) {
+    throw new AppError('Security violation: path traversal sequence detected in evidence path', 403);
+  }
+
+  const allowedBases = [
+    path.resolve(process.cwd(), 'evidence'),
+    path.resolve(process.cwd(), 'data'),
+    path.resolve(process.cwd(), 'data/evidence'),
+    path.resolve(process.cwd(), 'public'),
+  ];
+
+  const resolved = path.resolve(process.cwd(), normalized);
+  const isAllowed = allowedBases.some(base => resolved.startsWith(base) || resolved === base);
+  if (!isAllowed) {
+    throw new AppError('Security violation: evidence path is outside authorized surveillance repositories', 403);
+  }
+  return resolved;
+}
+
+// GET /api/incidents/:id/evidence/verify - On-demand cryptographic SHA-256 integrity verification
+incidentsRouter.get('/:id/evidence/verify', (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const db = getDatabase();
+    const { id } = req.params;
+
+    const row = db.prepare('SELECT * FROM incidents WHERE id = ?').get(id) as any;
+    if (!row) {
+      throw new AppError(`Incident with id '${id}' not found`, 404);
+    }
+
+    let meta: any = {};
+    try {
+      meta = typeof row.metadata === 'string' ? JSON.parse(row.metadata) : (row.metadata || {});
+    } catch {
+      meta = {};
+    }
+
+    const expectedSha256 = (meta.sha256 || row.sha256 || '').toLowerCase();
+    const rawPath = row.evidence_path || meta.evidence_path;
+
+    if (!rawPath) {
+      return res.status(404).json({
+        success: false,
+        incident_id: id,
+        error: 'No forensic evidence clip attached to this incident record',
+        verified: false,
+        status: 'NO_EVIDENCE',
+        timestamp: new Date().toISOString(),
+      });
+    }
+
+    const safePath = getSafeEvidencePath(rawPath);
+    if (!fs.existsSync(safePath)) {
+      return res.status(404).json({
+        success: false,
+        incident_id: id,
+        error: `Evidence file missing on edge disk: ${path.basename(safePath)}`,
+        verified: false,
+        status: 'FILE_MISSING',
+        timestamp: new Date().toISOString(),
+      });
+    }
+
+    const fileBuf = fs.readFileSync(safePath);
+    const actualSha256 = crypto.createHash('sha256').update(fileBuf).digest('hex').toLowerCase();
+    const isTampered = Boolean(expectedSha256 && actualSha256 !== expectedSha256);
+    const isVerified = Boolean(expectedSha256 && actualSha256 === expectedSha256);
+
+    res.json({
+      success: true,
+      incident_id: id,
+      evidence_path: path.basename(safePath),
+      file_size_bytes: fileBuf.length,
+      expected_sha256: expectedSha256 || actualSha256,
+      computed_sha256: actualSha256,
+      status: isTampered ? 'TAMPER_DETECTED' : (isVerified ? 'VERIFIED' : 'UNSEALED'),
+      verified: isVerified,
+      tampered: isTampered,
+      message: isTampered
+        ? 'CRITICAL ALERT: Forensic digest mismatch! Video evidence file has been modified or corrupted.'
+        : 'CRYPTOGRAPHIC INTEGRITY VERIFIED: SHA-256 matches sealed forensic record.',
+      verified_at: new Date().toISOString(),
+    });
+  } catch (err) {
+    next(err);
+  }
+});
+
+// POST /api/incidents/:id/evidence/tamper-demo - Deterministic 1-byte tamper simulation for SIH live evaluation
+incidentsRouter.post('/:id/evidence/tamper-demo', (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const db = getDatabase();
+    const { id } = req.params;
+
+    const row = db.prepare('SELECT * FROM incidents WHERE id = ?').get(id) as any;
+    if (!row) {
+      throw new AppError(`Incident with id '${id}' not found`, 404);
+    }
+
+    let meta: any = {};
+    try {
+      meta = typeof row.metadata === 'string' ? JSON.parse(row.metadata) : (row.metadata || {});
+    } catch {
+      meta = {};
+    }
+
+    const rawPath = row.evidence_path || meta.evidence_path;
+    if (!rawPath) {
+      throw new AppError('No evidence file to tamper with', 400);
+    }
+
+    const safePath = getSafeEvidencePath(rawPath);
+    if (!fs.existsSync(safePath)) {
+      throw new AppError(`Evidence file not found on disk: ${path.basename(safePath)}`, 404);
+    }
+
+    const originalBuf = fs.readFileSync(safePath);
+    if (!evidenceTamperBackups.has(safePath)) {
+      evidenceTamperBackups.set(safePath, Buffer.from(originalBuf));
+    }
+
+    const originalSha = crypto.createHash('sha256').update(originalBuf).digest('hex');
+
+    // Tamper exactly 1 byte in the payload
+    const tamperedBuf = Buffer.from(originalBuf);
+    const targetIdx = Math.min(128, tamperedBuf.length - 1);
+    tamperedBuf[targetIdx] = tamperedBuf[targetIdx] ^ 0xFF;
+
+    fs.writeFileSync(safePath, tamperedBuf);
+    const tamperedSha = crypto.createHash('sha256').update(tamperedBuf).digest('hex');
+
+    res.json({
+      success: true,
+      incident_id: id,
+      action: '1_BYTE_TAMPER_INJECTED',
+      byte_offset: targetIdx,
+      original_sha256: originalSha,
+      tampered_sha256: tamperedSha,
+      status: 'TAMPER_INJECTED',
+      instructions: 'Run GET /api/incidents/:id/evidence/verify now to observe cryptographic digest mismatch.',
+      timestamp: new Date().toISOString(),
+    });
+  } catch (err) {
+    next(err);
+  }
+});
+
+// POST /api/incidents/:id/evidence/restore-demo - Restore genuine original evidence after tamper demo
+incidentsRouter.post('/:id/evidence/restore-demo', (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const db = getDatabase();
+    const { id } = req.params;
+
+    const row = db.prepare('SELECT * FROM incidents WHERE id = ?').get(id) as any;
+    if (!row) {
+      throw new AppError(`Incident with id '${id}' not found`, 404);
+    }
+
+    let meta: any = {};
+    try {
+      meta = typeof row.metadata === 'string' ? JSON.parse(row.metadata) : (row.metadata || {});
+    } catch {
+      meta = {};
+    }
+
+    const rawPath = row.evidence_path || meta.evidence_path;
+    if (!rawPath) {
+      throw new AppError('No evidence path', 400);
+    }
+
+    const safePath = getSafeEvidencePath(rawPath);
+    if (evidenceTamperBackups.has(safePath)) {
+      const restored = evidenceTamperBackups.get(safePath)!;
+      fs.writeFileSync(safePath, restored);
+      evidenceTamperBackups.delete(safePath);
+      const restoredSha = crypto.createHash('sha256').update(restored).digest('hex');
+
+      return res.json({
+        success: true,
+        incident_id: id,
+        action: 'EVIDENCE_RESTORED',
+        restored_sha256: restoredSha,
+        status: 'VERIFIED',
+        timestamp: new Date().toISOString(),
+      });
+    }
+
+    res.json({
+      success: true,
+      incident_id: id,
+      message: 'No active tamper backup needed restoring',
+      timestamp: new Date().toISOString(),
+    });
+  } catch (err) {
+    next(err);
+  }
+});

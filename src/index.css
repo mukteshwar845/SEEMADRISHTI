@@ -20,6 +20,12 @@
     --glow-red: 0 0 15px rgba(255, 0, 85, 0.35);
   }
 
+  body {
+    font-family: 'JetBrains Mono', 'Share Tech Mono', 'Orbitron', 'SF Pro Mono', 'Segoe UI Mono', 'Roboto Mono', 'Cascadia Code', Menlo, Monaco, Consolas, monospace;
+    background-color: var(--bg-app);
+    color: var(--text-main);
+  }
+
   [data-theme="daylight-field"],
   [data-theme="standard"],
   html.theme-daylight,

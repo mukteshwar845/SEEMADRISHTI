@@ -23,6 +23,9 @@ import {
   Flame,
   Lock,
   Bot,
+  Radar,
+  Terminal,
+  Zap,
 } from 'lucide-react';
 import { ViewMode } from '../types';
 import { SeemadrishtiLogo } from './SeemadrishtiLogo';
@@ -62,6 +65,9 @@ export const Sidebar: React.FC<SidebarProps> = ({
 
   const navItems = [
     { id: 'dashboard' as ViewMode, label: 'Tactical Matrix', icon: LayoutGrid, code: '[SEC-01]' },
+    { id: 'radar-map' as ViewMode, label: 'Tactical Radar GIS', icon: Radar, badge: '360° GIS', isAlert: true, code: '[GIS_RADAR]' },
+    { id: 'sandbox' as ViewMode, label: 'Defense Sandbox', icon: Zap, badge: 'EVAL LAB', isAlert: true, code: '[SIM_LAB]' },
+    { id: 'terminal' as ViewMode, label: 'Edge Node CLI', icon: Terminal, badge: 'PORT 8000', code: '[TACTICAL_SH]' },
     { id: 'mission-control' as ViewMode, label: 'Mission Control', icon: Activity, badge: 'OPERATIONAL', isHealth: true, code: '[HQ_CMD]' },
     { id: 'agents' as ViewMode, label: 'Autonomous AI Swarm', icon: Bot, badge: '5 AGENTS', isAlert: true, code: '[AI_SWARM]' },
     { id: 'camera-fleet' as ViewMode, label: 'Camera Fleet', icon: Video, badge: '9 NODES', code: '[FLEET_09]' },

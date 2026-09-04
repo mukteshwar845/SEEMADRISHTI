@@ -18,8 +18,13 @@ export type ViewMode =
   | 'calibration'
   | 'target-journey'
   | 'threat-map'
+  | 'terminal'
+  | 'radar-map'
+  | 'sandbox'
   | 'settings' 
   | 'users';
+
+export type DefconLevel = 1 | 2 | 3 | 4 | 5;
 
 export interface TacticalAgentInfo {
   id: string;

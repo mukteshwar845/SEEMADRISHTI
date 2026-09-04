@@ -1,6 +1,9 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { BrowserRouter, useNavigate, useLocation } from 'react-router-dom';
-import { ViewMode, AlertItem, CameraFeed, MatrixCameraFeed } from './types';
+import { ViewMode, AlertItem, CameraFeed, MatrixCameraFeed, DefconLevel } from './types';
+import { TacticalTerminalView } from './components/terminal/TacticalTerminalView';
+import { TacticalRadarGisView } from './components/gis/TacticalRadarGisView';
+import { DefenseSandboxView } from './components/sandbox/DefenseSandboxView';
 import {
   initialAlerts,
   initialCameras,
@@ -110,6 +113,22 @@ function SeemadrishtiMainApp() {
   const [selectedJourneyTrackId, setSelectedJourneyTrackId] = useState<number | null>(null);
   const [heatmapHighlightCameras, setHeatmapHighlightCameras] = useState<string[]>([]);
   const [isBackendOffline, setIsBackendOffline] = useState(false);
+  const [defconLevel, setDefconLevel] = useState<DefconLevel>(() => {
+    try {
+      const saved = localStorage.getItem('seemadrishti_defcon_level');
+      if (saved && [1, 2, 3, 4, 5].includes(Number(saved))) {
+        return Number(saved) as DefconLevel;
+      }
+    } catch {}
+    return 4;
+  });
+
+  const handleSetDefconLevel = (level: DefconLevel) => {
+    setDefconLevel(level);
+    try {
+      localStorage.setItem('seemadrishti_defcon_level', String(level));
+    } catch {}
+  };
 
   // Dynamic Camera Name Renaming Handler
   const handleUpdateCameraName = (id: number, newName: string) => {
@@ -495,15 +514,26 @@ function SeemadrishtiMainApp() {
             <span className="text-rose-600 dark:text-rose-400 font-bold">
               [ALERTS TODAY: {alerts.length}]
             </span>
-            <span
-              className={`font-bold hidden sm:inline px-2 py-0.5 rounded border ${
-                isDaylight
-                  ? 'bg-cyan-100 text-cyan-900 border-cyan-300'
-                  : 'bg-cyan-950/80 border-cyan-500/40 text-cyan-400'
-              }`}
-            >
-              [DEFCON 4 // ACTIVE DEFENSE]
-            </span>
+            {(() => {
+              const defconMeta: Record<DefconLevel, { text: string; badgeCls: string }> = {
+                1: { text: 'DEFCON 1 // MAXIMUM COMBAT READY', badgeCls: 'bg-rose-950/90 border-rose-500 text-rose-400 animate-pulse shadow-[0_0_12px_rgba(244,63,94,0.5)]' },
+                2: { text: 'DEFCON 2 // INCURSION IMMINENT', badgeCls: 'bg-orange-950/90 border-orange-500 text-orange-400 shadow-[0_0_10px_rgba(249,115,22,0.4)]' },
+                3: { text: 'DEFCON 3 // INCREASED READINESS', badgeCls: 'bg-amber-950/90 border-amber-500 text-amber-400' },
+                4: { text: 'DEFCON 4 // ACTIVE DEFENSE', badgeCls: 'bg-cyan-950/80 border-cyan-500/40 text-cyan-400' },
+                5: { text: 'DEFCON 5 // PEACETIME NORMAL', badgeCls: 'bg-emerald-950/80 border-emerald-500/40 text-emerald-400' },
+              };
+              const curr = defconMeta[defconLevel] || defconMeta[4];
+              return (
+                <button
+                  type="button"
+                  onClick={() => setCurrentView('settings')}
+                  title="Click to view DEFCON Protocols & Rules of Engagement in System Config"
+                  className={`font-bold hidden sm:inline px-2 py-0.5 rounded border text-[11px] font-mono cursor-pointer transition-all hover:scale-105 active:scale-95 ${curr.badgeCls}`}
+                >
+                  [{curr.text}]
+                </button>
+              );
+            })()}
           </div>
         </div>
 
@@ -763,6 +793,34 @@ function SeemadrishtiMainApp() {
             />
           )}
 
+          {currentView === 'radar-map' && (
+            <TacticalRadarGisView
+              onSelectCamera={(cid) => {
+                setSelectedCameraId(cid);
+                setCurrentView('dashboard');
+              }}
+              onOpenTargetJourney={(tid) => {
+                setSelectedJourneyTrackId(tid);
+                setCurrentView('target-journey');
+              }}
+            />
+          )}
+
+          {currentView === 'sandbox' && (
+            <DefenseSandboxView
+              onTriggerAlert={handleSimulateIntrusion}
+              onSetDefcon={handleSetDefconLevel}
+              onNavigate={(v) => setCurrentView(v as ViewMode)}
+            />
+          )}
+
+          {currentView === 'terminal' && (
+            <TacticalTerminalView
+              onSetDefcon={handleSetDefconLevel}
+              currentDefcon={defconLevel}
+            />
+          )}
+
           {currentView === 'settings' && (
             <SettingsView
               anomalySensitivity={anomalySensitivity}
@@ -771,6 +829,12 @@ function SeemadrishtiMainApp() {
               onTrajectoryDatasetChange={setTrajectoryDataset}
               showTrajectoryVectors={showTrajectoryVectors}
               onToggleTrajectoryVectors={setShowTrajectoryVectors}
+              isAudioMuted={isAudioMuted}
+              onToggleAudioMute={() => setIsAudioMuted(!isAudioMuted)}
+              audioVolume={audioVolume}
+              onAudioVolumeChange={setAudioVolume}
+              onSetDefcon={handleSetDefconLevel}
+              currentDefcon={defconLevel}
             />
           )}
 

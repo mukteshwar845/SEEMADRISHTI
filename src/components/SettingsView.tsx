@@ -28,6 +28,14 @@ import {
   ShieldAlert,
   Terminal,
   Type,
+  Radio,
+  Activity,
+  Cpu,
+  Check,
+  AlertTriangle,
+  BookOpen,
+  ShieldCheck,
+  Zap,
 } from 'lucide-react';
 import {
   useTheme,
@@ -47,6 +55,8 @@ import {
   AVAILABLE_ALERT_TONES,
   AlertToneType,
 } from '../utils/audioAlert';
+import { DefconLevel } from '../types';
+import { TacticalTerminalView } from './terminal/TacticalTerminalView';
 
 export interface SettingsViewProps {
   anomalySensitivity?: number;
@@ -59,6 +69,8 @@ export interface SettingsViewProps {
   onToggleAudioMute?: () => void;
   audioVolume?: number;
   onAudioVolumeChange?: (val: number) => void;
+  onSetDefcon?: (level: DefconLevel) => void;
+  currentDefcon?: DefconLevel;
 }
 
 type SettingsTab = 'security' | 'appearance' | 'account' | 'surveillance' | 'help';
@@ -74,9 +86,20 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
   onToggleAudioMute,
   audioVolume = 85,
   onAudioVolumeChange,
+  onSetDefcon,
+  currentDefcon = 4,
 }) => {
   // Navigation Tabs matching reference screenshot
   const [activeTab, setActiveTab] = useState<SettingsTab>('security');
+  const [helpSubTab, setHelpSubTab] = useState<'defcon' | 'terminal' | 'manuals'>('defcon');
+  const [checklist, setChecklist] = useState<Record<string, boolean>>({
+    thermal_calib: true,
+    homography_locked: true,
+    radio_silence: false,
+    siren_test: true,
+    drone_standby: false,
+    qrf_vector_cleared: true,
+  });
 
   // Theme & Appearance Context
   const {
@@ -918,37 +941,307 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
       {/* TAB 5: HELP & SUPPORT */}
       {activeTab === 'help' && (
         <div className="bg-[#0a0f1d] border border-slate-800/90 rounded-3xl p-6 sm:p-8 space-y-6 shadow-2xl">
-          <div className="pb-4 border-b border-slate-800">
-            <h2 className="text-base font-bold text-white tracking-wide flex items-center gap-2">
-              <HelpCircle size={18} className="text-blue-400" />
-              <span>Help & Tactical Support</span>
-            </h2>
-            <p className="text-xs text-slate-400 mt-1">
-              Field operational manuals, emergency overrides, and edge node diagnostic logs
-            </p>
-          </div>
-
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div className="p-4 rounded-2xl bg-black/40 border border-slate-800 space-y-2">
-              <h3 className="text-xs font-bold text-white uppercase tracking-wider flex items-center gap-2">
-                <ShieldAlert size={14} className="text-amber-400" />
-                <span>DEFCON Protocols</span>
-              </h3>
-              <p className="text-xs text-slate-400 leading-relaxed">
-                Level 1-4 escalation rules for border wire breaches, unauthorized vehicle movement, and drone incursions.
+          <div className="flex flex-col md:flex-row md:items-center justify-between pb-4 border-b border-slate-800 gap-4">
+            <div>
+              <h2 className="text-base font-bold text-white tracking-wide flex items-center gap-2">
+                <HelpCircle size={18} className="text-cyan-400" />
+                <span>Help, Defense Protocols & Tactical CLI</span>
+              </h2>
+              <p className="text-xs text-slate-400 mt-1">
+                Field operational manuals, DEFCON Rules of Engagement (ROE), and live edge inference diagnostic console
               </p>
             </div>
 
-            <div className="p-4 rounded-2xl bg-black/40 border border-slate-800 space-y-2">
-              <h3 className="text-xs font-bold text-white uppercase tracking-wider flex items-center gap-2">
-                <Terminal size={14} className="text-cyan-400" />
-                <span>Edge Inference Node CLI</span>
-              </h3>
-              <p className="text-xs text-slate-400 leading-relaxed">
-                Connect via SSH to field camera nodes on port 8000 to review raw homography matrix calibration tables.
-              </p>
+            {/* Sub-tab Switcher */}
+            <div className="flex items-center gap-1.5 p-1 bg-black/40 border border-slate-800 rounded-2xl">
+              <button
+                type="button"
+                onClick={() => setHelpSubTab('defcon')}
+                className={`flex items-center gap-2 px-3 py-1.5 rounded-xl text-xs font-bold transition-all ${
+                  helpSubTab === 'defcon'
+                    ? 'bg-amber-500/20 text-amber-300 border border-amber-500/40 shadow-sm'
+                    : 'text-slate-400 hover:text-white'
+                }`}
+              >
+                <ShieldAlert size={14} />
+                <span>DEFCON ROE</span>
+              </button>
+              <button
+                type="button"
+                onClick={() => setHelpSubTab('terminal')}
+                className={`flex items-center gap-2 px-3 py-1.5 rounded-xl text-xs font-bold transition-all ${
+                  helpSubTab === 'terminal'
+                    ? 'bg-cyan-500/20 text-cyan-300 border border-cyan-500/40 shadow-sm'
+                    : 'text-slate-400 hover:text-white'
+                }`}
+              >
+                <Terminal size={14} />
+                <span>Edge CLI</span>
+              </button>
+              <button
+                type="button"
+                onClick={() => setHelpSubTab('manuals')}
+                className={`flex items-center gap-2 px-3 py-1.5 rounded-xl text-xs font-bold transition-all ${
+                  helpSubTab === 'manuals'
+                    ? 'bg-blue-500/20 text-blue-300 border border-blue-500/40 shadow-sm'
+                    : 'text-slate-400 hover:text-white'
+                }`}
+              >
+                <BookOpen size={14} />
+                <span>Field SOP</span>
+              </button>
             </div>
           </div>
+
+          {/* SUB-VIEW 1: DEFCON PROTOCOLS & ROE */}
+          {helpSubTab === 'defcon' && (
+            <div className="space-y-6">
+              {/* DEFCON Level Selector Grid */}
+              <div className="grid grid-cols-1 sm:grid-cols-5 gap-3">
+                {[
+                  {
+                    level: 5 as DefconLevel,
+                    title: 'DEFCON 5',
+                    tag: 'PEACETIME NORMAL',
+                    color: 'border-emerald-500/40 bg-emerald-950/20 text-emerald-400',
+                    activeRing: 'ring-2 ring-emerald-500 bg-emerald-950/40 shadow-[0_0_15px_rgba(16,185,129,0.3)]',
+                    desc: 'Normal border monitoring. Standard 15 FPS sampling.',
+                  },
+                  {
+                    level: 4 as DefconLevel,
+                    title: 'DEFCON 4',
+                    tag: 'ACTIVE DEFENSE',
+                    color: 'border-cyan-500/40 bg-cyan-950/20 text-cyan-400',
+                    activeRing: 'ring-2 ring-cyan-500 bg-cyan-950/40 shadow-[0_0_15px_rgba(6,182,212,0.3)]',
+                    desc: 'Default posture. Enhanced telemetry, cross-camera ReID active.',
+                  },
+                  {
+                    level: 3 as DefconLevel,
+                    title: 'DEFCON 3',
+                    tag: 'INCREASED READINESS',
+                    color: 'border-amber-500/40 bg-amber-950/20 text-amber-400',
+                    activeRing: 'ring-2 ring-amber-500 bg-amber-950/40 shadow-[0_0_15px_rgba(245,158,11,0.3)]',
+                    desc: 'Suspicious vector detected. QRF on 3-min standby.',
+                  },
+                  {
+                    level: 2 as DefconLevel,
+                    title: 'DEFCON 2',
+                    tag: 'INCURSION IMMINENT',
+                    color: 'border-orange-500/40 bg-orange-950/20 text-orange-400',
+                    activeRing: 'ring-2 ring-orange-500 bg-orange-950/40 shadow-[0_0_15px_rgba(249,115,22,0.3)]',
+                    desc: 'Perimeter wire approached within 50m. Sirens primed.',
+                  },
+                  {
+                    level: 1 as DefconLevel,
+                    title: 'DEFCON 1',
+                    tag: 'MAXIMUM READINESS',
+                    color: 'border-rose-500/50 bg-rose-950/30 text-rose-400 animate-pulse',
+                    activeRing: 'ring-2 ring-rose-500 bg-rose-950/50 shadow-[0_0_20px_rgba(244,63,94,0.4)]',
+                    desc: 'Active wire breach or hostile incursion. Immediate QRF dispatch.',
+                  },
+                ].map((def) => {
+                  const isActive = currentDefcon === def.level;
+                  return (
+                    <div
+                      key={def.level}
+                      onClick={() => onSetDefcon?.(def.level)}
+                      className={`p-4 rounded-2xl border cursor-pointer transition-all ${
+                        isActive ? `${def.activeRing} ${def.color}` : `${def.color} opacity-70 hover:opacity-100 hover:scale-[1.02]`
+                      }`}
+                    >
+                      <div className="flex items-center justify-between mb-1">
+                        <span className="text-xs font-black tracking-wider uppercase">{def.title}</span>
+                        {isActive && (
+                          <span className="w-2 h-2 rounded-full bg-current animate-ping" />
+                        )}
+                      </div>
+                      <div className="text-[10px] font-mono font-bold tracking-tight text-white mb-2">
+                        {def.tag}
+                      </div>
+                      <p className="text-[11px] text-slate-300 leading-snug">
+                        {def.desc}
+                      </p>
+                    </div>
+                  );
+                })}
+              </div>
+
+              {/* ROE & Tactical Protocol Details */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="p-5 rounded-2xl bg-black/40 border border-slate-800 space-y-4">
+                  <div className="flex items-center justify-between pb-3 border-b border-slate-800/80">
+                    <div className="flex items-center gap-2">
+                      <ShieldCheck size={16} className="text-cyan-400" />
+                      <h3 className="text-xs font-bold text-white uppercase tracking-wider">
+                        Rules of Engagement (ROE) Matrix
+                      </h3>
+                    </div>
+                    <span className="text-[10px] font-mono text-cyan-400 uppercase bg-cyan-950/50 px-2 py-0.5 rounded border border-cyan-800/40">
+                      LEVEL {currentDefcon} ACTIVE
+                    </span>
+                  </div>
+
+                  <div className="space-y-2.5 text-xs">
+                    <div className="flex items-center justify-between p-2 rounded-xl bg-slate-900/60 border border-slate-800/60">
+                      <span className="text-slate-400">Zero-Line Crossing Protocol:</span>
+                      <span className="font-mono font-bold text-rose-400">
+                        {currentDefcon <= 2 ? 'Auto-Interdict / Siren Engage' : 'Real-time Vector Tracking & Flag'}
+                      </span>
+                    </div>
+                    <div className="flex items-center justify-between p-2 rounded-xl bg-slate-900/60 border border-slate-800/60">
+                      <span className="text-slate-400">Edge Inference Loop:</span>
+                      <span className="font-mono font-bold text-emerald-400">
+                        {currentDefcon === 1 ? 'Continuous 30 FPS / Full ByteTrack ReID' : 'Standard 15-20 FPS Adaptive Loop'}
+                      </span>
+                    </div>
+                    <div className="flex items-center justify-between p-2 rounded-xl bg-slate-900/60 border border-slate-800/60">
+                      <span className="text-slate-400">QRF (Quick Reaction Force):</span>
+                      <span className="font-mono font-bold text-amber-400">
+                        {currentDefcon === 1
+                          ? 'Immediate Airborne / Tactical Vehicle Intercept'
+                          : currentDefcon <= 3
+                          ? 'Perimeter Standby (Vector BP-103)'
+                          : 'Standard Base Patrol Rotation'}
+                      </span>
+                    </div>
+                    <div className="flex items-center justify-between p-2 rounded-xl bg-slate-900/60 border border-slate-800/60">
+                      <span className="text-slate-400">Night-Vision CLAHE Pipeline:</span>
+                      <span className="font-mono font-bold text-cyan-400">Auto-Enhanced at Night</span>
+                    </div>
+                  </div>
+
+                  <div className="pt-2 flex flex-wrap gap-2">
+                    <button
+                      type="button"
+                      onClick={() => audioAlertEngine.playTone('klaxon_pulse')}
+                      className="flex-1 flex items-center justify-center gap-2 py-2 px-3 rounded-xl bg-rose-950/40 hover:bg-rose-900/50 border border-rose-800/60 text-rose-300 text-xs font-bold cursor-pointer transition-all"
+                    >
+                      <Zap size={14} className="text-rose-400" />
+                      <span>Test Tactical Siren</span>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => onSetDefcon?.(1)}
+                      className="flex-1 flex items-center justify-center gap-2 py-2 px-3 rounded-xl bg-amber-950/40 hover:bg-amber-900/50 border border-amber-800/60 text-amber-300 text-xs font-bold cursor-pointer transition-all"
+                    >
+                      <AlertTriangle size={14} className="text-amber-400" />
+                      <span>Force DEFCON 1</span>
+                    </button>
+                  </div>
+                </div>
+
+                {/* Operational Readiness Checklist */}
+                <div className="p-5 rounded-2xl bg-black/40 border border-slate-800 space-y-4">
+                  <div className="flex items-center justify-between pb-3 border-b border-slate-800/80">
+                    <div className="flex items-center gap-2">
+                      <Activity size={16} className="text-amber-400" />
+                      <h3 className="text-xs font-bold text-white uppercase tracking-wider">
+                        Operational Readiness Checklist
+                      </h3>
+                    </div>
+                    <span className="text-[10px] font-mono text-slate-400">
+                      {Object.values(checklist).filter(Boolean).length}/6 Verified
+                    </span>
+                  </div>
+
+                  <div className="space-y-2">
+                    {[
+                      { id: 'thermal_calib', label: 'Thermal Sensor Calibration (FLIR MWIR Locked)' },
+                      { id: 'homography_locked', label: 'Zero-Line Homography Matrix (Cam 01-09)' },
+                      { id: 'radio_silence', label: 'Radio Silence & Mesh Encryption (ChaCha20-Poly1305)' },
+                      { id: 'siren_test', label: 'High-Decibel Perimeter Siren Array Operational' },
+                      { id: 'drone_standby', label: 'Autonomous Aerial Sentry Drone on Launch Rail' },
+                      { id: 'qrf_vector_cleared', label: 'QRF Rapid Ingress Route BP-104 Cleared' },
+                    ].map((item) => {
+                      const checked = checklist[item.id] ?? false;
+                      return (
+                        <div
+                          key={item.id}
+                          onClick={() => setChecklist((prev) => ({ ...prev, [item.id]: !checked }))}
+                          className={`flex items-center gap-3 p-2.5 rounded-xl border cursor-pointer transition-all ${
+                            checked
+                              ? 'bg-slate-900/80 border-cyan-800/50 text-slate-200'
+                              : 'bg-black/30 border-slate-800/60 text-slate-500 hover:text-slate-300'
+                          }`}
+                        >
+                          <div
+                            className={`w-4 h-4 rounded-md flex items-center justify-center border transition-all ${
+                              checked ? 'bg-cyan-500 border-cyan-400 text-black' : 'border-slate-700 bg-black/40'
+                            }`}
+                          >
+                            {checked && <Check size={12} strokeWidth={3} />}
+                          </div>
+                          <span className="text-xs font-medium">{item.label}</span>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* SUB-VIEW 2: EMBEDDED TACTICAL TERMINAL */}
+          {helpSubTab === 'terminal' && (
+            <div className="space-y-3">
+              <div className="flex items-center justify-between text-xs text-slate-400">
+                <span className="font-mono text-cyan-400 flex items-center gap-1.5">
+                  <Terminal size={14} />
+                  <span>EMBEDDED EDGE INFERENCE NODE CLI (PORT 8000)</span>
+                </span>
+                <span className="text-slate-500">Type <code className="text-white bg-slate-800 px-1.5 py-0.5 rounded">help</code> to list commands</span>
+              </div>
+              <TacticalTerminalView embedded={true} onSetDefcon={onSetDefcon} currentDefcon={currentDefcon} />
+            </div>
+          )}
+
+          {/* SUB-VIEW 3: FIELD SOP & REFERENCE MANUALS */}
+          {helpSubTab === 'manuals' && (
+            <div className="space-y-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="p-5 rounded-2xl bg-black/40 border border-slate-800 space-y-3">
+                  <h3 className="text-xs font-bold text-cyan-400 uppercase tracking-wider flex items-center gap-2">
+                    <Cpu size={14} />
+                    <span>Edge Node IP & Port Directory</span>
+                  </h3>
+                  <div className="space-y-2 text-xs font-mono">
+                    <div className="flex justify-between p-2 rounded bg-slate-900/60 border border-slate-800/60">
+                      <span className="text-slate-400">Node API Gateway:</span>
+                      <span className="text-white">http://localhost:3000</span>
+                    </div>
+                    <div className="flex justify-between p-2 rounded bg-slate-900/60 border border-slate-800/60">
+                      <span className="text-slate-400">Python CV Worker (YOLOv8):</span>
+                      <span className="text-cyan-400">Internal IPC / Port 8000</span>
+                    </div>
+                    <div className="flex justify-between p-2 rounded bg-slate-900/60 border border-slate-800/60">
+                      <span className="text-slate-400">Tactical Ingress Socket:</span>
+                      <span className="text-emerald-400">ws://localhost:3000/ws/alerts</span>
+                    </div>
+                    <div className="flex justify-between p-2 rounded bg-slate-900/60 border border-slate-800/60">
+                      <span className="text-slate-400">RTSP Video Proxy:</span>
+                      <span className="text-amber-400">rtsp://edge-node:8554/live/cam01</span>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="p-5 rounded-2xl bg-black/40 border border-slate-800 space-y-3">
+                  <h3 className="text-xs font-bold text-amber-400 uppercase tracking-wider flex items-center gap-2">
+                    <Radio size={14} />
+                    <span>Homography & Ground-Plane Projection SOP</span>
+                  </h3>
+                  <p className="text-xs text-slate-300 leading-relaxed">
+                    SEEMADRISHTI calculates 3D ground coordinates using direct planar homography ($H$) mapped to GPS zero-line coordinates.
+                  </p>
+                  <div className="p-3 rounded-xl bg-slate-900/80 border border-slate-800 font-mono text-[11px] text-cyan-300 space-y-1">
+                    <div>[X_geo, Y_geo, 1]^T = H * [u_px, v_px, 1]^T</div>
+                    <div className="text-slate-400 text-[10px] mt-1">
+                      Calibrated across 9 edge sectors with 4-point survey markers along border fence.
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
         </div>
       )}
     </div>

@@ -12,6 +12,7 @@ import { useAuth } from '../context/AuthContext';
 import { useSecurity } from '../context/SecurityContext';
 import { OperatorProfileDropdown } from './profile/OperatorProfileDropdown';
 import { webSocketService, WebSocketServiceState } from '../services/websocketService';
+import { AiSystemStatusModal } from './AiSystemStatusModal';
 
 interface HeaderProps {
   onToggleSidebarMobile: () => void;
@@ -43,6 +44,7 @@ export const Header: React.FC<HeaderProps> = ({
   const [wsState, setWsState] = useState<WebSocketServiceState>(
     webSocketService.getState()
   );
+  const [isAiStatusOpen, setIsAiStatusOpen] = useState(false);
 
   useEffect(() => {
     const unsubWs = webSocketService.onStateChange((st) => setWsState(st));
@@ -146,24 +148,46 @@ export const Header: React.FC<HeaderProps> = ({
       {/* Right: Telemetry & Actions */}
       <div className="flex items-center gap-2 sm:gap-3">
 
-        {/* System Online Pill */}
-        <div
+        {/* System Online Pill - Grounded in real WebSocket state & clickable for AI Subsystem Status */}
+        <button
           id="system-status-pill"
-          className={`flex items-center gap-2 px-2.5 sm:px-3 py-1 rounded-md border ${
-            isDaylight
-              ? 'bg-emerald-50 border-emerald-300 shadow-xs'
-              : 'border-emerald-500/50 bg-emerald-950/40 shadow-[0_0_15px_rgba(0,255,102,0.2)]'
+          onClick={() => setIsAiStatusOpen(true)}
+          title="Click to inspect real-time AI subsystem integrity & model status"
+          className={`flex items-center gap-2 px-2.5 sm:px-3 py-1 rounded-md border cursor-pointer transition-all hover:scale-105 active:scale-95 ${
+            wsState.status === 'CONNECTED'
+              ? isDaylight
+                ? 'bg-emerald-50 border-emerald-300 shadow-xs'
+                : 'border-emerald-500/50 bg-emerald-950/40 shadow-[0_0_15px_rgba(0,255,102,0.2)]'
+              : wsState.status === 'CONNECTING' || wsState.status === 'RECONNECTING'
+              ? 'border-amber-500/50 bg-amber-950/40 shadow-[0_0_15px_rgba(245,158,11,0.2)]'
+              : 'border-rose-500/60 bg-rose-950/60 shadow-[0_0_15px_rgba(244,63,94,0.3)] animate-pulse'
           }`}
         >
-          <div className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse shadow-[0_0_6px_#00ff66]"></div>
+          <div
+            className={`w-1.5 h-1.5 rounded-full ${
+              wsState.status === 'CONNECTED'
+                ? 'bg-emerald-500 animate-pulse shadow-[0_0_6px_#00ff66]'
+                : wsState.status === 'CONNECTING' || wsState.status === 'RECONNECTING'
+                ? 'bg-amber-400 animate-pulse shadow-[0_0_6px_#f59e0b]'
+                : 'bg-rose-500 shadow-[0_0_6px_#f43f5e]'
+            }`}
+          ></div>
           <span
             className={`text-[10px] font-bold uppercase tracking-wider font-mono ${
-              isDaylight ? 'text-emerald-800' : 'text-emerald-400'
+              wsState.status === 'CONNECTED'
+                ? isDaylight ? 'text-emerald-800' : 'text-emerald-400'
+                : wsState.status === 'CONNECTING' || wsState.status === 'RECONNECTING'
+                ? 'text-amber-300'
+                : 'text-rose-300'
             }`}
           >
-            ● ONLINE (14ms)
+            {wsState.status === 'CONNECTED'
+              ? `● LIVE (${wsState.latencyMs > 0 ? `${wsState.latencyMs}ms` : '<20ms'})`
+              : wsState.status === 'CONNECTING' || wsState.status === 'RECONNECTING'
+              ? '⏳ RECONNECTING...'
+              : '⚠️ BACKEND OFFLINE'}
           </span>
-        </div>
+        </button>
 
         {/* Multi-Agent Swarm Orchestrator & Work Distribution Help Button */}
         {onOpenSwarmHelp && (
@@ -274,6 +298,13 @@ export const Header: React.FC<HeaderProps> = ({
           </button>
         )}
       </div>
+
+      {/* Real-Time AI Subsystem Status & Integrity Modal */}
+      <AiSystemStatusModal
+        isOpen={isAiStatusOpen}
+        onClose={() => setIsAiStatusOpen(false)}
+        wsState={wsState}
+      />
     </header>
   );
 };

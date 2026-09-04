@@ -235,7 +235,7 @@ export const SwarmHelpModal: React.FC<SwarmHelpModalProps> = ({
                     {
                       key: 'suspect_reid_multicam',
                       title: 'Cross-Cam Target Re-ID',
-                      desc: 'Deep OSNet embedding + transit graph handover',
+                      desc: 'Appearance histogram + transit corridor handover',
                     },
                     {
                       key: 'defcon1_lockdown',

@@ -78,7 +78,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
     { id: 'alerts' as ViewMode, label: 'Threat Alerts', icon: TriangleAlert, alertBadge: unreadAlertsCount, isAlert: true, code: '[DEFCON]' },
     { id: 'notification-history' as ViewMode, label: 'Notification History', icon: BellRing, code: '[AUDIO_LOG]' },
     { id: 'livestream' as ViewMode, label: 'Quad Live Stream', icon: Tv, code: '[4-WAY]' },
-    { id: 'stitching' as ViewMode, label: 'Panoramic Stitching', icon: Layers, isNew: true, code: '[PANORAMA]' },
+    { id: 'stitching' as ViewMode, label: 'Multi-Cam Handover', icon: Layers, isNew: true, code: '[HANDOVER]' },
     { id: 'calibration' as ViewMode, label: 'Zone Calibration', icon: Sliders, badge: 'EDITOR', code: '[GEO_CALIB]' },
     { id: 'settings' as ViewMode, label: 'System Config', icon: Settings, code: '[SYS_CONF]' },
     { id: 'users' as ViewMode, label: 'Access Control', icon: Users, code: '[IAM_SEC]' },

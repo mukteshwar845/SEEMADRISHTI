@@ -2,7 +2,9 @@ const PDFDocument = require('pdfkit');
 const fs = require('fs');
 const path = require('path');
 
-const inputFile = path.join(__dirname, 'presentation.md');
+const inputFile = fs.existsSync(path.join(__dirname, 'docs', 'archive', 'presentation.md'))
+  ? path.join(__dirname, 'docs', 'archive', 'presentation.md')
+  : path.join(__dirname, 'presentation.md');
 const outputFile = path.join(__dirname, 'presentation.pdf');
 
 console.log('Reading:', inputFile);

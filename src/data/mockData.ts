@@ -295,7 +295,7 @@ export const initialAlerts: AlertItem[] = [
     type: 'Normal Patrol',
     timestamp: Date.now() - 500000,
     status: 'resolved',
-    description: 'Automated 360 panoramic scan completed with no unauthorized targets.',
+    description: 'Automated 360° PTZ camera sweep completed with no unauthorized targets.',
     location: 'Sector H - Watchtower Overview',
     confidence: 99.4,
     assignedUnit: 'Tower Watch 08',

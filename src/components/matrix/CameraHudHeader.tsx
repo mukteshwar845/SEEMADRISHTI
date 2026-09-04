@@ -1,6 +1,6 @@
 import React from 'react';
 import { MatrixCameraFeed } from '../../types';
-import { Edit3, Check, X, Maximize2 } from 'lucide-react';
+import { Edit3, Check, X, Maximize2, Camera } from 'lucide-react';
 
 interface CameraHudHeaderProps {
   camera: MatrixCameraFeed;
@@ -21,6 +21,8 @@ interface CameraHudHeaderProps {
   liveCounts?: any;
   tracksCount: number;
   batteryIcon?: React.ReactNode;
+  isWebcamActive?: boolean;
+  onToggleWebcam?: () => void;
 }
 
 export const CameraHudHeader: React.FC<CameraHudHeaderProps> = ({
@@ -38,6 +40,8 @@ export const CameraHudHeader: React.FC<CameraHudHeaderProps> = ({
   liveCounts,
   tracksCount,
   batteryIcon,
+  isWebcamActive = false,
+  onToggleWebcam,
 }) => {
   return (
     <>
@@ -125,8 +129,24 @@ export const CameraHudHeader: React.FC<CameraHudHeaderProps> = ({
                   : 'bg-amber-400'
               }`}
             />
-            <span>{camera.src?.includes('.mp4') ? 'PLAYBACK (MP4)' : playbackMode}</span>
+            <span>{camera.src?.includes('.mp4') && !isWebcamActive ? 'PLAYBACK (MP4)' : isWebcamActive ? 'LIVE WEBCAM' : playbackMode}</span>
           </button>
+
+          {/* Explicit Webcam / Demo Toggle */}
+          {onToggleWebcam && (
+            <button
+              onClick={onToggleWebcam}
+              title={isWebcamActive ? "Switch back to MP4 Demo Fixture" : "Switch to Live Hardware Webcam"}
+              className={`px-1.5 py-0.5 rounded text-[8.5px] font-mono font-bold border transition-all cursor-pointer flex items-center gap-1 ${
+                isWebcamActive
+                  ? 'bg-rose-950/90 text-rose-300 border-rose-500/60 shadow-[0_0_8px_rgba(244,63,94,0.4)] animate-pulse'
+                  : 'bg-slate-900 hover:bg-slate-800 text-slate-400 hover:text-white border-slate-700/60'
+              }`}
+            >
+              <Camera size={10} className={isWebcamActive ? 'text-rose-400' : ''} />
+              <span>{isWebcamActive ? 'WEBCAM ON' : 'WEBCAM'}</span>
+            </button>
+          )}
 
           {onSelectSpotlight && (
             <button

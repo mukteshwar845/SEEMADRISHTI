@@ -1103,7 +1103,7 @@ export const LiveStreamPlayer: React.FC<LiveStreamPlayerProps> = ({
             className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-emerald-500/10 hover:bg-emerald-500/20 border border-emerald-500/30 text-emerald-400 hover:text-emerald-300 font-mono text-xs font-bold transition-all cursor-pointer shrink-0 ml-2"
           >
             <Layers size={13} />
-            <span className="hidden sm:inline">PANORAMIC STITCH</span>
+            <span className="hidden sm:inline">CORRIDOR HANDOVER</span>
           </button>
         )}
       </div>

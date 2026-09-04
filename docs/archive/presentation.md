@@ -64,7 +64,7 @@
 - **What to Show**: **Target Journey View** (`[JOURNEY]` on sidebar).
 - **What to Say**:
   - *"One of the hardest challenges in border security is tracking an intruder who runs across camera blindspots. Traditional facial recognition fails in night/fog or when targets wear masks."*
-  - *"SEEMADRISHTI utilizes **Planar Homography + Deep Re-ID Embeddings (OSNet)** to map physical ground coordinates (X, Y) onto a unified GIS border map."*
+  - *"SEEMADRISHTI utilizes **Spatial Corridor Registration + Appearance Re-ID Embeddings (HSV Color Histogram & Aspect Ratio)** to map physical ground coordinates onto a unified border layout."*
   - *"Here you can see Target TRK-992's complete movement journey: scaling the fence at CAM-02, entering the transition zone, and being handed over to CAM-03 without losing identity."*
 - **Actions to Perform**:
   1. Trace the dotted transit corridor vector between CAM-02 &rarr; CAM-03.
@@ -114,7 +114,7 @@
 | **Tactical Matrix** | `[SEC-01]` | 9 RTSP Feeds, YOLOv8, FLIR Thermal | Synchronized 60 FPS situational awareness across 9 border zones. |
 | **AI Swarm Orchestrator** | `[AI_SWARM]` | 4 Autonomous Agents, Express/TS backend | Heavy border tasks decomposed in parallel; 4.4x speedup (44ms execution). |
 | **Active Deliberation** | `AI Swarm &rarr; Deliberation` | Multi-Agent Consensus Scoring | 4 agents cross-verify evidence before triggering alarms (prevents false alerts). |
-| **Target Journey** | `[JOURNEY]` | Homography Ground Warp, OSNet Re-ID | Continuous tracking across blindspots without facial recognition. |
+| **Target Journey** | `[JOURNEY]` | Corridor Transit Warp, Appearance Re-ID | Continuous tracking across blindspots without facial recognition. |
 | **Incident Inspector** | `[FORENSIC]` | Frame Scrubber, Behavior Chain | Frame-accurate forensic reconstruction with multi-sensor alignment. |
 | **Evidence Vault** | `[FORENSIC_REC]` | SHA-256, SQLite Ledger | Tamper-proof chain-of-custody legally admissible in court. |
 | **Threat Heatmap** | `[HEATMAP]` | D3 Density Grid, Spatial Dwell | Identifies high-risk breach choke points for patrol reallocation. |

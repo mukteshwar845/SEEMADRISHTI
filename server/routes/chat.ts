@@ -29,9 +29,9 @@ const TACTICAL_KNOWLEDGE_BASE: TacticalKnowledgeEntry[] = [
       `**Core Capabilities:**\n` +
       `• **Synchronous 9-Node Edge Matrix:** Ingests live RTSP feeds at sub-21ms latency with edge NVIDIA Jetson Orin compute.\n` +
       `• **Autonomous 5-Agent Swarm:** Sentinel, Pathfinder, Commander, Awareness-05, and Lex Forensic orchestrate automated threat detection, DEFCON risk scoring, and countermeasure recommendations.\n` +
-      `• **Cross-Camera Re-ID & Journey:** Employs OSNet appearance embeddings and planar homography to track intruders seamlessly across camera blindspots.\n` +
-      `• **Panoramic 360° Stitching:** Fuses adjacent cameras into seamless 180°–270° tactical canvases with Thermal FLIR and Night Vision Phosphor.\n` +
-      `• **Cryptographic Legal Chain of Custody:** Every recorded incursion is stamped with a SHA-256 Merkle root hash admissible under Section 65B of the Indian Evidence Act.`,
+      `• **Cross-Camera Re-ID & Journey:** Employs Appearance & Spatiotemporal Topological Re-Identification (HSV 3D Color Histogram + Aspect Ratio Geometry + Transit Windows) to track intruders across camera blindspots.\n` +
+      `• **Multi-Camera Synchronized Surveillance:** Monitors adjacent camera nodes with synchronized dual-stream telemetry, tactical HUD overlays, and corridor handover tracking.\n` +
+      `• **Cryptographic Legal Chain of Custody:** Every recorded incursion is stamped with an immutable SHA-256 cryptographic digest ensuring chain-of-custody integrity under Section 65B of the Indian Evidence Act.`,
   },
   {
     patterns: [
@@ -50,7 +50,7 @@ const TACTICAL_KNOWLEDGE_BASE: TacticalKnowledgeEntry[] = [
       `• **Sector Delta:** CAM-07 (Forward Ridge Approach) & CAM-08 (Highway Observation Node)\n` +
       `• **Sector Echo:** CAM-09 (Riverine & Scrubland Border Corridor)\n\n` +
       `**Hardware & Sensor Specifications:**\n` +
-      `Each camera node is paired with an **NVIDIA Jetson Orin AGX** edge unit providing local YOLOv8 neural inference, active PTZ positioning, and triple-spectrum imaging (Daylight RGB, Night Vision Phosphor, and Thermal FLIR).`,
+      `Each camera node connects to an edge processing unit providing local YOLOv8 neural inference, active PTZ positioning, and analytical vision modes (Daylight RGB, Night Vision Phosphor emulation, and Thermal FLIR false-color).`,
   },
   {
     patterns: [
@@ -66,12 +66,12 @@ const TACTICAL_KNOWLEDGE_BASE: TacticalKnowledgeEntry[] = [
     ],
     title: 'Autonomous 5-Agent Tactical Swarm',
     response:
-      `SEEMADRISHTI operates with **5 autonomous specialized AI agents** that deliberate in a synchronized multi-agent loop:\n\n` +
+      `SEEMADRISHTI operates with **5 specialized tactical AI agent roles**:\n\n` +
       `1. **Sentinel (Tactical Threat Assessor):** Ingests real-time YOLOv8 detections, evaluates virtual tripwires, and identifies fence scaling, loitering, and perimeter breaches.\n` +
       `2. **Pathfinder (Spatial Vector Kinematics):** Calculates intruder velocity (m/s), movement trajectory vectors, and projects arrival times at adjacent camera sectors.\n` +
-      `3. **Commander (DEFCON Orchestrator):** Synthesizes inputs from Sentinel and Pathfinder, calculates DEFCON alert levels (1 to 5), and dispatches automated deterrence sirens, floodlights, and sentry dispatches.\n` +
+      `3. **Commander (DEFCON Orchestrator):** Synthesizes inputs from Sentinel and Pathfinder, calculates DEFCON alert levels (1 to 5), and dispatches automated deterrence sirens and sentry notifications.\n` +
       `4. **Awareness-05 (Multi-Camera Fusion):** Monitors blindspots between camera sectors and handles cross-camera handover correlation.\n` +
-      `5. **Lex Forensic (Legal Compliance & Evidence):** Automatically compiles tamper-proof incident dossiers sealed with SHA-256 Merkle root hashes compliant with Section 65B of the Indian Evidence Act.`,
+      `5. **Lex Forensic (Legal Compliance & Evidence):** Automatically compiles tamper-proof incident dossiers sealed with SHA-256 cryptographic hashes supporting Section 65B of the Indian Evidence Act.`,
   },
   {
     patterns: [
@@ -83,8 +83,8 @@ const TACTICAL_KNOWLEDGE_BASE: TacticalKnowledgeEntry[] = [
     ],
     title: 'Cross-Camera Target Journey & Re-ID Matrix',
     response:
-      `The **Cross-Camera Target Journey Engine** eliminates operator blindspots by connecting detections across multiple cameras into a single spatial incursion journey:\n\n` +
-      `• **OSNet Deep Appearance Embeddings:** Analyzes clothing color histograms (97%), silhouette aspect ratios (99%), and gait biomechanics (95%) without relying on facial recognition.\n` +
+      `The **Cross-Camera Target Journey Engine** connects detections across multiple cameras into an evidence-backed spatial incursion journey:\n\n` +
+      `• **Appearance-Based Re-Identification:** Extracts 3D HSV color histograms and aspect-ratio geometry from detection crops, combined with physical terrain transit time constraints.\n` +
       `• **Predictive Kinematics:** Computes target speed (e.g. 12.2 km/h sprint) and transit distance (~120 meters).\n` +
       `• **2D Sector Topology Map:** Visually renders the handover vector between nodes (CAM-01 ➔ CAM-02).\n` +
       `• **Export Dossier:** Allows defense officers to download a cryptographically verified SHA-256 audit docket of the entire incursion path.`,
@@ -100,10 +100,10 @@ const TACTICAL_KNOWLEDGE_BASE: TacticalKnowledgeEntry[] = [
     title: 'Camera Health & Stream Diagnostics',
     response:
       `The **Stream Diagnostics Dashboard** serves as the system's Network Operations Center (NOC):\n\n` +
-      `• **Sub-21ms Latency:** Profiles real-time RTSP/WebRTC round-trip transport delay to guarantee sub-40ms responsiveness.\n` +
-      `• **Jitter & Frame Drop Telemetry:** Maintains stable buffers (±1.8ms) and monitors frame drop ratios (<0.05%).\n` +
-      `• **Edge Hardware Thermals:** Monitors core temperatures (39°C–40°C) on NVIDIA Jetson Orin edge units to prevent thermal throttling under harsh border climates.\n` +
-      `• **Operator Buffer Flush:** Sentry operators can click "Ping Test" or "Reset Buffer" to re-sync streams without rebooting physical hardware.`,
+      `• **Sub-25ms Latency:** Profiles real-time edge processing and WebSocket dispatch delay.\n` +
+      `• **Jitter & Frame Drop Telemetry:** Monitors frame processing stability and stream health.\n` +
+      `• **Edge Hardware Thermals:** Monitors CPU load, memory utilization, and system thermals on edge compute units.\n` +
+      `• **Operator Buffer Flush:** Sentry operators can click "Ping Test" or "Reset Buffer" to re-sync streams dynamically.`,
   },
   {
     patterns: [
@@ -123,16 +123,18 @@ const TACTICAL_KNOWLEDGE_BASE: TacticalKnowledgeEntry[] = [
     patterns: [
       /panoramic\s*stitching/i,
       /stitching/i,
+      /synchronized\s*surveillance/i,
+      /corridor\s*handover/i,
       /360/i,
       /homography/i,
       /sift/i,
     ],
-    title: 'Panoramic Multi-Camera Stitching (360° AI)',
+    title: 'Multi-Camera Synchronized Surveillance & Spatial Handover',
     response:
-      `The **Panoramic Stitching Module** mathematically fuses adjacent camera feeds into continuous 180° to 270° panoramic super-feeds:\n\n` +
-      `• **Homography & SIFT Tie Points:** Computes a 3x3 planar transformation matrix with 98.4% RANSAC inliers to align ground planes seamlessly.\n` +
-      `• **Cross-Camera Handover Vectors:** Tracks targets across the overlap seam line with predictive arrival estimation (e.g. EST +3.2s).\n` +
-      `• **Multi-Spectral Vision:** Allows instant switching between Daylight RGB, Night Vision Phosphor (NVG), and Thermal FLIR false-color infrared.`,
+      `The **Multi-Camera Synchronized Surveillance Module** monitors adjacent camera feeds side-by-side with synchronized telemetry and spatial corridor handover tracking:\n\n` +
+      `• **Homography Alignment & Inlier Verification:** Employs OpenCV ORB/SIFT keypoint matching and RANSAC matrix estimation. Accurately reports whether camera feeds share physical geometric overlap or operate as independent adjacent surveillance nodes.\n` +
+      `• **Cross-Camera Handover Vectors:** Correlates intruder transitions across sector blindspots using velocity vectors and calibrated terrain transit time windows.\n` +
+      `• **Software Vision Modes:** Provides analytical false-color shader overlays (Daylight RGB, Night Vision Phosphor emulation, and Thermal FLIR false-color infrared) for enhanced tactical contrast.`,
   },
   {
     patterns: [
@@ -160,8 +162,8 @@ const TACTICAL_KNOWLEDGE_BASE: TacticalKnowledgeEntry[] = [
     response:
       `The **Evidence Vault** ensures that all recorded surveillance video and incident logs are legally binding:\n\n` +
       `• **Cryptographic Sealing:** Every incursion clip is hashed using SHA-256 upon capture.\n` +
-      `• **Merkle Tree Verification:** Changes to frames or metadata invalidate the root hash, preventing tampering.\n` +
-      `• **Section 65B Compliance:** Generates tamper-evident forensic certificates compliant with the Indian Evidence Act.`,
+      `• **Cryptographic Integrity:** Byte-level SHA-256 verification detects any modification to the recorded MP4 pixel matrix or metadata.\n` +
+      `• **Section 65B Support:** Generates verifiable digital custody certificates supporting presiding officer affidavits under the Indian Evidence Act.`,
   },
 ];
 

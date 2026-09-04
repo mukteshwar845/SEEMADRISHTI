@@ -91,7 +91,7 @@ const SCENARIO_STEPS: Array<{
         risk_score: 94,
         risk_level: 'CRITICAL',
         confidence: 0.973,
-        reason: 'Track #9921 crossed virtual tripwire NW-04 at 1.8 m/s. Thermal core: 36.8°C. Classified HUMAN with 97.3% confidence.',
+        reason: 'Track #9921 crossed virtual tripwire NW-04 at 1.8 m/s. Thermal FLIR incursion signature verified. Classified HUMAN with 97.3% confidence.',
         timestamp: new Date().toISOString(),
         zone_name: 'Perimeter Buffer Zone NW',
         metadata: {
@@ -101,7 +101,7 @@ const SCENARIO_STEPS: Array<{
           risk_level: 'CRITICAL',
           reasons: [
             { code: 'TRIPWIRE_CROSS', points: 40, description: 'Crossed virtual tripwire NW-04' },
-            { code: 'THERMAL_HUMAN', points: 30, description: 'Thermal gradient 36.8°C — confirmed human' },
+            { code: 'THERMAL_HUMAN', points: 30, description: 'Thermal FLIR gradient signature — confirmed human' },
             { code: 'VELOCITY_BREACH', points: 24, description: 'Approach velocity 1.8 m/s — running' },
           ],
         },
@@ -168,7 +168,7 @@ const SCENARIO_STEPS: Array<{
         ],
         reasons: [
           { code: 'CROSS_CAM_VELOCITY', points: 50, message: 'Consistent 1.8 m/s motion vector across 3 cameras' },
-          { code: 'APPEARANCE_MATCH', points: 30, message: 'OSNet 512-dim feature cosine similarity: 0.94' },
+          { code: 'APPEARANCE_MATCH', points: 30, message: 'Appearance feature cosine similarity: 0.89 (HSV + Aspect Ratio)' },
           { code: 'SPATIAL_HANDOVER', points: 16, message: 'Ground-plane trajectory matches predicted handover within ±1.2s' },
         ],
         created_at: new Date().toISOString(),

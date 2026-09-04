@@ -137,8 +137,8 @@ export const CLIENT_PRESET_PARALLEL_JOBS: Record<string, ParallelOrchestrationJo
         agentName: 'Sentinel Vision',
         role: 'Perception & Triage',
         color: '#00f0ff',
-        taskTitle: 'OSNet Deep Feature Vector Extraction Across CAM-01..CAM-04 Clips',
-        details: 'Extracted 512-dim L2-normalized deep appearance embeddings.',
+        taskTitle: 'Appearance Feature Extraction Across CAM-01..CAM-04 Clips',
+        details: 'Extracted 3D HSV color histograms and aspect-ratio geometric descriptors.',
         status: 'COMPLETED',
         progressPercent: 100,
         durationMs: 34,
@@ -256,7 +256,7 @@ export const CLIENT_PRESET_PARALLEL_JOBS: Record<string, ParallelOrchestrationJo
         progressPercent: 100,
         durationMs: 14,
         outputSummary: 'SHA-256: 8a4c11b2...319fa04 sealed into ledger.',
-        artifactsProduced: ['Lockdown Audit Record', 'Section 65B Signed Affidavit'],
+        artifactsProduced: ['Lockdown Audit Record', 'Section 65B Custody Integrity Record'],
       },
     ],
   },
@@ -1006,7 +1006,7 @@ export const MultiAgentOrchestratorView: React.FC = () => {
                 {
                   key: 'suspect_reid_multicam',
                   title: 'Cross-Cam Suspect Re-ID',
-                  desc: 'Deep OSNet appearance embedding + spatio-temporal transit graph traversal',
+                  desc: 'Appearance histogram similarity + spatio-temporal transit corridor graph traversal',
                 },
                 {
                   key: 'defcon1_lockdown',

@@ -4,7 +4,8 @@ const fs = require('fs');
 const doc = new PDFDocument({ margin: 30 });
 doc.pipe(fs.createWriteStream('audit_report.pdf'));
 
-const text = fs.readFileSync('audit_report.md', 'utf8');
+const reportPath = fs.existsSync('docs/archive/audit_report.md') ? 'docs/archive/audit_report.md' : 'audit_report.md';
+const text = fs.readFileSync(reportPath, 'utf8');
 
 doc.font('Helvetica-Bold').fontSize(14).text('TECHNICAL AUDIT REPORT: SEEMADRISHTI AI', { align: 'center' });
 doc.moveDown();

@@ -59,9 +59,9 @@
   > *"Facial recognition is impractical at borders because cameras are mounted 50 to 100 meters away, targets wear balaclavas, and conditions are dark.*
   >
   > *Instead, SEEMADRISHTI uses a **Triple-Fusion Re-ID Pipeline**:*
-  > *1. **Deep Appearance Feature Embeddings**: We extract a 512-dimensional feature vector using an **OSNet (Omni-Scale Network)** trained on pedestrian silhouette, clothing textures, footwear, and carry-gear aspect ratios.*
-  > *2. **Ground-Plane Spatial Correlation**: We project the target's pixel coordinates onto world UTM ground coordinates via homography.*
-  > *3. **Spatio-Temporal Handover Window**: An intruder cannot instantly teleport from CAM-01 to CAM-09. Pathfinder enforces physical velocity constraints ($v \le 7\,\text{m/s}$ for sprinting humans). Candidates outside the physical time-distance bubble are pruned immediately, yielding $>98\%$ cross-camera match accuracy."*
+  > *1. **Appearance Feature Embeddings**: We extract 3D HSV color histograms (1024 bins) and silhouette aspect ratios from target detection crops, capturing clothing color distributions and body proportions without requiring facial features.*
+  > *2. **Ground-Plane Spatial Correlation**: We project target trajectories onto adjacent camera sectors using corridor boundary mappings.*
+  > *3. **Spatio-Temporal Handover Window**: An intruder cannot instantly teleport between non-adjacent sectors. The system enforces physical transit velocity constraints ($v \le 7\,\text{m/s}$ for sprinting humans). Candidates outside the physical time-distance bubble are pruned immediately, yielding robust cross-camera association.*"
 
 ---
 
@@ -202,7 +202,7 @@
 
 ## 🌟 Top 5 Phrases to Impress the Jury
 1. *"We don't just detect objects; our 4-agent swarm **synthesizes tactical consensus in 44 milliseconds**."*
-2. *"Our cross-camera handover works via **ground-plane homography and OSNet feature embeddings**, completely eliminating facial recognition dependency."*
+2. *"Our cross-camera handover works via **spatial corridor registration and appearance feature histograms**, completely eliminating facial recognition dependency."*
 3. *"Every single frame and action is sealed with **SHA-256 cryptographic hashes** for indisputable courtroom admissibility."*
 4. *"The system is **100% edge-native and air-gapped**—ready to deploy in zero-connectivity forward border terrain."*
 5. *"By running parallel work distribution across 4 specialized worker agents, we achieve a **4.4x acceleration** over legacy sequential pipelines."*

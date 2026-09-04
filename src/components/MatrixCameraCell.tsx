@@ -1946,6 +1946,8 @@ export const MatrixCameraCell: React.FC<MatrixCameraCellProps> = ({
         freshness={freshness}
         liveCounts={liveCounts}
         tracksCount={realTracksRef.current?.tracks?.length ?? liveCounts?.visible?.total ?? 0}
+        isWebcamActive={isWebcamActive}
+        onToggleWebcam={handleToggleWebcam}
       />
 
       {/* 2. Video Player & 60 FPS Photorealistic Canvas AI Overlay Container */}

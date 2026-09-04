@@ -447,14 +447,14 @@ export const QuadLiveStreamView: React.FC<QuadLiveStreamViewProps> = ({
             <span className="hidden md:inline">SNAPSHOT ALL</span>
           </button>
 
-          {/* Panoramic Stitch Link */}
+          {/* Multi-Cam Corridor Handover Link */}
           {onOpenStitchingView && (
             <button
               onClick={onOpenStitchingView}
               className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-blue-600/20 hover:bg-blue-600/30 text-blue-400 border border-blue-500/40 text-xs font-mono font-bold transition-all cursor-pointer shadow-[0_0_10px_rgba(59,130,246,0.2)]"
             >
               <Layers size={14} />
-              <span className="hidden md:inline">PANORAMIC STITCH</span>
+              <span className="hidden md:inline">CORRIDOR HANDOVER</span>
             </button>
           )}
 

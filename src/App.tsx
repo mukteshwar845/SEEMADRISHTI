@@ -52,7 +52,7 @@ import { Auth3DView } from './components/auth/Auth3DView';
 import { webSocketService } from './services/websocketService';
 import { voiceCommandService } from './services/voiceCommandService';
 import { fetchAlerts, fetchCameras, fetchTelemetry } from './services/api';
-import { Siren, ShieldAlert } from 'lucide-react';
+import { Siren, ShieldAlert, AlertTriangle } from 'lucide-react';
 
 function SeemadrishtiMainApp() {
   const { theme, isDaylight } = useTheme();
@@ -109,6 +109,7 @@ function SeemadrishtiMainApp() {
   const [highlightedCameras, setHighlightedCameras] = useState<string[]>([]);
   const [selectedJourneyTrackId, setSelectedJourneyTrackId] = useState<number | null>(null);
   const [heatmapHighlightCameras, setHeatmapHighlightCameras] = useState<string[]>([]);
+  const [isBackendOffline, setIsBackendOffline] = useState(false);
 
   // Dynamic Camera Name Renaming Handler
   const handleUpdateCameraName = (id: number, newName: string) => {
@@ -284,9 +285,14 @@ function SeemadrishtiMainApp() {
       }));
     });
 
+    const unsubWs = webSocketService.onStateChange((st) => {
+      setIsBackendOffline(st.status === 'DISCONNECTED');
+    });
+
     return () => {
       unsubAlerts();
       unsubTelemetry();
+      unsubWs();
     };
   }, [triggerGlobalFlash]);
 
@@ -512,6 +518,24 @@ function SeemadrishtiMainApp() {
           onOpenAlerts={() => setCurrentView('alerts')}
           onOpenSwarmHelp={() => setIsSwarmHelpOpen(true)}
         />
+
+        {/* Real-time Backend Offline Indicator Banner */}
+        {isBackendOffline && (
+          <div className="bg-rose-950/95 border-b border-rose-500/60 px-4 py-2 flex items-center justify-between text-xs font-mono text-rose-200 z-30 shadow-[0_4px_20px_rgba(244,63,94,0.3)]">
+            <div className="flex items-center gap-2">
+              <AlertTriangle size={15} className="text-rose-400 shrink-0 animate-pulse" />
+              <span>
+                <strong>BACKEND OFFLINE:</strong> Real-time edge gateway (:3000) disconnected. Displaying offline test fixtures. Reconnecting in background...
+              </span>
+            </div>
+            <button
+              onClick={handleRefresh}
+              className="px-2.5 py-0.5 bg-rose-600 hover:bg-rose-500 text-white rounded text-[10px] font-bold transition-all cursor-pointer"
+            >
+              RETRY
+            </button>
+          </div>
+        )}
 
         {/* Dynamic Main Body by Current View */}
         <main className="flex-1 p-3.5 sm:p-5 overflow-y-auto space-y-5">

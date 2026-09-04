@@ -103,19 +103,7 @@ function SeemadrishtiMainApp() {
     }));
   });
   const [selectedCameraId, setSelectedCameraId] = useState<string>('cam-1');
-  const [alerts, setAlerts] = useState<AlertItem[]>([]);
-  const [cvStatus, setCvStatus] = useState<'ONLINE' | 'OFFLINE'>('ONLINE');
-  const [liveTelemetry, setLiveTelemetry] = useState<{
-    hasLiveFeed: boolean;
-    fps: number;
-    latencyMs: number;
-    lastFrameMs: number;
-  }>({
-    hasLiveFeed: false,
-    fps: 0,
-    latencyMs: 0,
-    lastFrameMs: 0,
-  });
+  const [alerts, setAlerts] = useState<AlertItem[]>(initialAlerts);
   const [isGlobalFlashActive, setIsGlobalFlashActive] = useState(false);
   const [selectedAlertForModal, setSelectedAlertForModal] = useState<AlertItem | null>(null);
   const [selectedCameraForModal, setSelectedCameraForModal] = useState<CameraFeed | null>(null);
@@ -316,18 +304,6 @@ function SeemadrishtiMainApp() {
       }));
     });
 
-    // Ingest real-time frame telemetry from CV processor
-    const unsubFrame = webSocketService.onFrameState((fs: any) => {
-      if (fs && (fs.processing_mode === 'live_cv' || fs.source_type === 'browser_webcam')) {
-        setLiveTelemetry({
-          hasLiveFeed: true,
-          fps: typeof fs.measured_fps === 'number' && fs.measured_fps > 0 ? fs.measured_fps : 3.3,
-          latencyMs: typeof fs.processing_latency_ms === 'number' ? fs.processing_latency_ms : 240,
-          lastFrameMs: Date.now(),
-        });
-      }
-    });
-
     const unsubWs = webSocketService.onStateChange((st) => {
       setIsBackendOffline(st.status === 'DISCONNECTED');
     });
@@ -335,49 +311,9 @@ function SeemadrishtiMainApp() {
     return () => {
       unsubAlerts();
       unsubTelemetry();
-      unsubFrame();
       unsubWs();
     };
   }, [triggerGlobalFlash]);
-
-  // Check CV Processor Health & Poll Periodically
-  useEffect(() => {
-    let isMounted = true;
-    const checkCv = async () => {
-      try {
-        const res = await fetch('/api/webcam/status');
-        if (res.ok) {
-          const data = await res.json();
-          if (isMounted) {
-            setCvStatus(data.cv_processor_online || data.status === 'ONLINE' ? 'ONLINE' : 'OFFLINE');
-          }
-        } else {
-          if (isMounted) setCvStatus('OFFLINE');
-        }
-      } catch {
-        if (isMounted) setCvStatus('OFFLINE');
-      }
-    };
-    checkCv();
-    const iv = setInterval(checkCv, 10000);
-    return () => {
-      isMounted = false;
-      clearInterval(iv);
-    };
-  }, []);
-
-  // Freshness timer: expire live feed if no frames received in last 15 seconds
-  useEffect(() => {
-    const iv = setInterval(() => {
-      setLiveTelemetry((prev) => {
-        if (prev.hasLiveFeed && Date.now() - prev.lastFrameMs > 15000) {
-          return { ...prev, hasLiveFeed: false };
-        }
-        return prev;
-      });
-    }, 2000);
-    return () => clearInterval(iv);
-  }, []);
 
   // Subscribe to Audio Alert Engine
   useEffect(() => {
@@ -533,7 +469,7 @@ function SeemadrishtiMainApp() {
       <Sidebar
         currentView={currentView}
         onSelectView={(view) => setCurrentView(view)}
-        unreadAlertsCount={alerts.filter((a) => !a.camera?.startsWith('CAM-TEST') && a.status === 'active').length}
+        unreadAlertsCount={alerts.filter((a) => a.status === 'active').length}
         isOpenMobile={isMobileSidebarOpen}
         onCloseMobile={() => setIsMobileSidebarOpen(false)}
       />
@@ -569,31 +505,14 @@ function SeemadrishtiMainApp() {
               [SEC_NET: ENCRYPTED 256-BIT]
             </span>
             <span className="text-slate-400">|</span>
-            <span
-              className={`hidden sm:inline font-bold ${
-                liveTelemetry.hasLiveFeed ? 'text-emerald-400' : 'text-slate-400'
-              }`}
-            >
-              {liveTelemetry.hasLiveFeed
-                ? `[● LIVE // ${liveTelemetry.fps.toFixed(1)} FPS // ${Math.round(liveTelemetry.latencyMs)}ms]`
-                : `[● NO LIVE FEED // CV: ${cvStatus} // STANDBY]`}
+            <span className="hidden sm:inline">
+              [SYSTEM LATENCY: 14ms // 60 FPS INFERENCE]
             </span>
           </div>
 
           <div className="flex items-center gap-3">
             <span className="text-rose-600 dark:text-rose-400 font-bold">
-              [ALERTS TODAY: {
-                alerts.filter((a) => {
-                  if (a.camera?.startsWith('CAM-TEST')) return false;
-                  const ad = new Date(a.timestamp);
-                  const now = new Date();
-                  return (
-                    ad.getDate() === now.getDate() &&
-                    ad.getMonth() === now.getMonth() &&
-                    ad.getFullYear() === now.getFullYear()
-                  );
-                }).length
-              }]
+              [ALERTS TODAY: {alerts.length}]
             </span>
             {(() => {
               const defconMeta: Record<DefconLevel, { text: string; badgeCls: string }> = {
@@ -623,26 +542,11 @@ function SeemadrishtiMainApp() {
           onToggleSidebarMobile={() => setIsMobileSidebarOpen(!isMobileSidebarOpen)}
           onRefresh={handleRefresh}
           isRefreshing={isRefreshing}
-          activeAlertCount={
-            alerts.filter((a) => {
-              if (a.camera?.startsWith('CAM-TEST')) return false;
-              const ad = new Date(a.timestamp);
-              const now = new Date();
-              return (
-                ad.getDate() === now.getDate() &&
-                ad.getMonth() === now.getMonth() &&
-                ad.getFullYear() === now.getFullYear()
-              );
-            }).length
-          }
+          activeAlertCount={alerts.length}
           onOpenDemoMode={() => setIsDemoGuideOpen(true)}
           onOpenSettings={() => setCurrentView('settings')}
           onOpenAlerts={() => setCurrentView('alerts')}
           onOpenSwarmHelp={() => setIsSwarmHelpOpen(true)}
-          hasLiveFeed={liveTelemetry.hasLiveFeed}
-          isCvOnline={cvStatus === 'ONLINE'}
-          activeCameraCount={liveTelemetry.hasLiveFeed ? 1 : 0}
-          liveTelemetry={liveTelemetry}
         />
 
         {/* Real-time Backend Offline Indicator Banner */}

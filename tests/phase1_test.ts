@@ -28,12 +28,7 @@ import { initializeWebSocketServer } from '../server/services/websocket';
 
 process.env.NODE_ENV = 'test';
 process.env.API_KEY = process.env.API_KEY || 'seemadrishti-test-key-suite';
-process.env.CAMERA_ZONES_PATH = 'data/test_camera_zones_phase1_transient.json';
-const testPhase1Db = 'data/test_phase1.sqlite';
-process.env.DATABASE_PATH = testPhase1Db;
-try {
-  if (fs.existsSync(testPhase1Db)) fs.unlinkSync(testPhase1Db);
-} catch {}
+process.env.CAMERA_ZONES_PATH = 'data/test_camera_zones_phase1.json';
 
 const TEST_PORT = 8001;
 const BASE_URL = `http://127.0.0.1:${TEST_PORT}`;
@@ -303,11 +298,14 @@ async function runTests() {
         body: JSON.stringify(eventPayload),
       });
 
+      if (createRes.status !== 201) throw new Error(`Expected 201, got ${createRes.status}: ${JSON.stringify(createRes.body)}`);
+
+      // Filter events by camera and severity
       const readRes = await request(`/api/events?camera_id=${testCameraId}&severity=High`);
       if (readRes.status !== 200) throw new Error(`Read events failed: ${readRes.status}`);
       const found = readRes.body?.data?.find((e: any) => e.id === testEventId);
       if (!found || found.event_type !== 'PERIMETER_PROXIMITY') {
-        throw new Error(`Event '${testEventId}' not found in query results: body=${JSON.stringify(readRes.body)}`);
+        throw new Error(`Event '${testEventId}' not found in query results`);
       }
 
       recordPass(9, 'Create & Read Events (POST & GET /api/events)', `Created '${testEventId}', retrieved with filters`);
@@ -513,14 +511,10 @@ async function runTests() {
     }
 
   } finally {
+    // Teardown
     if (serverInstance) {
       serverInstance.close();
     }
-    closeDatabase();
-    try {
-      if (fs.existsSync(testPhase1Db)) fs.unlinkSync(testPhase1Db);
-      if (fs.existsSync(process.env.CAMERA_ZONES_PATH!)) fs.unlinkSync(process.env.CAMERA_ZONES_PATH!);
-    } catch {}
   }
 
   // Summary Report

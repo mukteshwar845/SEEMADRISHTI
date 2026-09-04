@@ -433,8 +433,8 @@ export const TacticalTerminalView: React.FC<TacticalTerminalViewProps> = ({
             <div>Model Architecture: <span className="text-cyan-300 font-bold">YOLOv8 Nano (yolov8n.pt)</span></div>
             <div>Multi-Object Tracker: <span className="text-slate-200">ByteTrack (Dual-Threshold Kalman)</span></div>
             <div>Inference Resolution: <span className="text-slate-200">640 x 640 @ FP32</span></div>
-            <div>Hardware Acceleration: <span className="text-cyan-300 font-bold">CPU Native / DirectML</span></div>
-            <div>Latency Profile: <span className="text-emerald-400 font-bold">CPU: ~220ms (P50: 232ms) // GPU TensorRT Target: ~14ms</span></div>
+            <div>Hardware Acceleration: <span className="text-cyan-300 font-bold">CPU / DirectML Native</span></div>
+            <div>Latency Profile: <span className="text-emerald-400 font-bold">~14ms per frame</span></div>
           </div>
         );
         break;

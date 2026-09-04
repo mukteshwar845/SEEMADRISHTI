@@ -127,12 +127,11 @@ async function runRegressionSuite() {
   db.prepare(`
     INSERT INTO cameras (id, name, location, source_type, source_url, status, created_at, updated_at)
     VALUES (?, ?, ?, ?, ?, ?, ?, ?)
-    ON CONFLICT(id) DO NOTHING
   `).run('cam-01', 'Test Border Camera', 'Sector 4', 'mp4', 'evidence/INC-REG-001.mp4', 'Online', new Date().toISOString(), new Date().toISOString());
 
   // Insert test incident sealed with genuine hash
   db.prepare(`
-    INSERT OR REPLACE INTO incidents (
+    INSERT INTO incidents (
       id, camera_id, track_id, event_type, risk_score, risk_level,
       started_at, evidence_path, evidence_status, metadata, acknowledged, created_at
     ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
@@ -154,13 +153,13 @@ async function runRegressionSuite() {
   // Insert a test operator and commander
   const opPasswordHash = bcrypt.hashSync('ValidOperatorPass@2026', 10);
   db.prepare(`
-    INSERT OR REPLACE INTO users (id, username, password_hash, name, role, email, shift, status, assigned_sector, created_at, updated_at)
+    INSERT INTO users (id, username, password_hash, name, role, email, shift, status, assigned_sector, created_at, updated_at)
     VALUES (?, ?, ?, ?, ?, ?, ?, 'active', 'Sector 1', ?, ?)
   `).run('usr-op-01', 'operator1', opPasswordHash, 'Surveillance Operator One', 'Surveillance Operator', 'op1@seemadrishti.in', 'Morning', new Date().toISOString(), new Date().toISOString());
 
   const cmdPasswordHash = bcrypt.hashSync('CommanderSecret@2026', 10);
   db.prepare(`
-    INSERT OR REPLACE INTO users (id, username, password_hash, name, role, email, shift, status, assigned_sector, created_at, updated_at)
+    INSERT INTO users (id, username, password_hash, name, role, email, shift, status, assigned_sector, created_at, updated_at)
     VALUES (?, ?, ?, ?, ?, ?, ?, 'active', 'HQ', ?, ?)
   `).run('usr-cmd-01', 'commander1', cmdPasswordHash, 'Chief Commander Rao', 'Commander', 'commander@seemadrishti.in', 'Day', new Date().toISOString(), new Date().toISOString());
 
@@ -223,16 +222,14 @@ async function runRegressionSuite() {
 
     // Test 4: Public registration ignores client-provided role (cannot obtain privileged role)
     process.env.ALLOW_PUBLIC_REGISTRATION = 'true';
-    const testSneakyUser = `sneaky_officer_${Date.now()}`;
-    const testSneakyEmail = `sneaky_${Date.now()}@test.in`;
     const r4 = await request('/api/auth/register', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
-        username: testSneakyUser,
+        username: 'sneaky_officer',
         password: 'Password@123',
         name: 'Sneaky Officer',
-        email: testSneakyEmail,
+        email: 'sneaky@test.in',
         role: 'Commander', // Attempting to elevate to Commander
       }),
     });
@@ -241,7 +238,7 @@ async function runRegressionSuite() {
     if (r4.status === 201 && r4.body?.user?.role === 'Surveillance Operator') {
       pass(4, 'Public registration ignores client role; enforces Surveillance Operator', `Assigned: ${r4.body.user.role}`);
     } else {
-      fail(4, 'Public registration ignores client role', `got status ${r4.status} error: ${r4.body?.error} role: ${r4.body?.user?.role}`);
+      fail(4, 'Public registration ignores client role', `got status ${r4.status} role: ${r4.body?.user?.role}`);
     }
 
     // Test 5: Default-deny on sensitive reads

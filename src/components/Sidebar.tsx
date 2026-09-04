@@ -257,7 +257,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
                         : 'bg-emerald-950 text-emerald-300 border border-emerald-500/40 shadow-[0_0_8px_rgba(0,255,102,0.3)]'
                     }`}
                   >
-                    MULTI-CAM
+                    360° AI
                   </span>
                 )}
               </button>

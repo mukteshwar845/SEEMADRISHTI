@@ -9,26 +9,16 @@ export const eventsRouter = Router();
 const VALID_SEVERITIES: SeverityLevel[] = ['High', 'Medium', 'Low', 'Info'];
 
 function formatEvent(e: any) {
-  let parsedMetadata: any = null;
+  let parsedMetadata = null;
   if (e.metadata) {
     try {
-      parsedMetadata = typeof e.metadata === 'string' ? JSON.parse(e.metadata) : e.metadata;
+      parsedMetadata = JSON.parse(e.metadata);
     } catch {
       parsedMetadata = e.metadata;
     }
   }
-  const meta = typeof parsedMetadata === 'object' && parsedMetadata !== null ? parsedMetadata : {};
-  const parsedTrackId = meta.track_id !== undefined ? meta.track_id : (e.track_id !== undefined ? e.track_id : e.object_id);
   return {
     ...e,
-    source_type: e.source_type || meta.source_type || 'fixture',
-    confidence: e.confidence !== undefined ? e.confidence : meta.confidence !== undefined ? meta.confidence : null,
-    risk_score: e.risk_score !== undefined ? e.risk_score : meta.risk_score !== undefined ? meta.risk_score : null,
-    risk_level: e.risk_level || meta.risk_level || null,
-    track_id: parsedTrackId ?? null,
-    class_name: meta.class_name || meta.label || (e.event_type && e.event_type !== 'INTRUSION' && e.event_type !== 'LOITERING' && e.event_type !== 'BASELINE_CALIBRATION' ? e.event_type : null),
-    zone_name: meta.zone_name || e.zone_name || null,
-    bbox: meta.bbox || null,
     metadata: parsedMetadata,
   };
 }
@@ -37,17 +27,12 @@ function formatEvent(e: any) {
 eventsRouter.get('/', (req: Request, res: Response, next: NextFunction) => {
   try {
     const db = getDatabase();
-    const { camera, camera_id, severity, event_type, from, to, limit, source_type, live_only, freshness_sec, include_test } = req.query;
+    const { camera, camera_id, severity, event_type, from, to, limit } = req.query;
 
     let query = 'SELECT * FROM events WHERE 1=1';
     const params: any[] = [];
 
     const targetCamera = camera_id || camera;
-
-    // Filter out test cameras by default unless explicitly requested or querying specific camera
-    if (include_test !== 'true' && !targetCamera) {
-      query += " AND camera_id NOT LIKE 'cam-test%' AND camera_id NOT LIKE 'cam-transient%'";
-    }
     if (targetCamera && typeof targetCamera === 'string') {
       query += ' AND camera_id = ?';
       params.push(targetCamera);
@@ -61,21 +46,6 @@ eventsRouter.get('/', (req: Request, res: Response, next: NextFunction) => {
     if (event_type && typeof event_type === 'string') {
       query += ' AND event_type = ?';
       params.push(event_type);
-    }
-
-    // LIVE ONLY mode: strictly physical live cameras or browser webcam
-    if (live_only === 'true' || live_only === '1') {
-      query += " AND source_type IN ('live_camera', 'browser_webcam', 'rtsp')";
-      const seconds = Math.max(1, Math.min(300, parseInt(String(freshness_sec || '30'), 10)));
-      const cutoff = new Date(Date.now() - seconds * 1000).toISOString();
-      query += ' AND timestamp >= ?';
-      params.push(cutoff);
-    } else if (source_type && typeof source_type === 'string') {
-      query += ' AND source_type = ?';
-      params.push(source_type);
-    } else if (include_test !== 'true' && !targetCamera) {
-      // Exclude fixture/test from live views if not specified
-      query += " AND source_type != 'test'";
     }
 
     if (from && typeof from === 'string') {
@@ -133,7 +103,7 @@ eventsRouter.get('/:id', (req: Request, res: Response, next: NextFunction) => {
 eventsRouter.post('/', (req: Request, res: Response, next: NextFunction) => {
   try {
     const db = getDatabase();
-    const { id, camera_id, event_type, severity, object_id, timestamp, metadata, source_type } = req.body;
+    const { id, camera_id, event_type, severity, object_id, timestamp, metadata } = req.body;
 
     if (!camera_id || typeof camera_id !== 'string') {
       throw new AppError('camera_id is required', 400);
@@ -163,18 +133,13 @@ eventsRouter.post('/', (req: Request, res: Response, next: NextFunction) => {
     const eventId = id && typeof id === 'string' && id.trim() !== '' ? id.trim() : `evt-${Date.now()}`;
     const eventTime = timestamp && typeof timestamp === 'string' ? timestamp : new Date().toISOString();
     const metaString = metadata !== undefined ? (typeof metadata === 'string' ? metadata : JSON.stringify(metadata)) : null;
-    const targetSourceType = source_type && typeof source_type === 'string'
-      ? source_type
-      : camera_id.startsWith('cam-test')
-      ? 'test'
-      : 'fixture';
 
     const insert = db.prepare(`
-      INSERT INTO events (id, camera_id, event_type, severity, object_id, timestamp, metadata, source_type)
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+      INSERT INTO events (id, camera_id, event_type, severity, object_id, timestamp, metadata)
+      VALUES (?, ?, ?, ?, ?, ?, ?)
     `);
 
-    insert.run(eventId, camera_id, event_type.trim(), targetSeverity, object_id || null, eventTime, metaString, targetSourceType);
+    insert.run(eventId, camera_id, event_type.trim(), targetSeverity, object_id || null, eventTime, metaString);
 
     const created = db.prepare('SELECT * FROM events WHERE id = ?').get(eventId);
     const formatted = formatEvent(created);

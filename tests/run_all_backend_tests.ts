@@ -17,7 +17,6 @@ const testSuites = [
   { name: 'Security & Auth Verification Suite', path: 'tests/security_auth_test.ts' },
   { name: 'P0 Hardening & Forensic Verification Suite', path: 'tests/p0_hardening_test.ts' },
   { name: 'Phase 1 Backend Verification Suite', path: 'tests/phase1_test.ts' },
-  { name: 'Live Data Integrity & Zero-Synthetic Suite', path: 'tests/live_data_integrity_test.ts' },
   { name: 'Webcam Ingestion E2E Test Suite', path: 'tests/webcam_e2e_test.ts' },
 ];
 

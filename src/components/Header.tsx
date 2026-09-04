@@ -23,25 +23,17 @@ interface HeaderProps {
   onOpenSettings?: () => void;
   onOpenAlerts?: () => void;
   onOpenSwarmHelp?: () => void;
-  hasLiveFeed?: boolean;
-  isCvOnline?: boolean;
-  activeCameraCount?: number;
-  liveTelemetry?: { fps: number; latencyMs: number };
 }
 
 export const Header: React.FC<HeaderProps> = ({
   onToggleSidebarMobile,
   onRefresh,
   isRefreshing = false,
-  activeAlertCount = 0,
+  activeAlertCount = 12,
   onOpenDemoMode,
   onOpenSettings,
   onOpenAlerts,
   onOpenSwarmHelp,
-  hasLiveFeed = false,
-  isCvOnline = true,
-  activeCameraCount = 0,
-  liveTelemetry,
 }) => {
   const { theme, toggleTheme, isDaylight } = useTheme();
   const { user, logout, setPortal, setIsProfileModalOpen } = useAuth();
@@ -157,51 +149,45 @@ export const Header: React.FC<HeaderProps> = ({
       <div className="flex items-center gap-2 sm:gap-3">
 
         {/* System Online Pill - Grounded in real WebSocket state & clickable for AI Subsystem Status */}
-        {(() => {
-          let badgeText = '⚠️ BACKEND OFFLINE';
-          let borderBg = isDaylight ? 'bg-rose-50 border-rose-300' : 'border-rose-500/60 bg-rose-950/60 shadow-[0_0_15px_rgba(244,63,94,0.3)] animate-pulse';
-          let dotColor = 'bg-rose-500 shadow-[0_0_6px_#f43f5e]';
-          let textColor = 'text-rose-400';
-
-          if (wsState.status === 'CONNECTED') {
-            if (hasLiveFeed) {
-              const fpsStr = liveTelemetry?.fps ? `${liveTelemetry.fps.toFixed(1)} FPS` : 'LIVE';
-              badgeText = `● LIVE (${fpsStr})`;
-              borderBg = isDaylight ? 'bg-emerald-50 border-emerald-300' : 'border-emerald-500/50 bg-emerald-950/40 shadow-[0_0_15px_rgba(0,255,102,0.2)]';
-              dotColor = 'bg-emerald-500 animate-pulse shadow-[0_0_6px_#00ff66]';
-              textColor = isDaylight ? 'text-emerald-800' : 'text-emerald-400';
-            } else if (isCvOnline) {
-              badgeText = '● NO LIVE FEED (CV ONLINE)';
-              borderBg = isDaylight ? 'bg-cyan-50 border-cyan-300' : 'border-cyan-500/50 bg-cyan-950/40 shadow-[0_0_12px_rgba(6,182,212,0.2)]';
-              dotColor = 'bg-cyan-400 shadow-[0_0_6px_#06b6d4]';
-              textColor = isDaylight ? 'text-cyan-800' : 'text-cyan-300';
-            } else {
-              badgeText = '● CV PROCESSOR OFFLINE';
-              borderBg = isDaylight ? 'bg-amber-50 border-amber-300' : 'border-amber-500/50 bg-amber-950/40 shadow-[0_0_12px_rgba(245,158,11,0.2)]';
-              dotColor = 'bg-amber-400 shadow-[0_0_6px_#f59e0b]';
-              textColor = isDaylight ? 'text-amber-800' : 'text-amber-300';
-            }
-          } else if (wsState.status === 'CONNECTING' || wsState.status === 'RECONNECTING') {
-            badgeText = '⏳ RECONNECTING...';
-            borderBg = 'border-amber-500/50 bg-amber-950/40';
-            dotColor = 'bg-amber-400 animate-pulse';
-            textColor = 'text-amber-300';
-          }
-
-          return (
-            <button
-              id="system-status-pill"
-              onClick={() => setIsAiStatusOpen(true)}
-              title="Click to inspect real-time AI subsystem integrity & model status"
-              className={`flex items-center gap-2 px-2.5 sm:px-3 py-1 rounded-md border cursor-pointer transition-all hover:scale-105 active:scale-95 ${borderBg}`}
-            >
-              <div className={`w-1.5 h-1.5 rounded-full ${dotColor}`}></div>
-              <span className={`text-[10px] font-bold uppercase tracking-wider font-mono ${textColor}`}>
-                {badgeText}
-              </span>
-            </button>
-          );
-        })()}
+        <button
+          id="system-status-pill"
+          onClick={() => setIsAiStatusOpen(true)}
+          title="Click to inspect real-time AI subsystem integrity & model status"
+          className={`flex items-center gap-2 px-2.5 sm:px-3 py-1 rounded-md border cursor-pointer transition-all hover:scale-105 active:scale-95 ${
+            wsState.status === 'CONNECTED'
+              ? isDaylight
+                ? 'bg-emerald-50 border-emerald-300 shadow-xs'
+                : 'border-emerald-500/50 bg-emerald-950/40 shadow-[0_0_15px_rgba(0,255,102,0.2)]'
+              : wsState.status === 'CONNECTING' || wsState.status === 'RECONNECTING'
+              ? 'border-amber-500/50 bg-amber-950/40 shadow-[0_0_15px_rgba(245,158,11,0.2)]'
+              : 'border-rose-500/60 bg-rose-950/60 shadow-[0_0_15px_rgba(244,63,94,0.3)] animate-pulse'
+          }`}
+        >
+          <div
+            className={`w-1.5 h-1.5 rounded-full ${
+              wsState.status === 'CONNECTED'
+                ? 'bg-emerald-500 animate-pulse shadow-[0_0_6px_#00ff66]'
+                : wsState.status === 'CONNECTING' || wsState.status === 'RECONNECTING'
+                ? 'bg-amber-400 animate-pulse shadow-[0_0_6px_#f59e0b]'
+                : 'bg-rose-500 shadow-[0_0_6px_#f43f5e]'
+            }`}
+          ></div>
+          <span
+            className={`text-[10px] font-bold uppercase tracking-wider font-mono ${
+              wsState.status === 'CONNECTED'
+                ? isDaylight ? 'text-emerald-800' : 'text-emerald-400'
+                : wsState.status === 'CONNECTING' || wsState.status === 'RECONNECTING'
+                ? 'text-amber-300'
+                : 'text-rose-300'
+            }`}
+          >
+            {wsState.status === 'CONNECTED'
+              ? `● LIVE (${wsState.latencyMs > 0 ? `${wsState.latencyMs}ms` : '<20ms'})`
+              : wsState.status === 'CONNECTING' || wsState.status === 'RECONNECTING'
+              ? '⏳ RECONNECTING...'
+              : '⚠️ BACKEND OFFLINE'}
+          </span>
+        </button>
 
         {/* Multi-Agent Swarm Orchestrator & Work Distribution Help Button */}
         {onOpenSwarmHelp && (

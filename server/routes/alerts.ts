@@ -25,11 +25,6 @@ alertsRouter.get('/', (req: Request, res: Response, next: NextFunction) => {
     const params: any[] = [];
 
     const targetCamera = camera_id || camera;
-
-    const { include_test } = req.query;
-    if (include_test !== 'true' && !targetCamera) {
-      query += " AND camera_id NOT LIKE 'cam-test%' AND camera_id NOT LIKE 'cam-transient%'";
-    }
     if (targetCamera && typeof targetCamera === 'string') {
       query += ' AND camera_id = ?';
       params.push(targetCamera);

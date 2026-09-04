@@ -420,9 +420,95 @@ export async function fetchMovementAnomalies(cameraId?: string): Promise<{ succe
   return request(`/analytics/anomalies${query}`);
 }
 
+export interface AnalyticsTimelinePoint {
+  hour: string;
+  hourIndex: number;
+  totalDetections: number;
+  person: number;
+  vehicle: number;
+  intrusion: number;
+  noHelmet: number;
+  loitering: number;
+  abandoned: number;
+  totalAnomalies: number;
+  anomalyRate: number;
+  riskIndex: number;
+}
+
+export interface CameraAnalyticsSummaryItem {
+  camera: string;
+  code: string;
+  cameraId: string;
+  name: string;
+  location: string;
+  total: number;
+  anomalies: number;
+  normal: number;
+  rate: string;
+  riskLevel: string;
+  color: string;
+  status: string;
+}
+
+export interface ClassDistributionItem {
+  name: string;
+  count: number;
+  color: string;
+  percentage: number;
+  isAnomaly: boolean;
+}
+
+export interface RadarThreatItem {
+  subject: string;
+  CAM1?: number;
+  CAM2?: number;
+  CAM3?: number;
+  CAM4?: number;
+  CAM5?: number;
+  CAM6?: number;
+  [key: string]: any;
+}
+
+export interface AnalyticsHistoryResponse {
+  success: boolean;
+  range: string;
+  camera_id: string;
+  summary_stats: {
+    totalDetections: number;
+    totalAnomalies: number;
+    totalIntrusions: number;
+    avgConfidence: number;
+    avgAnomalyRate: number;
+    peakHour: string;
+    meanInterceptTime: string;
+  };
+  timeline: AnalyticsTimelinePoint[];
+  full_24h_timeline: AnalyticsTimelinePoint[];
+  camera_summary: CameraAnalyticsSummaryItem[];
+  detection_types: ClassDistributionItem[];
+  radar_threat_distribution: RadarThreatItem[];
+  most_active: {
+    most_active_camera: string;
+    most_active_zone: string;
+    most_common_class: string;
+    most_frequent_event: string;
+  };
+  timestamp: string;
+}
+
+export async function fetchAnalyticsHistory(range: string = '24h', cameraId?: string): Promise<AnalyticsHistoryResponse> {
+  const params = new URLSearchParams();
+  params.set('range', range);
+  if (cameraId && cameraId !== 'all' && cameraId !== 'ALL') {
+    params.set('camera_id', cameraId);
+  }
+  return request(`/analytics/history?${params.toString()}`);
+}
+
 export async function fetchCorridors(): Promise<{ success: boolean; data: CorridorStats[] }> {
   return request('/analytics/corridors');
 }
+
 
 // ----------------------------------------------------------------------------
 // Phase 7 Incident Evidence & Forensics Endpoints
@@ -1128,6 +1214,10 @@ export interface HeatmapCameraStat {
   camera_id: string;
   camera_name: string;
   sector: string;
+  x?: number;
+  y?: number;
+  region?: string;
+  elevation?: string;
   threat_index: number;
   threat_level: 'CRITICAL' | 'HIGH' | 'MEDIUM' | 'LOW';
   event_counts: {
@@ -1160,12 +1250,18 @@ export interface ThreatHotspot {
   threat_level: 'CRITICAL' | 'HIGH' | 'MEDIUM' | 'LOW';
   primary_contributors: Record<string, number>;
   trend: string;
+  x?: number;
+  y?: number;
 }
 
 export interface ThreatCorridorItem {
   corridor_id: string;
   from_camera: string;
   to_camera: string;
+  from_x?: number;
+  from_y?: number;
+  to_x?: number;
+  to_y?: number;
   path: string[];
   correlated_incidents: number;
   restricted_breaches: number;
@@ -1175,15 +1271,31 @@ export interface ThreatCorridorItem {
   event_density: 'HIGH' | 'MEDIUM' | 'LOW';
 }
 
+export interface SpatialHeatPoint {
+  camera_id: string;
+  camera_name: string;
+  sector: string;
+  x: number;
+  y: number;
+  region?: string;
+  intensity: number;
+  radius_px: number;
+  threat_index: number;
+  threat_level: 'CRITICAL' | 'HIGH' | 'MEDIUM' | 'LOW';
+  trend?: string;
+}
+
 export interface ThreatHeatmapResponse {
   success: boolean;
   time_window: string;
   window_seconds: number;
   hotspot: ThreatHotspot | null;
   cameras: HeatmapCameraStat[];
+  spatial_points?: SpatialHeatPoint[];
   sectors: HeatmapSectorStat[];
   corridors: ThreatCorridorItem[];
   weights: Record<string, number>;
+  canvas_bounds?: { width: number; height: number };
   timestamp: string;
 }
 
@@ -1192,11 +1304,22 @@ export interface CameraThreatProfile {
   camera_id: string;
   camera_name: string;
   sector: string;
+  x?: number;
+  y?: number;
+  region?: string;
+  elevation?: string;
   threat_index: number;
   threat_level: string;
   event_counts: Record<string, number>;
   total_events: number;
   total_incidents: number;
+  total_anomalies?: number;
+  active_zones?: Array<{
+    zone_id: string;
+    name: string;
+    current_occupants: number;
+    is_occupied: boolean;
+  }>;
   recent_incidents: any[];
 }
 

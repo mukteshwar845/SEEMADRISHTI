@@ -119,6 +119,18 @@ class WebcamCVProcessor:
         )
         tracks = track_output.get("tracks", [])
         raw_detections = track_output.get("detections", [])
+        if not raw_detections and tracks:
+            raw_detections = [
+                {
+                    "class_name": t["class_name"],
+                    "class": t.get("class", t["class_name"]),
+                    "class_id": t["class_id"],
+                    "category": t["category"],
+                    "confidence": t["confidence"],
+                    "bbox": t["bbox"],
+                }
+                for t in tracks
+            ]
         inference_time_ms = track_output.get("inference_ms", 0.0)
         tracking_time_ms = track_output.get("tracking_ms", 0.0)
 
@@ -190,6 +202,8 @@ class WebcamCVProcessor:
                 "total": len(tracks),
                 "persons": len([t for t in tracks if t.get("class_name") == "person"]),
                 "vehicles": len([t for t in tracks if t.get("category") == "VEHICLE"]),
+                "animals": len([t for t in tracks if t.get("category") == "ANIMAL"]),
+                "objects": len([t for t in tracks if t.get("category") == "OBJECT"]),
             },
             "events": formatted_events,
             "risk": {

@@ -192,11 +192,15 @@ class IntrusionDetector:
         except Exception as e:
             logger.debug(f"Could not load zones from backend: {e}")
 
-        # 2. Fallback to config/camera_zones.json
+        # 2. Fallback to config/camera_zones.json (or CAMERA_ZONES_PATH if set)
         try:
-            cfg_path = os.path.abspath(
-                os.path.join(os.path.dirname(__file__), "..", "..", "config", "camera_zones.json")
-            )
+            env_path = os.environ.get("CAMERA_ZONES_PATH")
+            if env_path:
+                cfg_path = os.path.abspath(env_path)
+            else:
+                cfg_path = os.path.abspath(
+                    os.path.join(os.path.dirname(__file__), "..", "..", "config", "camera_zones.json")
+                )
             if os.path.isfile(cfg_path):
                 with open(cfg_path, "r", encoding="utf-8") as f:
                     cfg_data = json.load(f)

@@ -3,9 +3,17 @@ import fs from 'fs';
 import path from 'path';
 import { getDatabase } from '../db/database';
 import { AppError } from '../middleware/errorHandler';
+import { requireRole } from '../middleware/auth';
 import { ZoneEntity } from '../types/api';
 
 export const zonesRouter = Router();
+
+export function getCameraZonesConfigPath(): string {
+  if (process.env.CAMERA_ZONES_PATH) {
+    return path.resolve(process.cwd(), process.env.CAMERA_ZONES_PATH);
+  }
+  return path.resolve(process.cwd(), 'config/camera_zones.json');
+}
 
 // Helper to format Zone entity (parse polygon JSON string to object)
 function formatZone(z: any) {
@@ -34,14 +42,17 @@ function syncZonesToFile(db: any) {
       }
       grouped[camId].push(z);
     }
-    const zonesPath = path.resolve(process.cwd(), 'config/camera_zones.json');
+    const zonesPath = getCameraZonesConfigPath();
     const dir = path.dirname(zonesPath);
     if (!fs.existsSync(dir)) {
       fs.mkdirSync(dir, { recursive: true });
     }
-    fs.writeFileSync(zonesPath, JSON.stringify(grouped, null, 2), 'utf-8');
+    // Atomic write via temporary file
+    const tmpPath = `${zonesPath}.tmp.${Date.now()}.${Math.random().toString(36).substring(2, 8)}`;
+    fs.writeFileSync(tmpPath, JSON.stringify(grouped, null, 2), 'utf-8');
+    fs.renameSync(tmpPath, zonesPath);
   } catch (err) {
-    console.error('[ZonesRouter] Failed to sync zones to config/camera_zones.json:', err);
+    console.error('[ZonesRouter] Failed to sync zones to config file:', err);
   }
 }
 
@@ -99,8 +110,8 @@ zonesRouter.get('/:id', (req: Request, res: Response, next: NextFunction) => {
   }
 });
 
-// POST /api/zones - Create zone
-zonesRouter.post('/', (req: Request, res: Response, next: NextFunction) => {
+// POST /api/zones - Create zone (Admin / Commander only)
+zonesRouter.post('/', requireRole(['Admin', 'Commander']), (req: Request, res: Response, next: NextFunction) => {
   try {
     const db = getDatabase();
     const { id, camera_id, name, polygon, enabled } = req.body;
@@ -164,8 +175,8 @@ zonesRouter.post('/', (req: Request, res: Response, next: NextFunction) => {
   }
 });
 
-// PUT /api/zones/:id - Update zone
-zonesRouter.put('/:id', (req: Request, res: Response, next: NextFunction) => {
+// PUT /api/zones/:id - Update zone (Admin / Commander only)
+zonesRouter.put('/:id', requireRole(['Admin', 'Commander']), (req: Request, res: Response, next: NextFunction) => {
   try {
     const db = getDatabase();
     const { id } = req.params;
@@ -224,8 +235,8 @@ zonesRouter.put('/:id', (req: Request, res: Response, next: NextFunction) => {
   }
 });
 
-// DELETE /api/zones/:id - Delete zone
-zonesRouter.delete('/:id', (req: Request, res: Response, next: NextFunction) => {
+// DELETE /api/zones/:id - Delete zone (Admin / Commander only)
+zonesRouter.delete('/:id', requireRole(['Admin', 'Commander']), (req: Request, res: Response, next: NextFunction) => {
   try {
     const db = getDatabase();
     const { id } = req.params;

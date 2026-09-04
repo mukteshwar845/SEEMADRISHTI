@@ -5,27 +5,24 @@ import crypto from 'crypto';
 import { Request, Response, NextFunction } from 'express';
 import jwt from 'jsonwebtoken';
 
-// Security: Ephemeral random secret strictly for test execution if unset; fail fast in production
-const ephemeralTestSecret = crypto.randomBytes(32).toString('hex');
+// Security: Ephemeral random secret for non-production execution if unset; fail fast in production
+const ephemeralSecret = crypto.randomBytes(32).toString('hex');
 export const API_KEY = process.env.API_KEY || '';
 export const CV_SERVICE_TOKEN = process.env.CV_SERVICE_TOKEN || process.env.API_KEY || '';
-export const JWT_SECRET =
-  process.env.JWT_SECRET ||
-  process.env.API_KEY ||
-  (process.env.NODE_ENV === 'test' ? ephemeralTestSecret : '');
+export const JWT_SECRET = process.env.JWT_SECRET || process.env.API_KEY || '';
 
-// Fail loudly at startup in production/non-test if JWT_SECRET or API_KEY is unset
-if (process.env.NODE_ENV !== 'test') {
-  if (!API_KEY) {
+// Fail loudly at startup in production if JWT_SECRET or API_KEY is unset
+if (process.env.NODE_ENV === 'production') {
+  if (!process.env.API_KEY && !API_KEY) {
     throw new Error(
-      '\nCRITICAL SECURITY CONFIGURATION ERROR: process.env.API_KEY is unset.\n' +
+      '\nCRITICAL SECURITY CONFIGURATION ERROR: process.env.API_KEY is unset in production.\n' +
       'SEEMADRISHTI AI refuses to start without a cryptographically secure API key.\n' +
       'Generate one with: openssl rand -hex 32 and set API_KEY in your .env file.\n'
     );
   }
-  if (!JWT_SECRET) {
+  if (!process.env.JWT_SECRET && !JWT_SECRET) {
     throw new Error(
-      '\nCRITICAL SECURITY CONFIGURATION ERROR: process.env.JWT_SECRET is unset.\n' +
+      '\nCRITICAL SECURITY CONFIGURATION ERROR: process.env.JWT_SECRET is unset in production.\n' +
       'SEEMADRISHTI AI refuses to start without a cryptographically secure JWT secret.\n'
     );
   }
@@ -81,27 +78,23 @@ export function requireRole(allowedRoles: string[]) {
 
 /**
  * Authentication Middleware for SEEMADRISHTI AI Backend
- * Gating mutating and sensitive read API routes.
+ * Gating sensitive reads, mutations, and evidence streaming.
  *
- * Supports two authentication schemes:
+ * Supports three authentication methods:
  * 1. Per-operator JWT Bearer token: 'Authorization: Bearer <jwt_token>' (Issued via /api/auth/login)
  * 2. Machine-to-Machine service token: 'x-api-key: <token>' or 'Authorization: Bearer <token>' matching API_KEY or CV_SERVICE_TOKEN
+ * 3. Query string token for native media elements: '?token=<jwt_or_api_key>' (HTML5 video / img)
  */
 export function getApiKey(): string {
-  return process.env.API_KEY || API_KEY || '';
+  return process.env.API_KEY || API_KEY || (process.env.NODE_ENV === 'production' ? '' : ephemeralSecret);
 }
 
 export function getCvServiceToken(): string {
-  return process.env.CV_SERVICE_TOKEN || process.env.API_KEY || CV_SERVICE_TOKEN || '';
+  return process.env.CV_SERVICE_TOKEN || process.env.API_KEY || CV_SERVICE_TOKEN || getApiKey();
 }
 
 export function getJwtSecret(): string {
-  return (
-    process.env.JWT_SECRET ||
-    process.env.API_KEY ||
-    JWT_SECRET ||
-    (process.env.NODE_ENV === 'test' ? ephemeralTestSecret : '')
-  );
+  return process.env.JWT_SECRET || process.env.API_KEY || JWT_SECRET || getApiKey();
 }
 
 export function requireAuth(req: Request, res: Response, next: NextFunction) {
@@ -109,10 +102,12 @@ export function requireAuth(req: Request, res: Response, next: NextFunction) {
   const authHeader = req.headers['authorization'];
 
   let token: string | undefined;
-  if (typeof headerKey === 'string') {
+  if (typeof headerKey === 'string' && headerKey.trim()) {
     token = headerKey.trim();
   } else if (typeof authHeader === 'string' && authHeader.toLowerCase().startsWith('bearer ')) {
     token = authHeader.substring(7).trim();
+  } else if (req.query?.token && typeof req.query.token === 'string' && req.query.token.trim()) {
+    token = req.query.token.trim();
   }
 
   const apiKey = getApiKey();
@@ -156,15 +151,10 @@ export function requireAuth(req: Request, res: Response, next: NextFunction) {
     }
   }
 
-  // 3. Test environment runner bypass (allows automated unit test suite execution without auth mocks)
-  if (process.env.NODE_ENV === 'test') {
-    return next();
-  }
-
-  // 4. Missing token -> 401 Unauthorized
+  // 3. Missing token -> 401 Unauthorized (Strict default-deny: no test bypass)
   return res.status(401).json({
     success: false,
-    error: 'Authentication required: missing Authorization Bearer token or x-api-key',
+    error: 'Authentication required: missing Authorization Bearer token, x-api-key, or query token',
     timestamp: new Date().toISOString(),
   });
 }

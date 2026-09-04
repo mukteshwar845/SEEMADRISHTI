@@ -243,7 +243,7 @@ export async function generateAlertPdfReport(alert: AlertItem, operatorNotes?: s
     : 'Automated alert trigger verified by AI vision inference pipeline. Dispatched Rapid Intercept Squad to secure perimeter sector.';
   doc.text(operatorText, 18, y + 7);
 
-  // Footer / Chain of Custody & Hash
+  // Footer / Chain of Custody & Hash (Real Verification Only — Never Simulated)
   const footerY = pageHeight - 18;
   doc.setFillColor(15, 23, 42);
   doc.rect(0, footerY, pageWidth, 18, 'F');
@@ -251,14 +251,15 @@ export async function generateAlertPdfReport(alert: AlertItem, operatorNotes?: s
   doc.setFont('courier', 'normal');
   doc.setFontSize(7.5);
   doc.setTextColor(148, 163, 184);
-  const hashSeed = `${alert.id || 'INC-001'}-${alert.camera || 'cam-01'}-${alert.timestamp || '2026-08-29'}`;
-  let hashVal = 0;
-  for (let i = 0; i < hashSeed.length; i++) {
-    hashVal = ((hashVal << 5) - hashVal) + hashSeed.charCodeAt(i);
-    hashVal |= 0;
+
+  const realHash = (alert as any).sha256;
+  const isVerified = (alert as any).verification_status === 'VERIFIED' && typeof realHash === 'string' && realHash.length === 64;
+
+  if (isVerified) {
+    doc.text(`CRYPTOGRAPHIC EVIDENCE HASH: SHA-256 ${realHash.slice(0, 32)}... [VERIFIED]`, 14, footerY + 6);
+  } else {
+    doc.text('RECORD STATUS: UNSEALED // NO AUTHORITATIVE CRYPTOGRAPHIC SEAL (DEMO RECORD)', 14, footerY + 6);
   }
-  const sha256Sim = `SHA256: ${Math.abs(hashVal).toString(16).padStart(8, '0')}e94a82b719f...VERIFIED`;
-  doc.text(`CRYPTOGRAPHIC EVIDENCE HASH: ${sha256Sim}`, 14, footerY + 6);
   doc.text('SEEMADRISHTI DEFENSE AI ENGINE // SECURE AUDIT CHAIN', 14, footerY + 11);
 
   doc.text('PAGE 1 OF 1', pageWidth - 14, footerY + 9, { align: 'right' });

@@ -96,7 +96,7 @@ export const MatrixCameraCell: React.FC<MatrixCameraCellProps> = ({
   const [isWebcamActive, setIsWebcamActive] = useState(false);
   const [useCvStream, setUseCvStream] = useState(false);
   const webcamStreamRef = useRef<MediaStream | null>(null);
-  const [webcamCvStatus, setWebcamCvStatus] = useState<'IDLE' | 'CONNECTING' | 'ONLINE' | 'OFFLINE'>('IDLE');
+  const [webcamCvStatus, setWebcamCvStatus] = useState<'IDLE' | 'CONNECTING' | 'ONLINE' | 'OFFLINE' | 'DISCONNECTED' | 'BACKEND_OFFLINE'>('IDLE');
   const [webcamTelemetry, setWebcamTelemetry] = useState<{
     fps: number;
     latencyMs: number;
@@ -122,6 +122,8 @@ export const MatrixCameraCell: React.FC<MatrixCameraCellProps> = ({
       setUseCvStream(false);
       setWebcamCvStatus('IDLE');
       setWebcamTelemetry(null);
+      realTracksRef.current = null;
+      realDetectionsRef.current = null;
       inFlightRef.current = false;
     } else {
       try {
@@ -129,22 +131,40 @@ export const MatrixCameraCell: React.FC<MatrixCameraCellProps> = ({
           video: { width: { ideal: 1280 }, height: { ideal: 720 } },
           audio: false,
         });
+
+        // Listen for hardware disconnect or permission revocation
+        stream.getVideoTracks().forEach((track) => {
+          track.onended = () => {
+            console.warn('[MatrixCameraCell] Webcam track ended / camera disconnected');
+            setIsWebcamActive(false);
+            setWebcamCvStatus('DISCONNECTED');
+            setWebcamTelemetry(null);
+            realTracksRef.current = null;
+            realDetectionsRef.current = null;
+            if (webcamStreamRef.current) {
+              webcamStreamRef.current = null;
+            }
+          };
+        });
+
         webcamStreamRef.current = stream;
         setIsWebcamActive(true);
         setUseCvStream(false);
         setVideoLoaded(true);
         setVideoError(false);
+        setWebcamCvStatus('CONNECTING');
         if (videoRef.current) {
           videoRef.current.srcObject = stream;
           videoRef.current.play().catch(() => {});
         }
       } catch (err) {
-        console.warn('[MatrixCameraCell] Browser webcam locked or unavailable. Switching to live AI CV stream:', err);
-        // Seamlessly fallback to live MJPEG stream from python cv_service
-        setUseCvStream(true);
+        console.warn('[MatrixCameraCell] Browser webcam unavailable or permission denied:', err);
         setIsWebcamActive(false);
-        setVideoLoaded(true);
-        setVideoError(false);
+        setUseCvStream(false);
+        setWebcamCvStatus('DISCONNECTED');
+        setWebcamTelemetry(null);
+        realTracksRef.current = null;
+        realDetectionsRef.current = null;
       }
     }
   };
@@ -230,9 +250,9 @@ export const MatrixCameraCell: React.FC<MatrixCameraCellProps> = ({
             setWebcamCvStatus('ONLINE');
             if (data.telemetry) {
               setWebcamTelemetry({
-                fps: data.telemetry.measured_fps || 12,
-                latencyMs: data.telemetry.total_latency_ms || 32,
-                inferenceMs: data.telemetry.inference_time_ms || 22,
+                fps: typeof data.telemetry.measured_fps === 'number' ? data.telemetry.measured_fps : 0,
+                latencyMs: typeof data.telemetry.total_latency_ms === 'number' ? data.telemetry.total_latency_ms : 0,
+                inferenceMs: typeof data.telemetry.inference_time_ms === 'number' ? data.telemetry.inference_time_ms : 0,
                 detectionsCount: data.detections?.length || 0,
                 tracksCount: data.tracks?.length || 0,
               });
@@ -265,10 +285,21 @@ export const MatrixCameraCell: React.FC<MatrixCameraCellProps> = ({
             }
           } else if (res.status === 503) {
             setWebcamCvStatus('OFFLINE');
+            setWebcamTelemetry(null);
+            realTracksRef.current = null;
+            realDetectionsRef.current = null;
+          } else {
+            setWebcamCvStatus('OFFLINE');
+            setWebcamTelemetry(null);
+            realTracksRef.current = null;
+            realDetectionsRef.current = null;
           }
         })
         .catch(() => {
-          setWebcamCvStatus('OFFLINE');
+          setWebcamCvStatus('BACKEND_OFFLINE');
+          setWebcamTelemetry(null);
+          realTracksRef.current = null;
+          realDetectionsRef.current = null;
         })
         .finally(() => {
           inFlightRef.current = false;
@@ -2132,19 +2163,33 @@ export const MatrixCameraCell: React.FC<MatrixCameraCellProps> = ({
               <div className={`px-1.5 py-0.5 text-[8px] font-mono font-bold rounded flex items-center gap-1 border shadow-md backdrop-blur-md ${
                 webcamCvStatus === 'ONLINE'
                   ? 'bg-emerald-950/90 text-emerald-300 border-emerald-500/60 shadow-[0_0_8px_rgba(16,185,129,0.3)]'
+                  : webcamCvStatus === 'DISCONNECTED'
+                  ? 'bg-slate-900/90 text-slate-300 border-slate-700/60'
+                  : webcamCvStatus === 'BACKEND_OFFLINE'
+                  ? 'bg-rose-950/90 text-rose-300 border-rose-500/60'
                   : webcamCvStatus === 'OFFLINE'
                   ? 'bg-rose-950/90 text-rose-300 border-rose-500/60'
                   : 'bg-amber-950/90 text-amber-300 border-amber-500/60 animate-pulse'
               }`}>
                 <span className={`w-1.5 h-1.5 rounded-full ${
-                  webcamCvStatus === 'ONLINE' ? 'bg-emerald-400 animate-pulse' : 'bg-amber-400'
+                  webcamCvStatus === 'ONLINE'
+                    ? 'bg-emerald-400 animate-pulse'
+                    : webcamCvStatus === 'DISCONNECTED'
+                    ? 'bg-slate-400'
+                    : webcamCvStatus === 'CONNECTING'
+                    ? 'bg-amber-400'
+                    : 'bg-rose-400'
                 }`}></span>
                 <span>
                   {webcamCvStatus === 'ONLINE'
-                    ? `● WEBCAM (LIVE YOLOv8+BYTETRACK) // ${webcamTelemetry?.fps ?? 10} FPS`
+                    ? `● WEBCAM (LIVE YOLOv8 + ByteTrack)${webcamTelemetry?.fps ? ` // ${webcamTelemetry.fps} FPS` : ''}`
                     : webcamCvStatus === 'OFFLINE'
-                    ? '● WEBCAM (CV PROCESSOR OFFLINE)'
-                    : '● WEBCAM (CONNECTING TO CV...)'}
+                    ? '● WEBCAM — CV PROCESSOR OFFLINE'
+                    : webcamCvStatus === 'DISCONNECTED'
+                    ? '● WEBCAM — CAMERA DISCONNECTED'
+                    : webcamCvStatus === 'BACKEND_OFFLINE'
+                    ? '● WEBCAM — BACKEND OFFLINE'
+                    : '● WEBCAM — CONNECTING TO CV...'}
                 </span>
               </div>
             ) : useCvStream || camera.src?.includes('/stream') ? (

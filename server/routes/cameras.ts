@@ -4,6 +4,7 @@ import path from 'path';
 import { Router, Request, Response, NextFunction } from 'express';
 import { getDatabase } from '../db/database';
 import { AppError } from '../middleware/errorHandler';
+import { requireRole } from '../middleware/auth';
 import { broadcastWebSocketMessage } from '../services/websocket';
 import { CameraEntity, CameraSourceType, CameraStatus } from '../types/api';
 
@@ -266,8 +267,8 @@ camerasRouter.get('/:id', (req: Request, res: Response, next: NextFunction) => {
   }
 });
 
-// POST /api/cameras - Create new camera
-camerasRouter.post('/', (req: Request, res: Response, next: NextFunction) => {
+// POST /api/cameras - Create new camera (Admin / Commander only)
+camerasRouter.post('/', requireRole(['Admin', 'Commander']), (req: Request, res: Response, next: NextFunction) => {
   try {
     const db = getDatabase();
     const { id, name, location, source_type, source_url, status } = req.body;
@@ -323,8 +324,8 @@ camerasRouter.post('/', (req: Request, res: Response, next: NextFunction) => {
   }
 });
 
-// PUT /api/cameras/:id - Update existing camera
-camerasRouter.put('/:id', (req: Request, res: Response, next: NextFunction) => {
+// PUT /api/cameras/:id - Update existing camera (Admin / Commander only)
+camerasRouter.put('/:id', requireRole(['Admin', 'Commander']), (req: Request, res: Response, next: NextFunction) => {
   try {
     const db = getDatabase();
     const { id } = req.params;
@@ -385,8 +386,8 @@ camerasRouter.put('/:id', (req: Request, res: Response, next: NextFunction) => {
   }
 });
 
-// DELETE /api/cameras/:id - Delete camera (cascades to zones and events)
-camerasRouter.delete('/:id', (req: Request, res: Response, next: NextFunction) => {
+// DELETE /api/cameras/:id - Delete camera (cascades to zones and events - Admin / Commander only)
+camerasRouter.delete('/:id', requireRole(['Admin', 'Commander']), (req: Request, res: Response, next: NextFunction) => {
   try {
     const db = getDatabase();
     const { id } = req.params;
@@ -415,10 +416,8 @@ camerasRouter.delete('/:id', (req: Request, res: Response, next: NextFunction) =
   }
 });
 
-
-
-// POST /api/cameras/:id/control - Operational camera control (Phase 15 Part C)
-camerasRouter.post('/:id/control', (req: Request, res: Response, next: NextFunction) => {
+// POST /api/cameras/:id/control - Operational camera control (Admin / Commander only)
+camerasRouter.post('/:id/control', requireRole(['Admin', 'Commander']), (req: Request, res: Response, next: NextFunction) => {
   try {
     const db = getDatabase();
     const { id } = req.params;
@@ -483,8 +482,8 @@ camerasRouter.post('/:id/control', (req: Request, res: Response, next: NextFunct
   }
 });
 
-// PRD Section 13: POST /api/v1/cameras/:id/zones - Save newly drawn geofence polygon for a specific camera
-camerasRouter.post('/:id/zones', (req: Request, res: Response, next: NextFunction) => {
+// PRD Section 13: POST /api/v1/cameras/:id/zones - Save newly drawn geofence polygon for a specific camera (Admin / Commander only)
+camerasRouter.post('/:id/zones', requireRole(['Admin', 'Commander']), (req: Request, res: Response, next: NextFunction) => {
   try {
     const db = getDatabase();
     const { id } = req.params;
@@ -564,7 +563,7 @@ camerasRouter.get('/:id/zones', (req: Request, res: Response, next: NextFunction
 });
 
 // POST /api/cameras/homography/evaluate - Run real OpenCV homography evaluation between two camera feeds
-camerasRouter.post('/homography/evaluate', async (req: Request, res: Response, next: NextFunction) => {
+camerasRouter.post('/homography/evaluate', requireRole(['Admin', 'Commander', 'Surveillance Operator', 'AI Analyst']), async (req: Request, res: Response, next: NextFunction) => {
   try {
     const { camA = 'cam-01', camB = 'cam-02' } = req.body;
     const profiles = getCameraSourceProfiles();

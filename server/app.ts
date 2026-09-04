@@ -20,6 +20,7 @@ import { intelligenceRouter } from './routes/intelligence';
 import { agentsRouter } from './routes/agents';
 import { chatRouter } from './routes/chat';
 import { webcamRouter } from './routes/webcam';
+import { evidenceRouter } from './routes/evidence';
 import { errorHandler, notFoundHandler } from './middleware/errorHandler';
 import { requireAuth } from './middleware/auth';
 
@@ -70,21 +71,10 @@ export function createApp(): express.Application {
     });
   });
 
-  // Static Serving for Evidence and Video Fixtures with Range and Cache control
-  app.use('/evidence', express.static(path.resolve(process.cwd(), 'evidence'), {
-    acceptRanges: true,
-    etag: true,
-    setHeaders: (res) => {
-      res.setHeader('Accept-Ranges', 'bytes');
-    },
-  }));
-  app.use('/fixtures', express.static(path.resolve(process.cwd(), 'cv_service/tests/fixtures'), {
-    acceptRanges: true,
-    etag: true,
-    setHeaders: (res) => {
-      res.setHeader('Accept-Ranges', 'bytes');
-    },
-  }));
+  // Authenticated Evidence Endpoints (Strictly Protected; HTTP 206 Partial Content Range Support)
+  app.use('/evidence', evidenceRouter);
+  app.use('/api/evidence', evidenceRouter);
+  app.use('/api/v1/evidence', evidenceRouter);
 
   // Favicon handler
   app.get('/favicon.ico', (req: Request, res: Response) => {
@@ -96,52 +86,29 @@ export function createApp(): express.Application {
     return res.status(204).end();
   });
 
-  // Priority 1 Security: Enforce authentication on all mutating and sensitive API routes
+  // Priority 0 Security: Default-Deny on all API routes except explicitly whitelisted public endpoints
   app.use('/api', (req: Request, res: Response, next: NextFunction) => {
-    const p = req.path;
+    // Normalize path by stripping optional /v1 prefix
+    const normPath = req.path.replace(/^\/v1/, '');
 
-    // 1. Whitelist Public Endpoints
-    if (
-      p === '/health' ||
-      p === '/v1/health' ||
-      p === '/webcam/status' ||
-      p === '/v1/webcam/status' ||
-      p === '/auth/login' ||
-      p === '/v1/auth/login' ||
-      p === '/auth/register' ||
-      p === '/v1/auth/register' ||
-      p === '/auth/roles' ||
-      p === '/v1/auth/roles' ||
-      p === '/intelligence/search' ||
-      p === '/v1/intelligence/search' ||
-      p.startsWith('/intelligence/search') ||
-      p.startsWith('/v1/intelligence/search') ||
-      p.startsWith('/agents') ||
-      p.startsWith('/v1/agents') ||
-      p.startsWith('/chat') ||
-      p.startsWith('/v1/chat') ||
-      // Browser video element streams (allows streaming without breaking HTML5 video elements)
-      (req.method === 'GET' && (p.includes('/video') || p.includes('/stream')))
-    ) {
+    // Whitelist strictly public endpoints:
+    // - Health probes: /health
+    // - Authentication: /auth/login, /auth/register, /auth/roles
+    // - Local webcam daemon status probe: /webcam/status
+    const isPublic =
+      normPath === '/health' ||
+      normPath === '/auth/login' ||
+      normPath === '/auth/register' ||
+      normPath === '/auth/roles' ||
+      normPath === '/webcam/status';
+
+    if (isPublic) {
       return next();
     }
 
-    // 2. All Mutating Operations require authentication (POST /api/alerts is strictly protected)
-    if (['POST', 'PUT', 'DELETE', 'PATCH'].includes(req.method)) {
-      return requireAuth(req, res, next);
-    }
-
-    // 3. Sensitive Intelligence, Incidents, Zones, Events, Alerts, Users, System require authentication
-    if (
-      p.startsWith('/intelligence/journey') ||
-      p.startsWith('/v1/intelligence/journey') ||
-      p.startsWith('/users') ||
-      p.startsWith('/v1/users')
-    ) {
-      return requireAuth(req, res, next);
-    }
-
-    next();
+    // All sensitive reads (cameras, zones, events, alerts, incidents, correlations, telemetry,
+    // analytics, system state, search, agents, chat) and all mutations require authentication
+    return requireAuth(req, res, next);
   });
 
   // Mount API Sub-Routers

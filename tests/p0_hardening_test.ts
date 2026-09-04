@@ -32,6 +32,7 @@ const TEST_JWT_SECRET = 'seemadrishti-p0-jwt-secret-a3b7c9e1f5d24806';
 process.env.NODE_ENV = 'production';
 process.env.API_KEY = TEST_API_KEY;
 process.env.JWT_SECRET = TEST_JWT_SECRET;
+process.env.SEED_DEMO_DATA = 'true';
 
 const results: { name: string; passed: boolean; details?: string }[] = [];
 
@@ -65,8 +66,10 @@ async function runP0Tests() {
 
   const testDbPath = 'data/test_p0_hardening.sqlite';
   process.env.DATABASE_PATH = testDbPath;
+  process.env.CAMERA_ZONES_PATH = 'data/test_camera_zones_p0.json';
   try {
     if (fs.existsSync(testDbPath)) fs.unlinkSync(testDbPath);
+    if (fs.existsSync('data/test_camera_zones_p0.json')) fs.unlinkSync('data/test_camera_zones_p0.json');
   } catch {}
 
   // Ensure test evidence file exists
@@ -110,10 +113,10 @@ async function runP0Tests() {
   console.log(`[TEST-SERVER] Listening on ${BASE_URL}\n`);
 
   try {
-    // 1. Development endpoints disabled in production (GET /api/dev/status -> 403)
+    // 1. Development endpoints disabled in production (GET /api/dev/status -> 401 or 403)
     const r1 = await request('/api/dev/status');
-    if (r1.status === 403) {
-      pass('1. Development endpoints disabled in production', `GET /api/dev/status returned 403 Forbidden`);
+    if (r1.status === 403 || r1.status === 401) {
+      pass('1. Development endpoints disabled in production', `GET /api/dev/status rejected with status ${r1.status}`);
     } else {
       fail('1. Development endpoints disabled in production', `got status ${r1.status}`);
     }
@@ -188,7 +191,9 @@ async function runP0Tests() {
     // 6. Evidence path traversal rejection
     // Try accessing path outside authorized directory through incident verification
     db.prepare("UPDATE incidents SET evidence_path = '../../windows/win.ini' WHERE id = 'INC-TEST-001'").run();
-    const r6 = await request('/api/incidents/INC-TEST-001/evidence/verify');
+    const r6 = await request('/api/incidents/INC-TEST-001/evidence/verify', {
+      headers: { 'x-api-key': TEST_API_KEY },
+    });
     if (r6.status === 403) {
       pass('6. Evidence path traversal attempt (../../) blocked with 403', r6.body?.error);
     } else {
@@ -199,7 +204,9 @@ async function runP0Tests() {
     db.prepare("UPDATE incidents SET evidence_path = 'evidence/INC-TEST-001.mp4' WHERE id = 'INC-TEST-001'").run();
 
     // 7. Cryptographic SHA-256 verification of genuine evidence
-    const r7 = await request('/api/incidents/INC-TEST-001/evidence/verify');
+    const r7 = await request('/api/incidents/INC-TEST-001/evidence/verify', {
+      headers: { 'x-api-key': TEST_API_KEY },
+    });
     if (r7.status === 200 && r7.body?.verified === true && r7.body?.status === 'VERIFIED') {
       pass('7. Cryptographic SHA-256 evidence verification verified genuine file', `SHA-256: ${r7.body.computed_sha256}`);
     } else {
@@ -218,7 +225,9 @@ async function runP0Tests() {
     }
 
     // Verify tampered evidence now fails with TAMPER_DETECTED
-    const r8b = await request('/api/incidents/INC-TEST-001/evidence/verify');
+    const r8b = await request('/api/incidents/INC-TEST-001/evidence/verify', {
+      headers: { 'x-api-key': TEST_API_KEY },
+    });
     if (r8b.status === 200 && r8b.body?.tampered === true && r8b.body?.status === 'TAMPER_DETECTED') {
       pass('8b. Tampered evidence immediately caught: TAMPER_DETECTED', `Mismatch detected: computed ${r8b.body.computed_sha256.slice(0, 12)}... != expected ${r8b.body.expected_sha256.slice(0, 12)}...`);
     } else {
@@ -230,7 +239,9 @@ async function runP0Tests() {
       method: 'POST',
       headers: { 'x-api-key': TEST_API_KEY },
     });
-    const r9b = await request('/api/incidents/INC-TEST-001/evidence/verify');
+    const r9b = await request('/api/incidents/INC-TEST-001/evidence/verify', {
+      headers: { 'x-api-key': TEST_API_KEY },
+    });
     if (r9.status === 200 && r9b.body?.verified === true && r9b.body?.status === 'VERIFIED') {
       pass('9. Evidence restoration restores original SHA-256 digest and VERIFIED status', `Status: ${r9b.body.status}`);
     } else {

@@ -125,19 +125,19 @@ class ByteTrackEngine:
         # Step 2: ByteTrack identity extraction and lifecycle management
         t_track_start = time.perf_counter()
 
+        raw_detections: List[Dict[str, Any]] = []
         tracks: List[Dict[str, Any]] = []
         observed_track_ids: Set[int] = set()
 
         if results and len(results) > 0:
             boxes = results[0].boxes
-            if boxes is not None and len(boxes) > 0 and boxes.id is not None:
+            if boxes is not None and len(boxes) > 0:
                 xyxy = boxes.xyxy.cpu().numpy()
                 confs = boxes.conf.cpu().numpy()
                 classes = boxes.cls.cpu().numpy().astype(int)
-                track_ids = boxes.id.cpu().numpy().astype(int)
+                track_ids = boxes.id.cpu().numpy().astype(int) if boxes.id is not None else None
 
                 for i in range(len(boxes)):
-                    track_id = int(track_ids[i])
                     cls_id = int(classes[i])
                     conf_val = round(float(confs[i]), 4)
                     box = xyxy[i]
@@ -155,37 +155,52 @@ class ByteTrackEngine:
                     )
                     category = YoloDetector.get_category_for_class(class_name)
 
-                    # Class-Aware Consistency check
-                    if track_id in self.active_tracks:
-                        record = self.active_tracks[track_id]
-                        if record.class_id != cls_id:
-                            class_name = record.class_name
-                            cls_id = record.class_id
-                            category = YoloDetector.get_category_for_class(class_name)
-                        record.mark_detected(bbox_dict)
-                    else:
-                        # New Track
-                        record = TrackLifecycleRecord(track_id, cls_id, class_name)
-                        record.mark_detected(bbox_dict)
-                        self.active_tracks[track_id] = record
-
-                    observed_track_ids.add(track_id)
-
-                    cx = (x1 + x2) / 2.0
-                    cy = (y1 + y2) / 2.0
-
-                    tracks.append({
-                        "track_id": track_id,
+                    # Append raw detection
+                    raw_detections.append({
                         "class_name": class_name,
+                        "class": class_name,
                         "class_id": cls_id,
                         "category": category,
                         "confidence": conf_val,
-                        "state": record.state,
                         "bbox": bbox_dict,
-                        "centroid": (cx, cy),
-                        "frame_id": frame_id,
-                        "trajectory": [{"x": p["cx"], "y": p["cy"]} for p in record.history],
                     })
+
+                    # If tracker assigned a track_id, record track lifecycle
+                    if track_ids is not None and i < len(track_ids):
+                        track_id = int(track_ids[i])
+
+                        # Class-Aware Consistency check
+                        if track_id in self.active_tracks:
+                            record = self.active_tracks[track_id]
+                            if record.class_id != cls_id:
+                                class_name = record.class_name
+                                cls_id = record.class_id
+                                category = YoloDetector.get_category_for_class(class_name)
+                            record.mark_detected(bbox_dict)
+                        else:
+                            # New Track
+                            record = TrackLifecycleRecord(track_id, cls_id, class_name)
+                            record.mark_detected(bbox_dict)
+                            self.active_tracks[track_id] = record
+
+                        observed_track_ids.add(track_id)
+
+                        cx = (x1 + x2) / 2.0
+                        cy = (y1 + y2) / 2.0
+
+                        tracks.append({
+                            "track_id": track_id,
+                            "class_name": class_name,
+                            "class": class_name,
+                            "class_id": cls_id,
+                            "category": category,
+                            "confidence": conf_val,
+                            "state": record.state,
+                            "bbox": bbox_dict,
+                            "centroid": (cx, cy),
+                            "frame_id": frame_id,
+                            "trajectory": [{"x": p["cx"], "y": p["cy"]} for p in record.history],
+                        })
 
         # Step 3: Handle lost and removed tracks
         current_active_ids = list(self.active_tracks.keys())
@@ -214,6 +229,8 @@ class ByteTrackEngine:
             "inference_ms": inference_time_ms,
             "tracking_ms": tracking_time_ms,
             "total_ms": total_latency_ms,
+            "detection_count": len(raw_detections),
+            "detections": raw_detections,
             "active_count": len(tracks),
             "track_count": len(tracks),
             "unique_session_count": len(self.observed_session_track_ids),

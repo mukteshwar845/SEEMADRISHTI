@@ -28,6 +28,7 @@ import { initializeWebSocketServer } from '../server/services/websocket';
 
 process.env.NODE_ENV = 'test';
 process.env.API_KEY = process.env.API_KEY || 'seemadrishti-test-key-suite';
+process.env.CAMERA_ZONES_PATH = 'data/test_camera_zones_phase1.json';
 
 const TEST_PORT = 8001;
 const BASE_URL = `http://127.0.0.1:${TEST_PORT}`;

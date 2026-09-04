@@ -5,6 +5,7 @@ import path from 'path';
 import { getDatabase } from '../db/database';
 import { getConnectedClientCount, broadcastWebSocketMessage } from '../services/websocket';
 import { AppError } from '../middleware/errorHandler';
+import { requireRole } from '../middleware/auth';
 
 export const systemRouter = Router();
 
@@ -124,7 +125,7 @@ systemRouter.get('/health', (req: Request, res: Response, next: NextFunction) =>
 });
 
 // POST /api/system/heartbeat - Record heartbeat from CV service or edge nodes
-systemRouter.post('/heartbeat', (req: Request, res: Response, next: NextFunction) => {
+systemRouter.post('/heartbeat', requireRole(['Admin', 'Commander', 'service', 'cv_service']), (req: Request, res: Response, next: NextFunction) => {
   try {
     const db = getDatabase();
     const {
@@ -309,8 +310,8 @@ systemRouter.get('/timeline', (req: Request, res: Response, next: NextFunction) 
   }
 });
 
-// POST /api/system/events - Record a system event
-systemRouter.post('/events', (req: Request, res: Response, next: NextFunction) => {
+// POST /api/system/events - Record a system event (Admin / Commander only)
+systemRouter.post('/events', requireRole(['Admin', 'Commander']), (req: Request, res: Response, next: NextFunction) => {
   try {
     const db = getDatabase();
     const { event_type, severity = 'INFO', source = 'SYSTEM', message, metadata } = req.body;
@@ -361,7 +362,7 @@ systemRouter.get('/operator-actions', (req: Request, res: Response, next: NextFu
 });
 
 // POST /api/system/operator-actions - Log an operator action
-systemRouter.post('/operator-actions', (req: Request, res: Response, next: NextFunction) => {
+systemRouter.post('/operator-actions', requireRole(['Admin', 'Commander', 'Surveillance Operator', 'Patrol Officer', 'AI Analyst']), (req: Request, res: Response, next: NextFunction) => {
   try {
     const db = getDatabase();
     const {
@@ -503,8 +504,8 @@ systemRouter.get('/performance', (req: Request, res: Response, next: NextFunctio
   }
 });
 
-// POST /api/demo/reset - Reset demo session state without destroying configuration or evidence
-systemRouter.post('/demo/reset', (req: Request, res: Response, next: NextFunction) => {
+// POST /api/demo/reset - Reset demo session state (Admin / Commander only)
+systemRouter.post('/demo/reset', requireRole(['Admin', 'Commander']), (req: Request, res: Response, next: NextFunction) => {
   try {
     const db = getDatabase();
     const nowIso = new Date().toISOString();

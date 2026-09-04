@@ -23,7 +23,7 @@ import { initializeSchema } from '../server/db/schema';
 import { seedDemoData } from '../server/db/seed';
 import { closeDatabase, getDatabase } from '../server/db/database';
 import { initializeWebSocketServer } from '../server/services/websocket';
-import { ensureCvProcessor, shutdownCvProcessor } from '../server/services/cvProcessManager';
+import { ensureCvProcessor, shutdownCvProcessor, disableCvAutoRestart, enableCvAutoRestart } from '../server/services/cvProcessManager';
 
 const TEST_PORT = 8010;
 const BASE_URL = `http://127.0.0.1:${TEST_PORT}`;
@@ -152,6 +152,25 @@ async function runTests() {
     }
 
     // -------------------------------------------------------------
+    // Test 2b: POST /api/webcam/frame invalid JWT -> 401
+    // -------------------------------------------------------------
+    {
+      const res = await request('/api/webcam/frame', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: 'Bearer invalid.tampered.token.seemadrishti',
+        },
+        body: JSON.stringify({ camera_id: 'cam-01', frame: getTestFrameBase64() }),
+      });
+      if (res.status === 401 || res.status === 403) {
+        pass('POST /api/webcam/frame rejects invalid/tampered JWT with 401/403', `Status: ${res.status}`);
+      } else {
+        fail('POST /api/webcam/frame invalid JWT check', `Expected 401/403, got ${res.status}`);
+      }
+    }
+
+    // -------------------------------------------------------------
     // Test 3: POST /api/webcam/frame rejects oversized payload (>5MB) -> 413
     // -------------------------------------------------------------
     {
@@ -199,7 +218,7 @@ async function runTests() {
       console.log('  [Setup] Ensuring Python CV processor is running...');
       const cvOnline = await ensureCvProcessor();
       if (!cvOnline) {
-        console.warn('  [Warning] Python CV processor did not start. Checking status endpoint...');
+        console.warn('  [Warning] Python CV processor did not start.');
       }
 
       const frameData = getTestFrameBase64();
@@ -217,10 +236,43 @@ async function runTests() {
       });
 
       if (res.status === 200 && res.body?.success === true) {
-        pass('POST /api/webcam/frame executes real YOLOv8 and returns genuine detections',
-          `Latency: ${res.body.telemetry?.total_latency_ms}ms, FPS: ${res.body.telemetry?.measured_fps}, Detections: ${res.body.detections?.length || 0}`);
+        const dets = res.body.detections || [];
+        const trks = res.body.tracks || [];
 
-        // Verify data contract:
+        // G5 Check: Person Detection
+        const personDetections = dets.filter(
+          (d: any) => (d.class === 'person' || d.class_name === 'person') && d.confidence >= 0.45
+        );
+        if (personDetections.length > 0) {
+          pass('YOLOv8 produces genuine person detection on test fixture',
+            `Count: ${personDetections.length}, Confidences: ${personDetections.map((d: any) => `${Math.round(d.confidence * 100)}%`).join(', ')}`);
+        } else {
+          fail('Person detection check', `Expected >=1 person detection with conf >= 0.45, got 0 (Total detections: ${dets.length})`);
+        }
+
+        // G6 Check: ByteTrack Track ID Generation
+        const personTracks = trks.filter(
+          (t: any) => (t.class === 'person' || t.class_name === 'person') && typeof t.track_id === 'number' && t.track_id > 0
+        );
+        if (personTracks.length > 0) {
+          pass('ByteTrack assigns persistent track IDs to detected persons',
+            `Track IDs: [${personTracks.map((t: any) => t.track_id).join(', ')}]`);
+        } else {
+          fail('ByteTrack tracking check', `Expected >=1 person track with positive track_id, got 0 (Total tracks: ${trks.length})`);
+        }
+
+        // G7 Check: Bounding-box sanity (within frame boundary)
+        const allBoxesValid = dets.every((d: any) => {
+          const b = d.bbox;
+          return b && b.x1 >= 0 && b.y1 >= 0 && b.x2 > b.x1 && b.y2 > b.y1;
+        });
+        if (allBoxesValid) {
+          pass('Bounding boxes strictly follow detected objects with truthful coordinates');
+        } else {
+          fail('Bounding-box truth check', 'Found out-of-bounds or inverted bounding boxes');
+        }
+
+        // Verify data contract
         const b = res.body;
         if (b.source_type === 'browser_webcam' && b.processing_mode === 'live_cv') {
           pass('Payload metadata accurately tags source_type: browser_webcam and processing_mode: live_cv');
@@ -228,14 +280,11 @@ async function runTests() {
           fail('Source metadata check', `Expected browser_webcam / live_cv, got ${b.source_type} / ${b.processing_mode}`);
         }
 
-        if (typeof b.telemetry?.inference_time_ms === 'number' && b.telemetry.inference_time_ms >= 0) {
+        if (typeof b.telemetry?.inference_time_ms === 'number' && b.telemetry.inference_time_ms > 0) {
           pass('Measured inference time is genuine numeric duration', `${b.telemetry.inference_time_ms} ms`);
         } else {
           fail('Inference time check', `Invalid inference_time_ms: ${b.telemetry?.inference_time_ms}`);
         }
-      } else if (res.status === 503) {
-        // Fallback when python dependencies are not installed in test environment
-        pass('POST /api/webcam/frame returns honest 503 CV_PROCESSOR_OFFLINE if Python is not running', 'Zero false claims');
       } else {
         fail('POST /api/webcam/frame execution', `Status: ${res.status}, body: ${JSON.stringify(res.body)}`);
       }
@@ -299,7 +348,6 @@ async function runTests() {
     // -------------------------------------------------------------
     console.log('\n[Suite 5: Verification of Zero Synthetic Webcam Targets]');
     {
-      // Inspect MatrixCameraCell code to prove fake sine-wave webcam fallback is eradicated
       const componentPath = path.resolve(process.cwd(), 'src/components/MatrixCameraCell.tsx');
       const content = fs.readFileSync(componentPath, 'utf8');
 
@@ -313,9 +361,110 @@ async function runTests() {
       }
     }
 
+    // -------------------------------------------------------------
+    // Test 8: Performance Benchmark across 100 Ingested Frames
+    // -------------------------------------------------------------
+    console.log('\n[Suite 6: Performance Benchmark (100 Frames Post Warm-Up)]');
+    {
+      const frameData = getTestFrameBase64();
+      const TOTAL_FRAMES = 100;
+      const WARM_UP = 5;
+
+      console.log(`  [Benchmark] Warming up pipeline with ${WARM_UP} frames...`);
+      for (let w = 0; w < WARM_UP; w++) {
+        await request('/api/webcam/frame', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            Authorization: `Bearer ${operatorToken}`,
+          },
+          body: JSON.stringify({ camera_id: 'cam-01', frame: frameData }),
+        });
+      }
+
+      console.log(`  [Benchmark] Executing ${TOTAL_FRAMES} benchmark frames...`);
+      const latencies: number[] = [];
+      const inferenceTimes: number[] = [];
+      const trackingTimes: number[] = [];
+      const benchStart = Date.now();
+
+      for (let i = 0; i < TOTAL_FRAMES; i++) {
+        const fStart = Date.now();
+        const res = await request('/api/webcam/frame', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            Authorization: `Bearer ${operatorToken}`,
+          },
+          body: JSON.stringify({ camera_id: 'cam-01', frame: frameData }),
+        });
+        const e2e = Date.now() - fStart;
+        latencies.push(e2e);
+
+        if (res.body?.telemetry) {
+          inferenceTimes.push(res.body.telemetry.inference_time_ms || 0);
+          trackingTimes.push(res.body.telemetry.tracking_time_ms || 0);
+        }
+      }
+
+      const totalElapsedSec = (Date.now() - benchStart) / 1000;
+      const avgFps = roundTo(TOTAL_FRAMES / totalElapsedSec, 1);
+      latencies.sort((a, b) => a - b);
+      const p50 = latencies[Math.floor(latencies.length * 0.5)];
+      const p95 = latencies[Math.floor(latencies.length * 0.95)];
+      const avgYolo = roundTo(inferenceTimes.reduce((a, b) => a + b, 0) / (inferenceTimes.length || 1), 2);
+      const avgByteTrack = roundTo(trackingTimes.reduce((a, b) => a + b, 0) / (trackingTimes.length || 1), 2);
+      const avgE2E = roundTo(latencies.reduce((a, b) => a + b, 0) / latencies.length, 1);
+
+      console.log('\n  --- [REAL PERFORMANCE BENCHMARK REPORT] ---');
+      console.log(`  Frames:                 ${TOTAL_FRAMES}`);
+      console.log(`  Warm-up:                ${WARM_UP}`);
+      console.log(`  Average FPS:            ${avgFps}`);
+      console.log(`  P50 latency:            ${p50} ms`);
+      console.log(`  P95 latency:            ${p95} ms`);
+      console.log(`  Average YOLO latency:   ${avgYolo} ms`);
+      console.log(`  Average ByteTrack lat:  ${avgByteTrack} ms`);
+      console.log(`  End-to-end latency:     ${avgE2E} ms`);
+      console.log('  -------------------------------------------\n');
+
+      pass('Performance benchmark completed with real measured telemetry across 100 frames',
+        `Avg FPS: ${avgFps}, P50: ${p50}ms, P95: ${p95}ms, YOLO: ${avgYolo}ms, ByteTrack: ${avgByteTrack}ms`);
+    }
+
+    // -------------------------------------------------------------
+    // Test 9: CV Disconnection / Failure Handling (Gate G12)
+    // -------------------------------------------------------------
+    console.log('\n[Suite 7: CV Process Failure & Disconnection Handling]');
+    {
+      console.log('  [Setup] Disabling auto-restart and shutting down Python CV processor to test offline handling...');
+      disableCvAutoRestart();
+      shutdownCvProcessor();
+
+      // Ingest a frame while CV processor is dead
+      const res = await request('/api/webcam/frame', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${operatorToken}`,
+        },
+        body: JSON.stringify({
+          camera_id: 'cam-01',
+          frame: getTestFrameBase64(),
+        }),
+      });
+
+      if (res.status === 503 && res.body?.status === 'CV_PROCESSOR_OFFLINE') {
+        pass('CV processor offline produces honest HTTP 503 and zero simulated fallbacks',
+          `Status: ${res.status}, Message: ${res.body.error}`);
+      } else {
+        fail('CV offline check', `Expected 503 CV_PROCESSOR_OFFLINE, got ${res.status}: ${JSON.stringify(res.body)}`);
+      }
+    }
+
   } catch (err) {
     console.error('[Test-Runner] Unexpected test suite exception:', err);
   } finally {
+    enableCvAutoRestart();
     shutdownCvProcessor();
     server.close();
     closeDatabase();
@@ -330,6 +479,11 @@ async function runTests() {
     const allPassed = results.every((r) => r.passed);
     process.exit(allPassed ? 0 : 1);
   }
+}
+
+function roundTo(val: number, decimals: number): number {
+  const factor = Math.pow(10, decimals);
+  return Math.round(val * factor) / factor;
 }
 
 runTests();

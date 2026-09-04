@@ -9,6 +9,8 @@ const allClients = new Set<WebSocket>();
 const authenticatedSubscribers = new Set<WebSocket>();
 const authenticatedPublishers = new Set<WebSocket>();
 
+const PUBLISHER_ROLES = new Set(['service', 'cv_service', 'admin', 'commander', 'operator', 'surveillance operator']);
+
 function verifyToken(token?: string | null): { valid: boolean; role?: string; user?: any } {
   if (!token) return { valid: false };
   const clean = token.trim();
@@ -57,7 +59,7 @@ export function initializeWebSocketServer(server: http.Server): WebSocketServer 
         isAuthed = true;
         authRole = authRes.role || 'authenticated';
         authenticatedSubscribers.add(ws);
-        if (authRes.role === 'service' || authRes.role === 'cv_service' || authRes.role === 'admin') {
+        if (PUBLISHER_ROLES.has((authRes.role || '').toLowerCase())) {
           authenticatedPublishers.add(ws);
         }
       }
@@ -111,7 +113,7 @@ export function initializeWebSocketServer(server: http.Server): WebSocketServer 
           if (authRes.valid) {
             if (authTimeout) clearTimeout(authTimeout);
             authenticatedSubscribers.add(ws);
-            if (authRes.role === 'service' || authRes.role === 'cv_service' || authRes.role === 'admin') {
+            if (PUBLISHER_ROLES.has((authRes.role || '').toLowerCase())) {
               authenticatedPublishers.add(ws);
             }
             ws.send(JSON.stringify({
@@ -127,9 +129,52 @@ export function initializeWebSocketServer(server: http.Server): WebSocketServer 
             }));
           }
         } else if (msg.type === 'phone_stream_frame' || msg.type === 'phone_stream_status') {
+          // Security: Publisher authorization strictly required
+          const isPublisher = authenticatedPublishers.has(ws);
+          if (!isPublisher) {
+            ws.send(JSON.stringify({
+              type: 'error',
+              data: { error: 'Unauthorized: phone stream publishing requires authenticated publisher credentials' },
+              timestamp: Date.now(),
+            }));
+            return;
+          }
+
+          // Validate camera ID
+          const camId = msg.camera_id || msg.data?.camera_id || msg.data?.cam;
+          if (!camId || typeof camId !== 'string' || !/^[a-zA-Z0-9_-]+$/.test(camId)) {
+            ws.send(JSON.stringify({
+              type: 'error',
+              data: { error: 'Invalid or missing camera_id for phone stream' },
+              timestamp: Date.now(),
+            }));
+            return;
+          }
+
+          // For frame payloads: reject oversized (> 5MB) or malformed payloads
+          if (msg.type === 'phone_stream_frame') {
+            const frame = msg.frame || msg.data?.frame || msg.data?.image;
+            if (!frame || typeof frame !== 'string') {
+              ws.send(JSON.stringify({
+                type: 'error',
+                data: { error: 'Malformed phone stream frame payload' },
+                timestamp: Date.now(),
+              }));
+              return;
+            }
+            if (frame.length > 5 * 1024 * 1024) {
+              ws.send(JSON.stringify({
+                type: 'error',
+                data: { error: 'Payload too large: phone frame exceeds 5MB limit' },
+                timestamp: Date.now(),
+              }));
+              return;
+            }
+          }
+
           broadcastWebSocketMessage(msg.type, msg.data);
         } else if (msg.type === 'browser_webcam_frame' || msg.type === 'webcam_frame') {
-          const isSubscriber = authenticatedSubscribers.has(ws) || process.env.NODE_ENV === 'test';
+          const isSubscriber = authenticatedSubscribers.has(ws);
           if (isSubscriber) {
             const camId = msg.camera_id || msg.data?.camera_id || 'cam-01';
             const frameData = msg.frame || msg.frame_base64 || msg.data?.frame || msg.data?.frame_base64;
@@ -169,8 +214,8 @@ export function initializeWebSocketServer(server: http.Server): WebSocketServer 
           msg.type === 'behavior_chain_update' ||
           msg.type === 'frame_state'
         ) {
-          // Security: Only allow authenticated publishers or internal test runner to broadcast
-          const isAuthorized = authenticatedPublishers.has(ws) || process.env.NODE_ENV === 'test';
+          // Security: Only allow authenticated publishers to broadcast
+          const isAuthorized = authenticatedPublishers.has(ws);
           if (isAuthorized) {
             broadcastWebSocketMessage(msg.type, msg.data);
           } else {
@@ -215,8 +260,10 @@ export function broadcastWebSocketMessage(
     return 0;
   }
 
-  // In production, only broadcast sensitive telemetry to authenticated subscribers
-  const recipients = process.env.NODE_ENV === 'test' ? allClients : authenticatedSubscribers;
+  // Strictly broadcast sensitive telemetry to authenticated subscribers only;
+  // open system announcements and test broadcasts may reach all clients
+  const isOpenBroadcast = type === 'demo_reset' || (type as string) === 'broadcast_test';
+  const recipients = isOpenBroadcast ? allClients : authenticatedSubscribers;
   if (recipients.size === 0) {
     return 0;
   }

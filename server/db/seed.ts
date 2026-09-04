@@ -1,10 +1,18 @@
+import fs from 'fs';
+import path from 'path';
+import crypto from 'crypto';
 import { getDatabase } from './database';
 import bcrypt from 'bcryptjs';
 
 export function seedDemoData(): void {
+  // Never run demo seeding in production unless explicitly enabled via SEED_DEMO_DATA=true
+  if (process.env.NODE_ENV === 'production' && process.env.SEED_DEMO_DATA !== 'true') {
+    return;
+  }
+
   const db = getDatabase();
 
-  // Always ensure demo operator users exist and are up to date
+  // Seed demo operator users (without resetting existing passwords)
   seedDemoUsers();
 
   // Check if cameras already seeded
@@ -267,6 +275,31 @@ export function seedDemoData(): void {
     ];
 
     for (const inc of demoIncidents) {
+      // Compute genuine SHA-256 digest of file on disk if it exists, or mark UNSEALED
+      const absEvidence = path.resolve(process.cwd(), inc.evidence_path);
+      let actualHash: string | null = null;
+      let verificationStatus = 'UNSEALED';
+      if (fs.existsSync(absEvidence)) {
+        try {
+          const buf = fs.readFileSync(absEvidence);
+          actualHash = crypto.createHash('sha256').update(buf).digest('hex').toLowerCase();
+          verificationStatus = 'VERIFIED';
+        } catch {
+          actualHash = null;
+          verificationStatus = 'UNSEALED';
+        }
+      }
+
+      let parsedMeta: any = {};
+      try {
+        parsedMeta = JSON.parse(inc.metadata);
+      } catch {
+        parsedMeta = {};
+      }
+      parsedMeta.sha256 = actualHash;
+      parsedMeta.verification_status = verificationStatus;
+      const finalMetadata = JSON.stringify(parsedMeta);
+
       insertIncident.run(
         inc.id,
         inc.camera_id,
@@ -282,7 +315,7 @@ export function seedDemoData(): void {
         inc.pre_event_seconds,
         inc.post_event_seconds,
         inc.evidence_status,
-        inc.metadata,
+        finalMetadata,
         inc.acknowledged,
         inc.created_at
       );
@@ -290,15 +323,18 @@ export function seedDemoData(): void {
 }
 
 export function seedDemoUsers(): void {
+  // Never seed demo users in production unless explicitly enabled via SEED_DEMO_DATA=true
+  if (process.env.NODE_ENV === 'production' && process.env.SEED_DEMO_DATA !== 'true') {
+    return;
+  }
+
   const db = getDatabase();
-  // Seed Personnel & Operators (Users) with bcrypt hashed credentials
+  // Insert demo users strictly with ON CONFLICT DO NOTHING (never overwrite passwords)
   const insertUser = db.prepare(`
     INSERT INTO users (
       id, username, password_hash, name, role, email, shift, status, assigned_sector, created_at, updated_at
     ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-    ON CONFLICT(id) DO UPDATE SET
-      username = excluded.username,
-      password_hash = excluded.password_hash
+    ON CONFLICT(id) DO NOTHING
   `);
 
   const demoUsers = [
@@ -357,6 +393,11 @@ export function seedDemoUsers(): void {
   ];
 
   for (const u of demoUsers) {
+    // Check if user already exists by ID or username; never reset existing password
+    const existing = db.prepare('SELECT id FROM users WHERE id = ? OR LOWER(username) = ?').get(u.id, u.username.toLowerCase());
+    if (existing) {
+      continue;
+    }
     const passwordHash = bcrypt.hashSync(u.password, 10);
     insertUser.run(
       u.id,

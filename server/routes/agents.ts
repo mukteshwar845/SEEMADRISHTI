@@ -1,8 +1,11 @@
 import { Router, Request, Response } from 'express';
 import { agentOrchestrator } from '../services/agentOrchestrator';
 import { simulationEngine } from '../services/simulationEngine';
+import { requireRole } from '../middleware/auth';
 
 export const agentsRouter = Router();
+
+const AGENT_ROLES = ['Admin', 'Commander', 'Surveillance Operator', 'AI Analyst'];
 
 // GET /api/v1/agents/status -> Get all agents telemetry & states
 agentsRouter.get('/status', (req: Request, res: Response) => {
@@ -27,7 +30,7 @@ agentsRouter.get('/status', (req: Request, res: Response) => {
 });
 
 // POST /api/v1/agents/deliberate -> Trigger multi-agent deliberation on a scenario
-agentsRouter.post('/deliberate', (req: Request, res: Response) => {
+agentsRouter.post('/deliberate', requireRole(AGENT_ROLES), (req: Request, res: Response) => {
   try {
     const { scenario } = req.body;
     const plan = agentOrchestrator.deliberateScenario(scenario || 'perimeter_scaling');
@@ -42,7 +45,7 @@ agentsRouter.post('/deliberate', (req: Request, res: Response) => {
 });
 
 // POST /api/v1/agents/execute -> Execute a consensus countermeasure
-agentsRouter.post('/execute', (req: Request, res: Response) => {
+agentsRouter.post('/execute', requireRole(AGENT_ROLES), (req: Request, res: Response) => {
   try {
     const { actionId } = req.body;
     const plan = agentOrchestrator.executeCountermeasure(actionId);
@@ -71,7 +74,7 @@ agentsRouter.get('/jobs', (req: Request, res: Response) => {
 });
 
 // POST /api/v1/agents/jobs/dispatch -> Dispatch parallel orchestration job across 4 agents
-agentsRouter.post('/jobs/dispatch', (req: Request, res: Response) => {
+agentsRouter.post('/jobs/dispatch', requireRole(AGENT_ROLES), (req: Request, res: Response) => {
   try {
     const { jobKey, query } = req.body;
     const target = jobKey || query || 'perimeter_sweep_9cam';
@@ -87,7 +90,7 @@ agentsRouter.post('/jobs/dispatch', (req: Request, res: Response) => {
 });
 
 // POST /api/v1/agents/copilot -> Multi-agent interactive tactical reasoning chat
-agentsRouter.post('/copilot', async (req: Request, res: Response) => {
+agentsRouter.post('/copilot', requireRole(AGENT_ROLES), async (req: Request, res: Response) => {
   try {
     const { query } = req.body;
     if (!query) {
@@ -106,7 +109,7 @@ agentsRouter.post('/copilot', async (req: Request, res: Response) => {
 // ── Simulation Demo Engine ──────────────────────────────────────────────────
 
 // POST /api/v1/agents/simulation/start -> Kick off autonomous threat demo scenario
-agentsRouter.post('/simulation/start', (req: Request, res: Response) => {
+agentsRouter.post('/simulation/start', requireRole(AGENT_ROLES), (req: Request, res: Response) => {
   try {
     const status = simulationEngine.startScenario();
     res.json({ success: true, ...status });
@@ -116,7 +119,7 @@ agentsRouter.post('/simulation/start', (req: Request, res: Response) => {
 });
 
 // POST /api/v1/agents/simulation/stop -> Cancel active simulation
-agentsRouter.post('/simulation/stop', (req: Request, res: Response) => {
+agentsRouter.post('/simulation/stop', requireRole(AGENT_ROLES), (req: Request, res: Response) => {
   try {
     const status = simulationEngine.stopScenario();
     res.json({ success: true, ...status });

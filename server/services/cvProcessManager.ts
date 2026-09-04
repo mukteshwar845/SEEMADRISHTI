@@ -17,6 +17,15 @@ let cvProcess: ChildProcess | null = null;
 let isStarting = false;
 let lastHealthCheckTime = 0;
 let isHealthy = false;
+let autoRestartEnabled = true;
+
+export function disableCvAutoRestart(): void {
+  autoRestartEnabled = false;
+}
+
+export function enableCvAutoRestart(): void {
+  autoRestartEnabled = true;
+}
 
 export interface FrameProcessingResult {
   success: boolean;
@@ -75,9 +84,13 @@ export async function ensureCvProcessor(): Promise<boolean> {
     return true;
   }
 
+  if (!autoRestartEnabled) {
+    return false;
+  }
+
   if (isStarting) {
-    // Wait up to 3 seconds if already starting
-    for (let i = 0; i < 6; i++) {
+    // Wait up to 25 seconds if already starting
+    for (let i = 0; i < 50; i++) {
       await new Promise((r) => setTimeout(r, 500));
       if (await checkCvHealth()) return true;
     }
@@ -113,8 +126,8 @@ export async function ensureCvProcessor(): Promise<boolean> {
       isHealthy = false;
     });
 
-    // Wait for the server to bind and load YOLO
-    for (let i = 0; i < 15; i++) {
+    // Wait for the server to bind and load YOLO (up to 30 iterations = 24s)
+    for (let i = 0; i < 30; i++) {
       await new Promise((r) => setTimeout(r, 800));
       if (await checkCvHealth()) {
         console.log('[CV-ProcessManager] Python CV processor is online and healthy.');
@@ -146,7 +159,7 @@ export async function dispatchWebcamFrame(
 
   try {
     const controller = new AbortController();
-    const timeout = setTimeout(() => controller.abort(), 2500);
+    const timeout = setTimeout(() => controller.abort(), 10000);
 
     const res = await fetch(`${PYTHON_CV_URL}/process_frame`, {
       method: 'POST',
@@ -249,6 +262,8 @@ export async function dispatchWebcamFrame(
  * Clean shutdown of child process if spawned.
  */
 export function shutdownCvProcessor(): void {
+  isHealthy = false;
+  lastHealthCheckTime = 0;
   if (cvProcess) {
     try {
       cvProcess.kill();

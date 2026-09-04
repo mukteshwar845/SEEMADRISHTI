@@ -16,8 +16,15 @@ const HOST = '0.0.0.0';
 console.log('[DB] Connecting to SQLite database at:', getDatabasePath());
 initializeSchema();
 
-// 2. Seed Initial Demo Data (Idempotent)
-seedDemoData();
+// 2. Seed Initial Demo Data (Only in non-production or when explicitly requested via SEED_DEMO_DATA=true)
+const isProd = process.env.NODE_ENV === 'production';
+const shouldSeed = process.env.SEED_DEMO_DATA === 'true' || (!isProd && process.env.NODE_ENV !== 'test');
+if (shouldSeed) {
+  console.log('[DB] Seeding non-production demo data...');
+  seedDemoData();
+} else {
+  console.log('[DB] Production startup: skipping demo data seeding (secure by default).');
+}
 
 // 3. Create Express Application & HTTP Server
 export const app = createApp();

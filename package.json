@@ -8,7 +8,9 @@
     "build": "vite build && esbuild server.ts --bundle --platform=node --format=cjs --packages=external --sourcemap --outfile=dist/server.cjs",
     "start": "node dist/server.cjs",
     "clean": "rm -rf dist server.js",
-    "lint": "tsc --noEmit"
+    "lint": "tsc --noEmit",
+    "test:backend": "tsx tests/run_all_backend_tests.ts",
+    "test": "npm run test:backend"
   },
   "dependencies": {
     "@google/genai": "^2.4.0",

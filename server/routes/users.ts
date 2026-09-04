@@ -2,8 +2,13 @@ import { Router, Request, Response, NextFunction } from 'express';
 import bcrypt from 'bcryptjs';
 import { getDatabase } from '../db/database';
 import { AppError } from '../middleware/errorHandler';
+import { requireAuth, requireRole } from '../middleware/auth';
 
 export const usersRouter = Router();
+
+// SECURITY: All user management endpoints require authenticated Admin or Commander role
+usersRouter.use(requireAuth);
+usersRouter.use(requireRole(['Admin', 'Commander']));
 
 export interface UserEntity {
   id: string;
@@ -52,6 +57,9 @@ usersRouter.post('/', (req: Request, res: Response, next: NextFunction) => {
     if (!email || typeof email !== 'string' || !email.includes('@')) {
       throw new AppError('Valid email address is required', 400);
     }
+    if (!password || typeof password !== 'string' || password.length < 6) {
+      throw new AppError('Password is required and must be at least 6 characters', 400);
+    }
 
     const id = `usr-${Date.now()}`;
     const now = new Date().toISOString();
@@ -59,7 +67,7 @@ usersRouter.post('/', (req: Request, res: Response, next: NextFunction) => {
     const sector = assigned_sector && typeof assigned_sector === 'string' ? assigned_sector.trim() : 'General Border Patrol';
     const userShift = shift && typeof shift === 'string' ? shift.trim() : 'Standard Shift';
     const cleanUsername = username && typeof username === 'string' ? username.trim().toLowerCase() : email.split('@')[0].toLowerCase();
-    const passwordHash = password && typeof password === 'string' ? bcrypt.hashSync(password, 10) : bcrypt.hashSync('Operator@123', 10);
+    const passwordHash = bcrypt.hashSync(password, 10);
 
     db.prepare(`
       INSERT INTO users (id, username, password_hash, name, role, email, shift, status, assigned_sector, created_at, updated_at)

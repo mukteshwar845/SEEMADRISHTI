@@ -31,6 +31,8 @@ const JWT_TEST_SECRET = 'seemadrishti-jwt-test-secret-random-hex-256';
 process.env.NODE_ENV = 'production'; // Enforce strict auth checks
 process.env.API_KEY = M2M_TEST_KEY;
 process.env.JWT_SECRET = JWT_TEST_SECRET;
+process.env.SEED_DEMO_DATA = 'true'; // Explicit test seeding for isolated test suite
+process.env.CAMERA_ZONES_PATH = 'data/test_camera_zones_auth.json';
 
 const results: { name: string; passed: boolean; error?: string }[] = [];
 
@@ -67,6 +69,7 @@ async function runSecurityTests() {
   process.env.DATABASE_PATH = testDbPath;
   try {
     if (fs.existsSync(testDbPath)) fs.unlinkSync(testDbPath);
+    if (fs.existsSync('data/test_camera_zones_auth.json')) fs.unlinkSync('data/test_camera_zones_auth.json');
   } catch {}
 
   const db = getDatabase();
@@ -81,12 +84,12 @@ async function runSecurityTests() {
   console.log(`[TEST-SERVER] Listening on ${BASE_URL}\n`);
 
   try {
-    // 1. Read-only endpoints accessible unauthenticated
+    // 1. Default-deny: Unauthenticated read-only endpoint GET /api/cameras rejected with 401
     const r1 = await request('/api/cameras');
-    if (r1.status === 200 && Array.isArray(r1.body.data)) {
-      pass('1. Read-only GET /api/cameras accessible unauthenticated', `status ${r1.status}`);
+    if (r1.status === 401) {
+      pass('1. Default-deny: Unauthenticated GET /api/cameras rejected with 401 Unauthorized', r1.body?.error);
     } else {
-      fail('1. Read-only GET /api/cameras accessible unauthenticated', `got status ${r1.status}`);
+      fail('1. Default-deny: Unauthenticated GET /api/cameras rejected with 401 Unauthorized', `got status ${r1.status}`);
     }
 
     // 2. Mutating POST /api/cameras without token rejected with 401

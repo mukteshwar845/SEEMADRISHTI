@@ -471,11 +471,15 @@ export async function fetchIncidentById(id: string): Promise<{ success: boolean;
 }
 
 export function getIncidentEvidenceUrl(id: string): string {
-  return `/api/incidents/${encodeURIComponent(id)}/evidence`;
+  const token = getAuthToken();
+  const base = `/api/incidents/${encodeURIComponent(id)}/evidence`;
+  return token ? `${base}?token=${encodeURIComponent(token)}` : base;
 }
 
 export function getIncidentDownloadUrl(id: string): string {
-  return `/api/incidents/${encodeURIComponent(id)}/download`;
+  const token = getAuthToken();
+  const base = `/api/incidents/${encodeURIComponent(id)}/download`;
+  return token ? `${base}?token=${encodeURIComponent(token)}` : base;
 }
 
 export async function fetchEvidenceStorageStats(): Promise<{ success: boolean; data: EvidenceStorageStats }> {

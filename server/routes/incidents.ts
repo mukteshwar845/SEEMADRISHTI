@@ -4,6 +4,7 @@ import path from 'path';
 import crypto from 'crypto';
 import { getDatabase } from '../db/database';
 import { AppError } from '../middleware/errorHandler';
+import { requireRole } from '../middleware/auth';
 import { broadcastWebSocketMessage } from '../services/websocket';
 import { IncidentEntity, RiskLevel, EvidenceStatus } from '../types/api';
 import { getIncidentBehaviorChain } from './behavior_chains';
@@ -12,8 +13,6 @@ export const incidentsRouter = Router();
 
 const VALID_RISK_LEVELS: RiskLevel[] = ['CRITICAL', 'HIGH', 'MEDIUM', 'LOW'];
 const VALID_EVIDENCE_STATUSES: EvidenceStatus[] = ['capturing', 'ready', 'failed'];
-
-const sha256Cache = new Map<string, string>();
 
 function formatIncident(row: any): IncidentEntity {
   let parsedMetadata: any = row.metadata;
@@ -25,32 +24,43 @@ function formatIncident(row: any): IncidentEntity {
     }
   }
 
-  let sha256 = (parsedMetadata && typeof parsedMetadata === 'object') ? parsedMetadata.sha256 : undefined;
+  const expectedSha256 = (parsedMetadata && typeof parsedMetadata === 'object' && parsedMetadata.sha256)
+    ? String(parsedMetadata.sha256).toLowerCase().trim()
+    : undefined;
   let fileSize = (parsedMetadata && typeof parsedMetadata === 'object') ? parsedMetadata.file_size : undefined;
   let duration = (parsedMetadata && typeof parsedMetadata === 'object') ? parsedMetadata.duration : undefined;
-  let verificationStatus = (parsedMetadata && typeof parsedMetadata === 'object') ? parsedMetadata.verification_status : undefined;
 
-  if (!sha256 && row.evidence_path) {
+  let actualSha256: string | undefined = undefined;
+  let verificationStatus = 'UNSEALED';
+
+  if (row.evidence_path) {
     const absPath = path.isAbsolute(row.evidence_path)
       ? path.normalize(row.evidence_path)
       : path.normalize(path.resolve(process.cwd(), row.evidence_path));
 
-    if (sha256Cache.has(absPath)) {
-      sha256 = sha256Cache.get(absPath);
-    } else if (fs.existsSync(absPath)) {
+    if (fs.existsSync(absPath)) {
       try {
         const fileBuf = fs.readFileSync(absPath);
-        sha256 = crypto.createHash('sha256').update(fileBuf).digest('hex');
-        sha256Cache.set(absPath, sha256);
+        actualSha256 = crypto.createHash('sha256').update(fileBuf).digest('hex').toLowerCase();
         if (!fileSize) fileSize = fileBuf.length;
-      } catch {
-        // ignore file read error
-      }
-    }
-  }
 
-  if (row.evidence_status === 'ready' && !verificationStatus) {
-    verificationStatus = 'VERIFIED';
+        if (expectedSha256) {
+          if (actualSha256 === expectedSha256) {
+            verificationStatus = 'VERIFIED';
+          } else {
+            verificationStatus = 'TAMPER_DETECTED';
+          }
+        } else {
+          verificationStatus = 'UNSEALED';
+        }
+      } catch {
+        verificationStatus = 'UNSEALED';
+      }
+    } else {
+      verificationStatus = 'NO_EVIDENCE';
+    }
+  } else {
+    verificationStatus = 'NO_EVIDENCE';
   }
 
   return {
@@ -71,10 +81,10 @@ function formatIncident(row: any): IncidentEntity {
     metadata: parsedMetadata,
     acknowledged: Boolean(row.acknowledged),
     created_at: row.created_at,
-    sha256: sha256 || undefined,
+    sha256: actualSha256 || expectedSha256 || undefined,
     file_size: fileSize || undefined,
     duration: duration || undefined,
-    verification_status: verificationStatus || undefined,
+    verification_status: verificationStatus as any,
   };
 }
 
@@ -483,7 +493,7 @@ incidentsRouter.patch('/:id', (req: Request, res: Response, next: NextFunction) 
 });
 
 // POST /api/incidents/:id/acknowledge - Mark incident as acknowledged with operator attribution
-incidentsRouter.post('/:id/acknowledge', (req: Request, res: Response, next: NextFunction) => {
+incidentsRouter.post('/:id/acknowledge', requireRole(['Admin', 'Commander', 'Surveillance Operator', 'Patrol Officer', 'AI Analyst']), (req: Request, res: Response, next: NextFunction) => {
   try {
     const db = getDatabase();
     const { id } = req.params;
@@ -535,7 +545,7 @@ incidentsRouter.post('/:id/acknowledge', (req: Request, res: Response, next: Nex
 });
 
 // POST /api/incidents/:id/resolve - Resolve incident with disposition and audit logging
-incidentsRouter.post('/:id/resolve', (req: Request, res: Response, next: NextFunction) => {
+incidentsRouter.post('/:id/resolve', requireRole(['Admin', 'Commander', 'Surveillance Operator', 'AI Analyst']), (req: Request, res: Response, next: NextFunction) => {
   try {
     const db = getDatabase();
     const { id } = req.params;
@@ -719,7 +729,7 @@ incidentsRouter.get('/:id/timeline', (req: Request, res: Response, next: NextFun
 });
 
 // POST /api/incidents/:id/dispatch - Dispatch rapid response team
-incidentsRouter.post('/:id/dispatch', (req: Request, res: Response, next: NextFunction) => {
+incidentsRouter.post('/:id/dispatch', requireRole(['Admin', 'Commander', 'Surveillance Operator']), (req: Request, res: Response, next: NextFunction) => {
   try {
     const db = getDatabase();
     const { id } = req.params;
@@ -770,7 +780,7 @@ incidentsRouter.post('/:id/dispatch', (req: Request, res: Response, next: NextFu
 });
 
 // POST /api/incidents/:id/investigate - Mark incident as under active investigation
-incidentsRouter.post('/:id/investigate', (req: Request, res: Response, next: NextFunction) => {
+incidentsRouter.post('/:id/investigate', requireRole(['Admin', 'Commander', 'Surveillance Operator', 'AI Analyst']), (req: Request, res: Response, next: NextFunction) => {
   try {
     const db = getDatabase();
     const { id } = req.params;
@@ -1261,7 +1271,7 @@ incidentsRouter.get('/:id/evidence/verify', (req: Request, res: Response, next: 
 });
 
 // POST /api/incidents/:id/evidence/tamper-demo - Deterministic 1-byte tamper simulation for SIH live evaluation
-incidentsRouter.post('/:id/evidence/tamper-demo', (req: Request, res: Response, next: NextFunction) => {
+incidentsRouter.post('/:id/evidence/tamper-demo', requireRole(['Admin', 'Commander', 'Surveillance Operator']), (req: Request, res: Response, next: NextFunction) => {
   try {
     const db = getDatabase();
     const { id } = req.params;
@@ -1320,7 +1330,7 @@ incidentsRouter.post('/:id/evidence/tamper-demo', (req: Request, res: Response, 
 });
 
 // POST /api/incidents/:id/evidence/restore-demo - Restore genuine original evidence after tamper demo
-incidentsRouter.post('/:id/evidence/restore-demo', (req: Request, res: Response, next: NextFunction) => {
+incidentsRouter.post('/:id/evidence/restore-demo', requireRole(['Admin', 'Commander', 'Surveillance Operator']), (req: Request, res: Response, next: NextFunction) => {
   try {
     const db = getDatabase();
     const { id } = req.params;

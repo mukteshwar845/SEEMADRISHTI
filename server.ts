@@ -9,6 +9,7 @@ import { initializeSchema } from './server/db/schema';
 import { seedDemoData } from './server/db/seed';
 import { closeDatabase, getDatabasePath, getDatabase } from './server/db/database';
 import { initializeWebSocketServer, broadcastWebSocketMessage, getConnectedClientCount } from './server/services/websocket';
+import { ensureCvProcessor } from './server/services/cvProcessManager';
 import os from 'os';
 
 dotenv.config();
@@ -25,6 +26,15 @@ async function startServer() {
   } catch (err) {
     console.error('[DB] Error initializing database:', err);
   }
+
+  // Warm up Python Computer Vision in background
+  ensureCvProcessor().then(healthy => {
+    if (healthy) {
+      console.log('[CV] Edge Computer Vision (YOLOv8 + ByteTrack) ready on port 8088.');
+    }
+  }).catch(err => {
+    console.warn('[CV] Startup CV warm-up deferred to first frame:', err);
+  });
 
   const app = createApp();
   const server = http.createServer(app);

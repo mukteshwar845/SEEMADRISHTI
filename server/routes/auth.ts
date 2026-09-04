@@ -44,13 +44,10 @@ authRouter.post('/login', (req: Request, res: Response, next: NextFunction) => {
       });
     }
 
-    // Verify password hash
+    // Verify password hash strictly with bcrypt (no plaintext fallback passwords)
     let passwordValid = false;
     if (user.password_hash) {
       passwordValid = bcrypt.compareSync(password, user.password_hash);
-    } else {
-      // Fallback for default demo accounts if unhashed
-      passwordValid = (password === 'Admin@123' || password === 'Operator@123');
     }
 
     if (!passwordValid) {
@@ -208,8 +205,18 @@ authRouter.put('/profile', (req: Request, res: Response, next: NextFunction) => 
 // POST /api/auth/register - Operator Registration (Sign Up)
 authRouter.post('/register', (req: Request, res: Response, next: NextFunction) => {
   try {
+    // In production, disable self-registration unless explicitly permitted
+    const isProd = process.env.NODE_ENV === 'production';
+    if (isProd && process.env.ALLOW_PUBLIC_REGISTRATION !== 'true') {
+      return res.status(403).json({
+        success: false,
+        error: 'Public self-registration is disabled in production. Personnel onboarding must be performed by an authorized Commander.',
+        timestamp: new Date().toISOString(),
+      });
+    }
+
     const db = getDatabase();
-    const { username, password, name, email, role, shift, assigned_sector } = req.body;
+    const { username, password, name, email, shift, assigned_sector } = req.body;
 
     if (!username || typeof username !== 'string' || username.trim().length < 3) {
       throw new AppError('Username is required and must be at least 3 characters', 400);
@@ -251,8 +258,8 @@ authRouter.post('/register', (req: Request, res: Response, next: NextFunction) =
 
     const id = `usr-${Date.now()}`;
     const now = new Date().toISOString();
-    const validRoles = ['Commander', 'Surveillance Operator', 'Patrol Officer', 'AI Analyst'];
-    const assignedRole = role && validRoles.includes(role) ? role : 'Surveillance Operator';
+    // SECURITY: Client-provided role is strictly ignored. Public registration NEVER grants Commander or Admin.
+    const assignedRole = 'Surveillance Operator';
     const assignedSector = assigned_sector && typeof assigned_sector === 'string' && assigned_sector.trim()
       ? assigned_sector.trim()
       : 'Sector Alpha - Main Gate';

@@ -99,10 +99,9 @@ export const Sidebar: React.FC<SidebarProps> = ({
           onClick={onCloseMobile}
         />
       )}
-
-      <aside
+      <aside
         id="seemadrishti-sidebar"
-        className={`fixed top-0 bottom-0 left-0 z-50 w-64 flex flex-col justify-between transition-all duration-300 ease-in-out lg:static lg:translate-x-0 ${
+        className={`sidebar fixed top-0 bottom-0 left-0 z-50 w-64 h-screen h-[100dvh] max-h-screen max-h-[100dvh] flex flex-col shrink-0 overflow-hidden transition-all duration-300 ease-in-out lg:static lg:translate-x-0 ${
           isDaylight
             ? 'bg-[#f8fafc] border-r border-slate-300 shadow-md text-slate-900'
             : theme === 'midnight-cyber'
@@ -114,8 +113,8 @@ export const Sidebar: React.FC<SidebarProps> = ({
             : 'bg-[#010307] border-r border-cyan-500/20 shadow-[10px_0_40px_rgba(0,0,0,0.95)] text-slate-200'
         } ${isOpenMobile ? 'translate-x-0' : '-translate-x-full'}`}
       >
-        {/* Brand Header */}
-        <div>
+        {/* 1. Header / Logo Section (Fixed Top, Never Scrolls) */}
+        <div className="sidebar-header shrink-0 flex-none select-none">
           <div
             className={`p-4 flex items-center gap-3 border-b ${
               isDaylight
@@ -145,7 +144,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
             </div>
           </div>
 
-          {/* Navigation Links */}
+          {/* Navigation Category Label */}
           <div className="px-4 pt-3.5 pb-1.5 flex items-center justify-between">
             <span
               className={`text-[9px] font-mono font-bold tracking-[0.2em] uppercase ${
@@ -162,112 +161,113 @@ export const Sidebar: React.FC<SidebarProps> = ({
               LIVE
             </span>
           </div>
-
-          <nav className="flex-1 px-2.5 py-1 space-y-1 overflow-y-auto max-h-[calc(100vh-210px)]" id="sidebar-nav-menu">
-            {navItems.map((item) => {
-              const Icon = item.icon;
-              const isActive = currentView === item.id;
-
-              return (
-                <button
-                  key={item.id}
-                  id={`nav-${item.id}`}
-                  onClick={() => {
-                    onSelectView(item.id);
-                    if (onCloseMobile) onCloseMobile();
-                  }}
-                  className={`w-full flex items-center justify-between px-3 py-2 rounded-lg text-xs font-semibold tracking-wide transition-all duration-200 cursor-pointer group relative ${
-                    isActive
-                      ? isDaylight
-                        ? 'bg-cyan-700 text-white font-bold shadow-sm'
-                        : 'bg-cyan-950/60 text-cyan-200 border border-cyan-500/50 shadow-[0_0_20px_rgba(0,240,255,0.2)]'
-                      : isDaylight
-                      ? 'text-slate-700 hover:bg-slate-200 hover:text-slate-900 border border-transparent'
-                      : 'text-slate-400 hover:bg-cyan-950/20 hover:text-cyan-300 border border-transparent'
-                  }`}
-                >
-                  {/* Left Active Glow Bar */}
-                  {isActive && (
-                    <span
-                      className={`absolute left-0 top-1 bottom-1 w-1 rounded-r-full ${
-                        isDaylight ? 'bg-cyan-300' : 'bg-cyan-400 shadow-[0_0_8px_#00f0ff]'
-                      }`}
-                    ></span>
-                  )}
-
-                  <div className="flex items-center gap-2.5 min-w-0">
-                    <Icon
-                      size={15}
-                      className={`transition-colors shrink-0 ${
-                        isActive
-                          ? isDaylight
-                            ? 'text-white'
-                            : 'text-cyan-300 drop-shadow-[0_0_6px_rgba(0,240,255,0.7)]'
-                          : item.isAlert
-                          ? 'text-rose-500 group-hover:text-rose-400'
-                          : item.isHealth
-                          ? 'text-emerald-500 group-hover:text-emerald-400'
-                          : isDaylight
-                          ? 'text-slate-600 group-hover:text-cyan-700'
-                          : 'text-slate-400 group-hover:text-cyan-400'
-                      }`}
-                    />
-                    <span className="font-mono text-[11px] truncate">{item.label}</span>
-                  </div>
-
-                  {item.alertBadge !== undefined && item.alertBadge > 0 && (
-                    <span
-                      className={`text-[9px] px-1.5 py-0.2 rounded font-mono font-bold ${
-                        isActive
-                          ? 'bg-rose-600 text-white shadow-[0_0_10px_rgba(255,0,85,0.6)]'
-                          : isDaylight
-                          ? 'bg-rose-100 text-rose-800 border border-rose-300 font-bold'
-                          : 'bg-rose-950 text-rose-400 border border-rose-500/50 animate-pulse'
-                      }`}
-                    >
-                      {item.alertBadge}
-                    </span>
-                  )}
-
-                  {item.badge && !item.alertBadge && (
-                    <span
-                      className={`text-[9px] px-1.5 py-0.2 rounded font-mono font-bold flex items-center gap-1 ${
-                        item.id === 'historical-logs' && activeRecCount > 0
-                          ? 'bg-rose-600 text-white border border-rose-400 shadow-[0_0_10px_rgba(244,63,94,0.8)] animate-pulse'
-                          : isActive
-                          ? isDaylight
-                            ? 'bg-cyan-800 text-cyan-100'
-                            : 'bg-cyan-900/60 text-cyan-300 border border-cyan-400/40'
-                          : isDaylight
-                          ? 'bg-slate-200 text-slate-700'
-                          : 'bg-black/60 text-slate-500 border border-white/[0.06]'
-                      }`}
-                    >
-                      {item.id === 'historical-logs' && activeRecCount > 0 && <Disc size={8} className="animate-spin" />}
-                      <span>{item.badge}</span>
-                    </span>
-                  )}
-
-                  {item.isNew && (
-                    <span
-                      className={`text-[8px] uppercase font-bold tracking-widest px-1 py-0.2 rounded ${
-                        isDaylight
-                          ? 'bg-emerald-100 text-emerald-800 border border-emerald-300'
-                          : 'bg-emerald-950 text-emerald-300 border border-emerald-500/40 shadow-[0_0_8px_rgba(0,255,102,0.3)]'
-                      }`}
-                    >
-                      360° AI
-                    </span>
-                  )}
-                </button>
-              );
-            })}
-          </nav>
         </div>
 
-        {/* Footer Operator & Hardware Info */}
+        {/* 2. Navigation Area (Independently Scrollable, Only This Scrolls) */}
+        <nav className="sidebar-nav flex-1 min-h-0 px-2.5 py-1 space-y-1 overflow-y-auto overflow-x-hidden" id="sidebar-nav-menu">
+          {navItems.map((item) => {
+            const Icon = item.icon;
+            const isActive = currentView === item.id;
+
+            return (
+              <button
+                key={item.id}
+                id={`nav-${item.id}`}
+                onClick={() => {
+                  onSelectView(item.id);
+                  if (onCloseMobile) onCloseMobile();
+                }}
+                className={`w-full flex items-center justify-between px-3 py-2 rounded-lg text-xs font-semibold tracking-wide transition-all duration-200 cursor-pointer group relative ${
+                  isActive
+                    ? isDaylight
+                      ? 'bg-cyan-700 text-white font-bold shadow-sm'
+                      : 'bg-cyan-950/60 text-cyan-200 border border-cyan-500/50 shadow-[0_0_20px_rgba(0,240,255,0.2)]'
+                    : isDaylight
+                    ? 'text-slate-700 hover:bg-slate-200 hover:text-slate-900 border border-transparent'
+                    : 'text-slate-400 hover:bg-cyan-950/20 hover:text-cyan-300 border border-transparent'
+                }`}
+              >
+                {/* Left Active Glow Bar */}
+                {isActive && (
+                  <span
+                    className={`absolute left-0 top-1 bottom-1 w-1 rounded-r-full ${
+                      isDaylight ? 'bg-cyan-300' : 'bg-cyan-400 shadow-[0_0_8px_#00f0ff]'
+                    }`}
+                  ></span>
+                )}
+
+                <div className="flex items-center gap-2.5 min-w-0">
+                  <Icon
+                    size={15}
+                    className={`transition-colors shrink-0 ${
+                      isActive
+                        ? isDaylight
+                          ? 'text-white'
+                          : 'text-cyan-300 drop-shadow-[0_0_6px_rgba(0,240,255,0.7)]'
+                        : item.isAlert
+                        ? 'text-rose-500 group-hover:text-rose-400'
+                        : item.isHealth
+                        ? 'text-emerald-500 group-hover:text-emerald-400'
+                        : isDaylight
+                        ? 'text-slate-600 group-hover:text-cyan-700'
+                        : 'text-slate-400 group-hover:text-cyan-400'
+                    }`}
+                  />
+                  <span className="font-mono text-[11px] truncate">{item.label}</span>
+                </div>
+
+                {item.alertBadge !== undefined && item.alertBadge > 0 && (
+                  <span
+                    className={`text-[9px] px-1.5 py-0.2 rounded font-mono font-bold ${
+                      isActive
+                        ? 'bg-rose-600 text-white shadow-[0_0_10px_rgba(255,0,85,0.6)]'
+                        : isDaylight
+                        ? 'bg-rose-100 text-rose-800 border border-rose-300 font-bold'
+                        : 'bg-rose-950 text-rose-400 border border-rose-500/50 animate-pulse'
+                    }`}
+                  >
+                    {item.alertBadge}
+                  </span>
+                )}
+
+                {item.badge && !item.alertBadge && (
+                  <span
+                    className={`text-[9px] px-1.5 py-0.2 rounded font-mono font-bold flex items-center gap-1 ${
+                      item.id === 'historical-logs' && activeRecCount > 0
+                        ? 'bg-rose-600 text-white border border-rose-400 shadow-[0_0_10px_rgba(244,63,94,0.8)] animate-pulse'
+                        : isActive
+                        ? isDaylight
+                          ? 'bg-cyan-800 text-cyan-100'
+                          : 'bg-cyan-900/60 text-cyan-300 border border-cyan-400/40'
+                        : isDaylight
+                        ? 'bg-slate-200 text-slate-700'
+                        : 'bg-black/60 text-slate-500 border border-white/[0.06]'
+                    }`}
+                  >
+                    {item.id === 'historical-logs' && activeRecCount > 0 && <Disc size={8} className="animate-spin" />}
+                    <span>{item.badge}</span>
+                  </span>
+                )}
+
+                {item.isNew && (
+                  <span
+                    className={`text-[8px] uppercase font-bold tracking-widest px-1 py-0.2 rounded ${
+                      isDaylight
+                        ? 'bg-emerald-100 text-emerald-800 border border-emerald-300'
+                        : 'bg-emerald-950 text-emerald-300 border border-emerald-500/40 shadow-[0_0_8px_rgba(0,255,102,0.3)]'
+                    }`}
+                  >
+                    360° AI
+                  </span>
+                )}
+              </button>
+            );
+          })}
+        </nav>
+
+        {/* 3. Bottom Operator & Hardware Section (Fixed Bottom, Never Scrolls, Never Overlaps) */}
         <div
-          className={`p-3 border-t space-y-2 ${
+          className={`sidebar-footer shrink-0 flex-none mt-auto p-3 border-t space-y-2 select-none ${
             isDaylight
               ? 'bg-slate-100 border-slate-300'
               : 'bg-[#03060c] border-cyan-500/20'

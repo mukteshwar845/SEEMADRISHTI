@@ -839,3 +839,123 @@ html {
   font-size: var(--font-scale-percent, 100%);
 }
 
+/* ============================================================================
+   SEEMADRISHTI SIDEBAR SCROLLBAR & FULL-HEIGHT LAYOUT ARCHITECTURE
+   ============================================================================ */
+html,
+body,
+#root {
+  height: 100%;
+  height: 100dvh;
+  margin: 0;
+  padding: 0;
+  overflow: hidden;
+}
+
+#seemadrishti-app-root {
+  height: 100vh;
+  height: 100dvh;
+  max-height: 100vh;
+  max-height: 100dvh;
+  overflow: hidden;
+}
+
+#seemadrishti-sidebar,
+.sidebar {
+  height: 100vh;
+  height: 100dvh;
+  max-height: 100vh;
+  max-height: 100dvh;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.sidebar-header {
+  flex: 0 0 auto;
+}
+
+.sidebar-nav {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow-y: auto;
+  overflow-x: hidden;
+  scrollbar-width: thin;
+  scrollbar-color: rgba(0, 240, 255, 0.3) transparent;
+}
+
+.sidebar-nav::-webkit-scrollbar {
+  width: 5px;
+}
+
+.sidebar-nav::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.sidebar-nav::-webkit-scrollbar-thumb {
+  background: rgba(0, 240, 255, 0.25);
+  border-radius: 999px;
+  transition: background-color 0.2s ease;
+}
+
+.sidebar-nav:hover::-webkit-scrollbar-thumb {
+  background: rgba(0, 240, 255, 0.55);
+}
+
+.sidebar-nav::-webkit-scrollbar-thumb:hover {
+  background: rgba(0, 240, 255, 0.85);
+}
+
+.sidebar-footer {
+  flex: 0 0 auto;
+}
+
+/* Daylight theme scrollbar */
+[data-theme="daylight-field"] .sidebar-nav,
+html.theme-daylight .sidebar-nav {
+  scrollbar-color: rgba(2, 132, 199, 0.35) transparent;
+}
+
+[data-theme="daylight-field"] .sidebar-nav::-webkit-scrollbar-thumb,
+html.theme-daylight .sidebar-nav::-webkit-scrollbar-thumb {
+  background: rgba(2, 132, 199, 0.35);
+}
+
+[data-theme="daylight-field"] .sidebar-nav:hover::-webkit-scrollbar-thumb,
+html.theme-daylight .sidebar-nav:hover::-webkit-scrollbar-thumb {
+  background: rgba(2, 132, 199, 0.65);
+}
+
+/* Midnight Cyber Theme Scrollbar */
+[data-theme="midnight-cyber"] .sidebar-nav,
+html.theme-cyber .sidebar-nav {
+  scrollbar-color: rgba(99, 102, 241, 0.35) transparent;
+}
+
+[data-theme="midnight-cyber"] .sidebar-nav::-webkit-scrollbar-thumb,
+html.theme-cyber .sidebar-nav::-webkit-scrollbar-thumb {
+  background: rgba(99, 102, 241, 0.3);
+}
+
+[data-theme="midnight-cyber"] .sidebar-nav:hover::-webkit-scrollbar-thumb,
+html.theme-cyber .sidebar-nav:hover::-webkit-scrollbar-thumb {
+  background: rgba(99, 102, 241, 0.6);
+}
+
+/* Emerald Ops Theme Scrollbar */
+[data-theme="emerald-ops"] .sidebar-nav,
+html.theme-emerald .sidebar-nav {
+  scrollbar-color: rgba(16, 185, 129, 0.35) transparent;
+}
+
+[data-theme="emerald-ops"] .sidebar-nav::-webkit-scrollbar-thumb,
+html.theme-emerald .sidebar-nav::-webkit-scrollbar-thumb {
+  background: rgba(16, 185, 129, 0.3);
+}
+
+[data-theme="emerald-ops"] .sidebar-nav:hover::-webkit-scrollbar-thumb,
+html.theme-emerald .sidebar-nav:hover::-webkit-scrollbar-thumb {
+  background: rgba(16, 185, 129, 0.6);
+}
+
+

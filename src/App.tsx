@@ -438,7 +438,7 @@ function SeemadrishtiMainApp() {
   return (
     <div
       id="seemadrishti-app-root"
-      className={`min-h-screen flex flex-row overflow-x-hidden font-mono antialiased relative transition-colors duration-300 ${
+      className={`h-screen h-[100dvh] max-h-screen max-h-[100dvh] flex flex-row overflow-hidden font-mono antialiased relative transition-colors duration-300 ${
         isDaylight
           ? 'bg-[#f1f5f9] text-slate-900 selection:bg-cyan-600 selection:text-white'
           : 'bg-[#02040a] text-slate-200 selection:bg-cyan-500 selection:text-black'
@@ -476,7 +476,7 @@ function SeemadrishtiMainApp() {
 
       {/* Main Content Area */}
       <div
-        className={`flex-1 flex flex-col min-w-0 relative transition-colors duration-300 ${
+        className={`flex-1 flex flex-col min-w-0 min-h-0 h-full max-h-full overflow-hidden relative transition-colors duration-300 ${
           isDaylight
             ? 'bg-[#f8fafc]'
             : theme === 'midnight-cyber'
@@ -490,7 +490,7 @@ function SeemadrishtiMainApp() {
       >
         {/* Tactical Defense Telemetry Ribbon */}
         <div
-          className={`h-6 px-4 flex items-center justify-between text-[9px] font-mono select-none overflow-hidden border-b ${
+          className={`h-6 shrink-0 flex-none px-4 flex items-center justify-between text-[9px] font-mono select-none overflow-hidden border-b ${
             isDaylight
               ? 'bg-slate-200 border-slate-300 text-slate-700'
               : 'bg-[#010307] border-cyan-500/20 text-cyan-400'
@@ -551,7 +551,7 @@ function SeemadrishtiMainApp() {
 
         {/* Real-time Backend Offline Indicator Banner */}
         {isBackendOffline && (
-          <div className="bg-rose-950/95 border-b border-rose-500/60 px-4 py-2 flex items-center justify-between text-xs font-mono text-rose-200 z-30 shadow-[0_4px_20px_rgba(244,63,94,0.3)]">
+          <div className="shrink-0 flex-none bg-rose-950/95 border-b border-rose-500/60 px-4 py-2 flex items-center justify-between text-xs font-mono text-rose-200 z-30 shadow-[0_4px_20px_rgba(244,63,94,0.3)]">
             <div className="flex items-center gap-2">
               <AlertTriangle size={15} className="text-rose-400 shrink-0 animate-pulse" />
               <span>
@@ -568,7 +568,7 @@ function SeemadrishtiMainApp() {
         )}
 
         {/* Dynamic Main Body by Current View */}
-        <main className="flex-1 p-3.5 sm:p-5 overflow-y-auto space-y-5">
+        <main className="flex-1 min-h-0 p-3.5 sm:p-5 overflow-y-auto space-y-5">
           {currentView === 'dashboard' && (
             <>
               {/* Surveillance Intelligence AI Search (Phase 20) */}

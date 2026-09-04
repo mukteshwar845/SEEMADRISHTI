@@ -352,6 +352,8 @@ export type WebSocketMessageType =
   | 'frame_state'
   | 'browser_webcam_frame'
   | 'webcam_frame'
+  | 'phone_stream_frame'
+  | 'phone_stream_status'
   | 'demo_reset'
   | 'broadcast_test';
 

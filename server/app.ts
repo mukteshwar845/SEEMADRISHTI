@@ -20,6 +20,7 @@ import { intelligenceRouter } from './routes/intelligence';
 import { agentsRouter } from './routes/agents';
 import { chatRouter } from './routes/chat';
 import { webcamRouter } from './routes/webcam';
+import { sensorsRouter } from './routes/sensors';
 import { evidenceRouter } from './routes/evidence';
 import { errorHandler, notFoundHandler } from './middleware/errorHandler';
 import { requireAuth } from './middleware/auth';
@@ -105,6 +106,8 @@ export function createApp(): express.Application {
       normPath === '/auth/register' ||
       normPath === '/auth/roles' ||
       normPath === '/webcam/status' ||
+      normPath === '/sensors/pair' ||
+      normPath === '/sensors/heartbeat' ||
       /^\/cameras\/[^\/]+\/video/.test(normPath);
 
     if (isPublic) {
@@ -136,6 +139,7 @@ export function createApp(): express.Application {
   app.use('/api/agents', agentsRouter);
   app.use('/api/chat', chatRouter);
   app.use('/api/webcam', webcamRouter);
+  app.use('/api/sensors', sensorsRouter);
 
   // V1 Alias Sub-Routers
   app.use('/api/v1/intelligence/search', searchRouter);
@@ -154,6 +158,7 @@ export function createApp(): express.Application {
   app.use('/api/v1/intelligence', intelligenceRouter);
   app.use('/api/v1/agents', agentsRouter);
   app.use('/api/v1/webcam', webcamRouter);
+  app.use('/api/v1/sensors', sensorsRouter);
 
   // 404 for unhandled API routes only
   app.use('/api', notFoundHandler);

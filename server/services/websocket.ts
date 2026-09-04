@@ -3,13 +3,15 @@ import { WebSocketServer, WebSocket } from 'ws';
 import jwt from 'jsonwebtoken';
 import { WebSocketMessage, WebSocketMessageType } from '../types/api';
 import { getJwtSecret, getApiKey, getCvServiceToken, AuthenticatedUser } from '../middleware/auth';
+import { sensorPairingManager } from './sensorPairingManager';
 
 let wss: WebSocketServer | null = null;
 const allClients = new Set<WebSocket>();
 const authenticatedSubscribers = new Set<WebSocket>();
 const authenticatedPublishers = new Set<WebSocket>();
+const socketMetadata = new Map<WebSocket, { sensor_id?: string; camera_id?: string }>();
 
-const PUBLISHER_ROLES = new Set(['service', 'cv_service', 'admin', 'commander', 'operator', 'surveillance operator']);
+const PUBLISHER_ROLES = new Set(['service', 'cv_service', 'admin', 'commander', 'operator', 'surveillance operator', 'sensorpublisher', 'sensor_publisher']);
 
 function verifyToken(token?: string | null): { valid: boolean; role?: string; user?: any } {
   if (!token) return { valid: false };
@@ -61,6 +63,15 @@ export function initializeWebSocketServer(server: http.Server): WebSocketServer 
         authenticatedSubscribers.add(ws);
         if (PUBLISHER_ROLES.has((authRes.role || '').toLowerCase())) {
           authenticatedPublishers.add(ws);
+        }
+        if (authRes.user?.sensor_id || authRes.user?.camera_id) {
+          socketMetadata.set(ws, {
+            sensor_id: authRes.user.sensor_id,
+            camera_id: authRes.user.camera_id,
+          });
+          if (authRes.user.sensor_id) {
+            sensorPairingManager.recordHeartbeat(authRes.user.sensor_id, authRes.user.camera_id);
+          }
         }
       }
     } catch {
@@ -116,6 +127,15 @@ export function initializeWebSocketServer(server: http.Server): WebSocketServer 
             if (PUBLISHER_ROLES.has((authRes.role || '').toLowerCase())) {
               authenticatedPublishers.add(ws);
             }
+            if (authRes.user?.sensor_id || authRes.user?.camera_id) {
+              socketMetadata.set(ws, {
+                sensor_id: authRes.user.sensor_id,
+                camera_id: authRes.user.camera_id,
+              });
+              if (authRes.user.sensor_id) {
+                sensorPairingManager.recordHeartbeat(authRes.user.sensor_id, authRes.user.camera_id);
+              }
+            }
             ws.send(JSON.stringify({
               type: 'auth_ack',
               data: { success: true, role: authRes.role || 'Operator' },
@@ -128,7 +148,7 @@ export function initializeWebSocketServer(server: http.Server): WebSocketServer 
               timestamp: Date.now(),
             }));
           }
-        } else if (msg.type === 'phone_stream_frame' || msg.type === 'phone_stream_status') {
+        } else if (msg.type === 'phone_stream_frame') {
           // Security: Publisher authorization strictly required
           const isPublisher = authenticatedPublishers.has(ws);
           if (!isPublisher) {
@@ -140,9 +160,11 @@ export function initializeWebSocketServer(server: http.Server): WebSocketServer 
             return;
           }
 
-          // Validate camera ID
-          const camId = msg.camera_id || msg.data?.camera_id || msg.data?.cam;
-          if (!camId || typeof camId !== 'string' || !/^[a-zA-Z0-9_-]+$/.test(camId)) {
+          const meta = socketMetadata.get(ws);
+          const camId = (msg.camera_id || msg.data?.camera_id || msg.data?.cam || meta?.camera_id || 'cam-02').toLowerCase();
+          const sensorId = msg.sensor_id || msg.data?.sensor_id || meta?.sensor_id;
+
+          if (!/^[a-zA-Z0-9_-]+$/.test(camId)) {
             ws.send(JSON.stringify({
               type: 'error',
               data: { error: 'Invalid or missing camera_id for phone stream' },
@@ -151,28 +173,74 @@ export function initializeWebSocketServer(server: http.Server): WebSocketServer 
             return;
           }
 
-          // For frame payloads: reject oversized (> 5MB) or malformed payloads
-          if (msg.type === 'phone_stream_frame') {
-            const frame = msg.frame || msg.data?.frame || msg.data?.image;
-            if (!frame || typeof frame !== 'string') {
-              ws.send(JSON.stringify({
-                type: 'error',
-                data: { error: 'Malformed phone stream frame payload' },
-                timestamp: Date.now(),
-              }));
-              return;
-            }
-            if (frame.length > 5 * 1024 * 1024) {
-              ws.send(JSON.stringify({
-                type: 'error',
-                data: { error: 'Payload too large: phone frame exceeds 5MB limit' },
-                timestamp: Date.now(),
-              }));
-              return;
+          if (sensorId) {
+            sensorPairingManager.recordHeartbeat(sensorId, camId);
+          }
+
+          const frame = msg.frame || msg.data?.frame || msg.data?.image;
+          if (!frame || typeof frame !== 'string') {
+            ws.send(JSON.stringify({
+              type: 'error',
+              data: { error: 'Malformed phone stream frame payload' },
+              timestamp: Date.now(),
+            }));
+            return;
+          }
+          if (frame.length > 5 * 1024 * 1024) {
+            ws.send(JSON.stringify({
+              type: 'error',
+              data: { error: 'Payload too large: phone frame exceeds 5MB limit' },
+              timestamp: Date.now(),
+            }));
+            return;
+          }
+
+          // Broadcast to connected dashboard subscribers for live tactical HUD
+          broadcastWebSocketMessage('phone_stream_frame', {
+            camera_id: camId,
+            sensor_id: sensorId,
+            frame,
+            timestamp: msg.timestamp || msg.data?.timestamp || Date.now(),
+          });
+
+          // Forward to Central CV Engine for real YOLOv8 + ByteTrack processing
+          import('./cvProcessManager').then(({ dispatchWebcamFrame }) => {
+            dispatchWebcamFrame(camId, frame, msg.timestamp || msg.data?.timestamp || Date.now()).catch((err) => {
+              console.warn('[WebSocket] Error in dispatchWebcamFrame for phone frame:', err);
+            });
+          }).catch(() => {});
+        } else if (msg.type === 'phone_stream_status') {
+          const isPublisher = authenticatedPublishers.has(ws);
+          if (!isPublisher) {
+            ws.send(JSON.stringify({
+              type: 'error',
+              data: { error: 'Unauthorized: phone stream status publishing requires authenticated publisher credentials' },
+              timestamp: Date.now(),
+            }));
+            return;
+          }
+
+          const meta = socketMetadata.get(ws);
+          const camId = (msg.camera_id || msg.data?.camera_id || msg.data?.cam || meta?.camera_id || 'cam-02').toLowerCase();
+          const sensorId = msg.sensor_id || msg.data?.sensor_id || meta?.sensor_id;
+          const isConnected = msg.connected !== undefined ? Boolean(msg.connected) : Boolean(msg.data?.connected);
+
+          if (sensorId) {
+            if (isConnected) {
+              sensorPairingManager.recordHeartbeat(sensorId, camId);
+            } else {
+              sensorPairingManager.disconnectSensor(sensorId);
             }
           }
 
-          broadcastWebSocketMessage(msg.type, msg.data);
+          broadcastWebSocketMessage('phone_stream_status', {
+            ...msg.data,
+            camera_id: camId,
+            sensor_id: sensorId,
+            connected: isConnected,
+            status: isConnected ? 'CONNECTED' : 'DISCONNECTED',
+            last_seen: new Date().toISOString(),
+          });
         } else if (msg.type === 'browser_webcam_frame' || msg.type === 'webcam_frame') {
           const isSubscriber = authenticatedSubscribers.has(ws);
           if (isSubscriber) {
@@ -239,6 +307,11 @@ export function initializeWebSocketServer(server: http.Server): WebSocketServer 
       allClients.delete(ws);
       authenticatedSubscribers.delete(ws);
       authenticatedPublishers.delete(ws);
+      const meta = socketMetadata.get(ws);
+      if (meta?.sensor_id) {
+        sensorPairingManager.disconnectSensor(meta.sensor_id);
+      }
+      socketMetadata.delete(ws);
     });
 
     ws.on('error', () => {
@@ -246,6 +319,11 @@ export function initializeWebSocketServer(server: http.Server): WebSocketServer 
       allClients.delete(ws);
       authenticatedSubscribers.delete(ws);
       authenticatedPublishers.delete(ws);
+      const meta = socketMetadata.get(ws);
+      if (meta?.sensor_id) {
+        sensorPairingManager.disconnectSensor(meta.sensor_id);
+      }
+      socketMetadata.delete(ws);
     });
   });
 

@@ -541,7 +541,7 @@ class WebSocketService {
     return this.subscribe('phone_stream_frame', listener);
   }
 
-  public onPhoneStreamStatus(listener: (payload: { camera_id: string; connected: boolean; device?: string; resolution?: string }) => void): () => void {
+  public onPhoneStreamStatus(listener: (payload: { camera_id: string; connected: boolean; device?: string; resolution?: string; sensor_id?: string; status?: string; transport?: string; cam?: string }) => void): () => void {
     return this.subscribe('phone_stream_status', listener);
   }
 

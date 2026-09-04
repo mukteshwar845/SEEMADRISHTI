@@ -330,6 +330,27 @@ export function initializeSchema(): void {
     CREATE INDEX IF NOT EXISTS idx_behavior_chains_track ON behavior_chains(camera_id, track_id);
     CREATE INDEX IF NOT EXISTS idx_behavior_chains_pattern ON behavior_chains(behavior_pattern);
     CREATE INDEX IF NOT EXISTS idx_behavior_chains_incident ON behavior_chains(incident_id);
+
+    -- Sensor Pairings table (Tactical Edge Sensor Ingestion)
+    CREATE TABLE IF NOT EXISTS sensor_pairings (
+      id TEXT PRIMARY KEY,
+      token_hash TEXT NOT NULL,
+      camera_id TEXT NOT NULL,
+      operator_id TEXT,
+      status TEXT NOT NULL DEFAULT 'PENDING' CHECK(status IN ('PENDING', 'PAIRED', 'EXPIRED', 'CANCELLED')),
+      sensor_id TEXT,
+      transport TEXT NOT NULL DEFAULT 'WS',
+      created_at TEXT NOT NULL,
+      expires_at TEXT NOT NULL,
+      paired_at TEXT,
+      last_seen TEXT,
+      metadata TEXT,
+      FOREIGN KEY (camera_id) REFERENCES cameras(id) ON DELETE CASCADE
+    );
+
+    CREATE INDEX IF NOT EXISTS idx_sensor_pairings_status ON sensor_pairings(status);
+    CREATE INDEX IF NOT EXISTS idx_sensor_pairings_camera ON sensor_pairings(camera_id);
+    CREATE INDEX IF NOT EXISTS idx_sensor_pairings_hash ON sensor_pairings(token_hash);
   `);
 
   // Migrations for existing database instances

@@ -20,6 +20,7 @@ import json
 import base64
 import threading
 from collections import deque
+from dataclasses import asdict
 from http.server import BaseHTTPRequestHandler, HTTPServer
 from socketserver import ThreadingMixIn
 from typing import Any, Dict, List, Optional

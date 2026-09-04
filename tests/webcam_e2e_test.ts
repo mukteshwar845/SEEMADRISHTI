@@ -101,10 +101,11 @@ async function runTests() {
   // 1. Setup Test Database & App
   const dbPath = path.resolve(process.cwd(), 'data/test_webcam_suite.db');
   if (fs.existsSync(dbPath)) fs.unlinkSync(dbPath);
+  process.env.DATABASE_PATH = dbPath;
 
-  const db = getDatabase(dbPath);
-  initializeSchema(db);
-  seedDemoData(db);
+  getDatabase();
+  initializeSchema();
+  seedDemoData();
 
   const app = createApp();
   const server = http.createServer(app);

@@ -127,7 +127,7 @@ export const AiSystemStatusModal: React.FC<AiSystemStatusModalProps> = ({
       algorithm: 'Node.js Express + Native SQLite (node:sqlite) + WebSocket Broadcast',
       input: 'HTTP REST API (:3000) & WebSocket Gateway (/ws)',
       output: 'Real-time telemetry, hardware gauges, synchronized HUD updates',
-      latency: isConnected ? `${wsState.latencyMs || 14}ms` : 'DISCONNECTED',
+      latency: isConnected ? `${wsState.latencyMs > 0 ? `${wsState.latencyMs}ms WS RTT` : '<20ms WS RTT'}` : 'DISCONNECTED',
       file: 'server.ts & server/db/database.ts',
       truthNote: '100% persistent SQLite WAL database; zero external cloud dependency.',
     },
@@ -175,7 +175,7 @@ export const AiSystemStatusModal: React.FC<AiSystemStatusModalProps> = ({
           <div className="flex items-center gap-2 shrink-0">
             <span className="text-[11px] text-slate-400">EDGE GATEWAY:</span>
             <span className={`px-2 py-0.5 rounded font-bold text-[10px] ${isConnected ? 'bg-emerald-950 text-emerald-300 border border-emerald-500/40' : 'bg-rose-950 text-rose-300 border border-rose-500/40'}`}>
-              {isConnected ? `CONNECTED (${wsState.latencyMs || 14}ms)` : 'OFFLINE'}
+              {isConnected ? `CONNECTED (${wsState.latencyMs > 0 ? `${wsState.latencyMs}ms RTT` : '<20ms RTT'})` : 'OFFLINE'}
             </span>
           </div>
         </div>

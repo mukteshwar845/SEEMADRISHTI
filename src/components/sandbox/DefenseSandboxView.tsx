@@ -267,7 +267,7 @@ export const DefenseSandboxView: React.FC<DefenseSandboxViewProps> = ({
 
               {/* HUD Target Overlay */}
               <div className="absolute top-3 left-3 px-2 py-1 bg-black/70 backdrop-blur rounded text-[10px] text-cyan-400 border border-cyan-500/30">
-                AI MOT INFERENCE: 640x640 // 14ms
+                AI MOT INFERENCE: 640x640 // CPU P50: 232ms
               </div>
 
               {scenarioState === 'TRIGGERED' && (

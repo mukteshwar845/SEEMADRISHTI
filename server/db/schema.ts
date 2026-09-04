@@ -34,6 +34,7 @@ export function initializeSchema(): void {
       camera_id TEXT NOT NULL,
       event_type TEXT NOT NULL,
       severity TEXT NOT NULL CHECK(severity IN ('High', 'Medium', 'Low', 'Info')),
+      source_type TEXT NOT NULL DEFAULT 'fixture' CHECK(source_type IN ('live_camera', 'browser_webcam', 'rtsp', 'fixture', 'test', 'seed')),
       object_id TEXT,
       timestamp TEXT NOT NULL,
       metadata TEXT,
@@ -362,5 +363,11 @@ export function initializeSchema(): void {
   } catch {}
   try {
     db.exec(`CREATE UNIQUE INDEX IF NOT EXISTS idx_users_username ON users(username);`);
+  } catch {}
+  try {
+    db.exec(`ALTER TABLE events ADD COLUMN source_type TEXT NOT NULL DEFAULT 'fixture';`);
+  } catch {}
+  try {
+    db.exec(`CREATE INDEX IF NOT EXISTS idx_events_source_type ON events(source_type);`);
   } catch {}
 }

@@ -828,31 +828,10 @@ export const CameraFeedCanvas: React.FC<CameraFeedCanvasProps> = ({
             const isCrossing = Math.abs(tCenterY - lineYAtX) < crossingTolerance && tCenterX >= Math.min(lx1, lx2) && tCenterX <= Math.max(lx1, lx2);
             const isNear = distNorm < tacticalLine.bufferThreshold && !isCrossing;
 
-            const prevState = st.state;
             if (isCrossing) {
               st.state = 'LINE_CROSSING';
-              if (prevState !== 'LINE_CROSSING') {
-                tacticalAlertDispatcher.trigger({
-                  cameraId: camera.id,
-                  cameraName: camera.name,
-                  trackId: st.id,
-                  className: st.rawClass,
-                  type: 'LINE_CROSSING',
-                  lineName: tacticalLine.name,
-                });
-              }
             } else if (isNear) {
               st.state = 'SUSPICIOUS_AREA';
-              if (prevState === 'NORMAL') {
-                tacticalAlertDispatcher.trigger({
-                  cameraId: camera.id,
-                  cameraName: camera.name,
-                  trackId: st.id,
-                  className: st.rawClass,
-                  type: 'SUSPICIOUS_AREA',
-                  lineName: tacticalLine.name,
-                });
-              }
             } else {
               st.state = 'NORMAL';
             }

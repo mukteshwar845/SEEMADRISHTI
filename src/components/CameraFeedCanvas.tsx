@@ -306,22 +306,39 @@ export interface SyntheticTrackDef {
   trail: { x: number; y: number }[];
   state: 'NORMAL' | 'SUSPICIOUS_AREA' | 'LINE_CROSSING';
   lastStateChange: number;
+  motionType?: 'linear_y' | 'linear_y_reverse' | 'linear_x' | 'linear_x_reverse' | 'crosswalk' | 'oscillate';
 }
 
 export const getCameraTracks = (camId: string, camCode: string): SyntheticTrackDef[] => {
   const norm = `${camId} ${camCode}`.toLowerCase();
 
-  // CAM-08: Aerial intersection with road and zebra crossing
+  // CAM-08: Aerial intersection with road and zebra crossing (VisDrone uav0000305: Cars, Bus, Van, Motorcycle, Pedestrians. 0 Animals)
   if (norm.includes('8') || norm.includes('cam-08') || norm.includes('delta') || norm.includes('observation')) {
     return [
-      { id: 101, label: 'CAR (WHITE SEDAN)', rawClass: 'car', baseNormX: 0.52, baseNormY: 0.52, ampX: 0.02, ampY: 0.18, speedFactor: 0.35, phase: 0.2, w: 0.048, h: 0.088, isThreat: false, trail: [], state: 'NORMAL', lastStateChange: 0 },
-      { id: 102, label: 'CAR (BLACK SUV)', rawClass: 'car', baseNormX: 0.45, baseNormY: 0.30, ampX: 0.01, ampY: 0.15, speedFactor: 0.40, phase: 1.8, w: 0.052, h: 0.095, isThreat: false, trail: [], state: 'NORMAL', lastStateChange: 0 },
-      { id: 103, label: 'CAR (BLUE SEDAN)', rawClass: 'car', baseNormX: 0.24, baseNormY: 0.52, ampX: 0.18, ampY: 0.02, speedFactor: 0.30, phase: 2.5, w: 0.085, h: 0.050, isThreat: false, trail: [], state: 'NORMAL', lastStateChange: 0 },
-      { id: 104, label: 'VAN (DELIVERY VAN)', rawClass: 'van', baseNormX: 0.78, baseNormY: 0.46, ampX: 0.16, ampY: 0.02, speedFactor: 0.28, phase: 3.2, w: 0.098, h: 0.058, isThreat: false, trail: [], state: 'NORMAL', lastStateChange: 0 },
-      { id: 105, label: 'MOTORCYCLE', rawClass: 'motorcycle', baseNormX: 0.60, baseNormY: 0.42, ampX: 0.08, ampY: 0.12, speedFactor: 0.45, phase: 0.9, w: 0.028, h: 0.052, isThreat: false, trail: [], state: 'NORMAL', lastStateChange: 0 },
-      { id: 201, label: 'PEDESTRIAN', rawClass: 'person', baseNormX: 0.58, baseNormY: 0.48, ampX: 0.06, ampY: 0.03, speedFactor: 0.18, phase: 4.1, w: 0.032, h: 0.065, isThreat: false, trail: [], state: 'NORMAL', lastStateChange: 0 },
-      { id: 202, label: 'PEDESTRIAN', rawClass: 'person', baseNormX: 0.38, baseNormY: 0.65, ampX: 0.04, ampY: 0.04, speedFactor: 0.15, phase: 1.2, w: 0.030, h: 0.062, isThreat: false, trail: [], state: 'NORMAL', lastStateChange: 0 },
-      { id: 301, label: 'ANIMAL (CANINE)', rawClass: 'animal', baseNormX: 0.35, baseNormY: 0.48, ampX: 0.05, ampY: 0.04, speedFactor: 0.22, phase: 2.9, w: 0.032, h: 0.042, isThreat: false, trail: [], state: 'NORMAL', lastStateChange: 0 },
+      // 1. Southbound Lane 1 Car (White Sedan crossing tripwire line cleanly)
+      { id: 101, label: 'CAR (WHITE SEDAN)', rawClass: 'car', baseNormX: 0.425, baseNormY: 0.20, ampX: 0.002, ampY: 0.0, speedFactor: 0.28, phase: 0.4, w: 0.026, h: 0.056, isThreat: false, trail: [], state: 'NORMAL', lastStateChange: 0, motionType: 'linear_y' },
+      // 2. Northbound Transit Bus (Prominent lime-green transit bus driving up avenue)
+      { id: 102, label: 'TRANSIT BUS (GREEN)', rawClass: 'bus', baseNormX: 0.455, baseNormY: 0.75, ampX: 0.002, ampY: 0.0, speedFactor: 0.20, phase: 1.8, w: 0.038, h: 0.115, isThreat: false, trail: [], state: 'NORMAL', lastStateChange: 0, motionType: 'linear_y_reverse' },
+      // 3. Northbound Red Sedan crossing intersection
+      { id: 103, label: 'CAR (RED SEDAN)', rawClass: 'car', baseNormX: 0.540, baseNormY: 0.52, ampX: 0.002, ampY: 0.0, speedFactor: 0.24, phase: 2.6, w: 0.026, h: 0.054, isThreat: false, trail: [], state: 'NORMAL', lastStateChange: 0, motionType: 'linear_y_reverse' },
+      // 4. Southbound Grey SUV in central corridor
+      { id: 104, label: 'SUV (GREY)', rawClass: 'car', baseNormX: 0.505, baseNormY: 0.45, ampX: 0.002, ampY: 0.0, speedFactor: 0.26, phase: 3.1, w: 0.027, h: 0.058, isThreat: false, trail: [], state: 'NORMAL', lastStateChange: 0, motionType: 'linear_y' },
+      // 5. Westbound White Delivery Van on horizontal boulevard
+      { id: 105, label: 'VAN (DELIVERY VAN)', rawClass: 'van', baseNormX: 0.78, baseNormY: 0.405, ampX: 0.0, ampY: 0.002, speedFactor: 0.25, phase: 1.1, w: 0.065, h: 0.034, isThreat: false, trail: [], state: 'NORMAL', lastStateChange: 0, motionType: 'linear_x_reverse' },
+      // 6. Eastbound Blue Sedan on horizontal boulevard
+      { id: 106, label: 'CAR (BLUE SEDAN)', rawClass: 'car', baseNormX: 0.22, baseNormY: 0.485, ampX: 0.0, ampY: 0.002, speedFactor: 0.27, phase: 2.0, w: 0.055, h: 0.028, isThreat: false, trail: [], state: 'NORMAL', lastStateChange: 0, motionType: 'linear_x' },
+      // 7. Motorcycle / Courier Scooter riding along roadway
+      { id: 107, label: 'MOTORCYCLE (COURIER)', rawClass: 'motorcycle', baseNormX: 0.420, baseNormY: 0.58, ampX: 0.003, ampY: 0.0, speedFactor: 0.32, phase: 4.2, w: 0.016, h: 0.030, isThreat: false, trail: [], state: 'NORMAL', lastStateChange: 0, motionType: 'linear_y' },
+      // 8. North approach White Box Cargo Truck
+      { id: 108, label: 'BOX TRUCK (WHITE)', rawClass: 'truck', baseNormX: 0.415, baseNormY: 0.15, ampX: 0.002, ampY: 0.0, speedFactor: 0.22, phase: 5.2, w: 0.035, h: 0.082, isThreat: false, trail: [], state: 'NORMAL', lastStateChange: 0, motionType: 'linear_y' },
+      // 9. Pedestrian 1 traversing zebra crosswalk horizontally
+      { id: 201, label: 'PEDESTRIAN (CROSSWALK)', rawClass: 'person', baseNormX: 0.50, baseNormY: 0.49, ampX: 0.14, ampY: 0.004, speedFactor: 0.18, phase: 0.5, w: 0.015, h: 0.028, isThreat: false, trail: [], state: 'NORMAL', lastStateChange: 0, motionType: 'crosswalk' },
+      // 10. Pedestrian 2 on east sidewalk corridor
+      { id: 202, label: 'PEDESTRIAN (SIDEWALK)', rawClass: 'person', baseNormX: 0.645, baseNormY: 0.42, ampX: 0.01, ampY: 0.04, speedFactor: 0.16, phase: 1.8, w: 0.014, h: 0.026, isThreat: false, trail: [], state: 'NORMAL', lastStateChange: 0, motionType: 'oscillate' },
+      // 11. Pedestrian 3 in upper-right open plaza
+      { id: 203, label: 'PEDESTRIAN (PLAZA)', rawClass: 'person', baseNormX: 0.680, baseNormY: 0.26, ampX: 0.03, ampY: 0.02, speedFactor: 0.15, phase: 2.7, w: 0.014, h: 0.024, isThreat: false, trail: [], state: 'NORMAL', lastStateChange: 0, motionType: 'oscillate' },
+      // 12. Pedestrian 4 waiting/moving near west sidewalk curb
+      { id: 204, label: 'PEDESTRIAN (WEST CURB)', rawClass: 'person', baseNormX: 0.340, baseNormY: 0.46, ampX: 0.015, ampY: 0.02, speedFactor: 0.14, phase: 3.9, w: 0.015, h: 0.026, isThreat: false, trail: [], state: 'NORMAL', lastStateChange: 0, motionType: 'oscillate' },
     ];
   }
 
@@ -465,7 +482,7 @@ export const CameraFeedCanvas: React.FC<CameraFeedCanvasProps> = ({
     tracks.forEach((t) => {
       const c = t.rawClass.toLowerCase();
       if (c === 'person' || c === 'intruder' || c === 'patrol') persons++;
-      else if (c === 'car' || c === 'truck' || c === 'van' || c === 'motorcycle' || c === 'vehicle') vehicles++;
+      else if (c === 'car' || c === 'truck' || c === 'van' || c === 'motorcycle' || c === 'vehicle' || c === 'bus') vehicles++;
       else if (c === 'animal' || c === 'dog' || c === 'canine' || c === 'wildlife' || c === 'cattle') animals++;
     });
 
@@ -758,9 +775,42 @@ export const CameraFeedCanvas: React.FC<CameraFeedCanvasProps> = ({
           s.syntheticTracks.forEach((st) => {
             const time = s.tick * st.speedFactor + st.phase;
 
-            // Compute periodic traversal across space
-            const normX = (st.baseNormX + Math.sin(time) * st.ampX + 1) % 1;
-            const normY = (st.baseNormY + Math.cos(time * 0.9) * st.ampY + 1) % 1;
+            let normX = st.baseNormX;
+            let normY = st.baseNormY;
+
+            if (st.motionType === 'linear_y') {
+              // Southbound: moves top-to-bottom from Y=0.10 to 0.90
+              const span = 0.80;
+              const prog = ((st.baseNormY - 0.10 + time * 0.05) % span + span) % span;
+              normY = 0.10 + prog;
+              normX = st.baseNormX + Math.sin(time * 0.2) * (st.ampX || 0.002);
+            } else if (st.motionType === 'linear_y_reverse') {
+              // Northbound: moves bottom-to-top from Y=0.90 to 0.10
+              const span = 0.80;
+              const prog = ((0.90 - st.baseNormY + time * 0.045) % span + span) % span;
+              normY = 0.90 - prog;
+              normX = st.baseNormX + Math.sin(time * 0.2) * (st.ampX || 0.002);
+            } else if (st.motionType === 'linear_x') {
+              // Eastbound: moves left-to-right from X=0.10 to 0.90
+              const span = 0.80;
+              const prog = ((st.baseNormX - 0.10 + time * 0.055) % span + span) % span;
+              normX = 0.10 + prog;
+              normY = st.baseNormY + Math.sin(time * 0.2) * (st.ampY || 0.002);
+            } else if (st.motionType === 'linear_x_reverse') {
+              // Westbound: moves right-to-left from X=0.90 to 0.10
+              const span = 0.80;
+              const prog = ((0.90 - st.baseNormX + time * 0.05) % span + span) % span;
+              normX = 0.90 - prog;
+              normY = st.baseNormY + Math.sin(time * 0.2) * (st.ampY || 0.002);
+            } else if (st.motionType === 'crosswalk') {
+              // Crossing zebra walk horizontally back & forth
+              normX = st.baseNormX + Math.sin(time * 0.4) * (st.ampX || 0.12);
+              normY = st.baseNormY + Math.cos(time * 0.4) * (st.ampY || 0.004);
+            } else {
+              // General oscillation
+              normX = (st.baseNormX + Math.sin(time) * st.ampX + 1) % 1;
+              normY = (st.baseNormY + Math.cos(time * 0.9) * st.ampY + 1) % 1;
+            }
 
             const bx = normX * w;
             const by = normY * h;
@@ -774,29 +824,35 @@ export const CameraFeedCanvas: React.FC<CameraFeedCanvasProps> = ({
             const distNorm = dist / h;
 
             const lineYAtX = ly1 + ((tCenterX - lx1) / Math.max(1, lx2 - lx1)) * (ly2 - ly1);
-            const isCrossing = Math.abs(tCenterY - lineYAtX) < (bh * 0.35) && tCenterX >= lx1 && tCenterX <= lx2;
+            const crossingTolerance = Math.max(8, bh * 0.30);
+            const isCrossing = Math.abs(tCenterY - lineYAtX) < crossingTolerance && tCenterX >= Math.min(lx1, lx2) && tCenterX <= Math.max(lx1, lx2);
             const isNear = distNorm < tacticalLine.bufferThreshold && !isCrossing;
 
+            const prevState = st.state;
             if (isCrossing) {
               st.state = 'LINE_CROSSING';
-              tacticalAlertDispatcher.trigger({
-                cameraId: camera.id,
-                cameraName: camera.name,
-                trackId: st.id,
-                className: st.rawClass,
-                type: 'LINE_CROSSING',
-                lineName: tacticalLine.name,
-              });
+              if (prevState !== 'LINE_CROSSING') {
+                tacticalAlertDispatcher.trigger({
+                  cameraId: camera.id,
+                  cameraName: camera.name,
+                  trackId: st.id,
+                  className: st.rawClass,
+                  type: 'LINE_CROSSING',
+                  lineName: tacticalLine.name,
+                });
+              }
             } else if (isNear) {
               st.state = 'SUSPICIOUS_AREA';
-              tacticalAlertDispatcher.trigger({
-                cameraId: camera.id,
-                cameraName: camera.name,
-                trackId: st.id,
-                className: st.rawClass,
-                type: 'SUSPICIOUS_AREA',
-                lineName: tacticalLine.name,
-              });
+              if (prevState === 'NORMAL') {
+                tacticalAlertDispatcher.trigger({
+                  cameraId: camera.id,
+                  cameraName: camera.name,
+                  trackId: st.id,
+                  className: st.rawClass,
+                  type: 'SUSPICIOUS_AREA',
+                  lineName: tacticalLine.name,
+                });
+              }
             } else {
               st.state = 'NORMAL';
             }
@@ -867,8 +923,10 @@ export const CameraFeedCanvas: React.FC<CameraFeedCanvasProps> = ({
             ctx.stroke();
 
             // Label pill
-            const conf = Math.round(92 + Math.sin(s.tick + st.id) * 6);
-            const pillText = `#${st.id} ${style.categoryLabel} ${conf}%`;
+            const conf = Math.round(92 + Math.sin(s.tick + st.id) * 5);
+            const pillText = st.state === 'LINE_CROSSING' || st.state === 'SUSPICIOUS_AREA'
+              ? `#${st.id} ${style.categoryLabel} ${conf}%`
+              : `#${st.id} ${st.label} ${conf}%`;
             ctx.font = 'bold 8px monospace';
             const pillTextWidth = ctx.measureText(pillText).width;
             ctx.fillStyle = style.badgeBg;

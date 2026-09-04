@@ -1864,35 +1864,57 @@ export const MatrixCameraCell: React.FC<MatrixCameraCellProps> = ({
             });
 
           } else if (camId === 8) {
-            // CAM-08: High Altitude Outpost
-            const apcProg = (t * 0.09) % 1.0;
-            const apcX = width * (0.8 - apcProg * 0.5);
-            const apcY = height * 0.62;
-            const apcW = width * 0.24;
-            const apcH = height * 0.18;
+            // CAM-08: Sector Delta Observation (VisDrone aerial intersection: bus, cars, pedestrians)
+            const busProg = (t * 0.05) % 1.0;
+            const busY = height * (0.85 - busProg * 0.70);
+            const busX = width * 0.455;
+            const busW = width * 0.040;
+            const busH = height * 0.115;
 
             targets.push({
               type: 'vehicle',
-              label: 'ARMORED CARRIER #03',
-              confidence: 0.95,
-              x: apcX,
-              y: apcY,
-              w: apcW,
-              h: apcH,
-              color: '#38bdf8',
-              subLabel: `[MILITARY] APC ID:03 | 32.5 km/h ← WEST`,
+              label: 'TRANSIT BUS #101',
+              confidence: 0.96,
+              x: busX,
+              y: busY,
+              w: busW,
+              h: busH,
+              color: '#06b6d4',
+              subLabel: `[VEHICLE] BUS ID:101 | 24.5 km/h ↑ NORTH`,
             });
+
+            const carProg = (t * 0.07) % 1.0;
+            const carY = height * (0.15 + carProg * 0.70);
+            const carX = width * 0.425;
+            const carW = width * 0.028;
+            const carH = height * 0.058;
+
+            targets.push({
+              type: 'vehicle',
+              label: 'WHITE SEDAN #102',
+              confidence: 0.94,
+              x: carX,
+              y: carY,
+              w: carW,
+              h: carH,
+              color: '#06b6d4',
+              subLabel: `[VEHICLE] CAR ID:102 | 31.0 km/h ↓ SOUTH`,
+            });
+
+            const pedProg = 0.5 + Math.sin(t * 0.8) * 0.12;
+            const pedX = width * pedProg;
+            const pedY = height * 0.49;
 
             targets.push({
               type: 'pedestrian',
-              label: 'OUTPOST SENTRY #05',
-              confidence: 0.97,
-              x: width * 0.22,
-              y: height * 0.38,
-              w: width * 0.07,
-              h: height * 0.20,
+              label: 'CROSSWALK PEDESTRIAN #201',
+              confidence: 0.93,
+              x: pedX,
+              y: pedY,
+              w: width * 0.016,
+              h: height * 0.030,
               color: '#22c55e',
-              subLabel: `[HUMAN] ID:05 97% [ELEVATED POST]`,
+              subLabel: `[HUMAN] ID:201 93% [ZEBRA CROSSWALK]`,
             });
 
           } else {

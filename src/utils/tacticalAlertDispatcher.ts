@@ -39,7 +39,7 @@ class TacticalAlertDispatcher {
     const normClass = className.toLowerCase().trim();
     const classDisplay = normClass === 'person' || normClass === 'human' || normClass === 'intruder' || normClass === 'patrol'
       ? 'Human'
-      : normClass === 'car' || normClass === 'truck' || normClass === 'bus' || normClass === 'van' || normClass === 'vehicle' || normClass === 'suv'
+      : normClass === 'car' || normClass === 'truck' || normClass === 'bus' || normClass === 'van' || normClass === 'vehicle' || normClass === 'suv' || normClass === 'motorcycle' || normClass === 'bicycle' || normClass === 'moped' || normClass === 'scooter'
       ? 'Vehicle'
       : normClass === 'animal' || normClass === 'dog' || normClass === 'canine' || normClass === 'wildlife' || normClass === 'cattle'
       ? 'Animal'

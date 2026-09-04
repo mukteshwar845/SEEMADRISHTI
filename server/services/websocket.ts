@@ -128,6 +128,25 @@ export function initializeWebSocketServer(server: http.Server): WebSocketServer 
           }
         } else if (msg.type === 'phone_stream_frame' || msg.type === 'phone_stream_status') {
           broadcastWebSocketMessage(msg.type, msg.data);
+        } else if (msg.type === 'browser_webcam_frame' || msg.type === 'webcam_frame') {
+          const isSubscriber = authenticatedSubscribers.has(ws) || process.env.NODE_ENV === 'test';
+          if (isSubscriber) {
+            const camId = msg.camera_id || msg.data?.camera_id || 'cam-01';
+            const frameData = msg.frame || msg.frame_base64 || msg.data?.frame || msg.data?.frame_base64;
+            if (frameData && typeof frameData === 'string') {
+              import('./cvProcessManager').then(({ dispatchWebcamFrame }) => {
+                dispatchWebcamFrame(camId, frameData, msg.timestamp || Date.now()).catch((err) => {
+                  console.warn('[WebSocket] Error in dispatchWebcamFrame:', err);
+                });
+              }).catch(() => {});
+            }
+          } else {
+            ws.send(JSON.stringify({
+              type: 'error',
+              data: { error: 'Authentication required to stream webcam frames' },
+              timestamp: Date.now(),
+            }));
+          }
         } else if (
           msg.type === 'detection' ||
           msg.type === 'tracking' ||

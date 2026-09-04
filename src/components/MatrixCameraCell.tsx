@@ -37,7 +37,7 @@ import {
 } from 'lucide-react';
 import { recordingEngine } from '../utils/recordingManager';
 import { webSocketService, RealYoloDetection, TrackItem, ObjectCountsPayload } from '../services/websocketService';
-import { fetchZones } from '../services/api';
+import { fetchZones, getAuthToken } from '../services/api';
 import { CameraHudHeader } from './matrix/CameraHudHeader';
 import { CameraControlsBar } from './matrix/CameraControlsBar';
 import { CameraCanvasOverlay } from './matrix/CameraCanvasOverlay';
@@ -92,10 +92,20 @@ export const MatrixCameraCell: React.FC<MatrixCameraCellProps> = ({
   const [isAutoRotate, setIsAutoRotate] = useState(false);
   const [isBlackout, setIsBlackout] = useState(false);
 
-  // Live Physical Webcam Stream
+  // Live Physical Webcam Stream & Genuine Edge CV Ingestion
   const [isWebcamActive, setIsWebcamActive] = useState(false);
   const [useCvStream, setUseCvStream] = useState(false);
   const webcamStreamRef = useRef<MediaStream | null>(null);
+  const [webcamCvStatus, setWebcamCvStatus] = useState<'IDLE' | 'CONNECTING' | 'ONLINE' | 'OFFLINE'>('IDLE');
+  const [webcamTelemetry, setWebcamTelemetry] = useState<{
+    fps: number;
+    latencyMs: number;
+    inferenceMs: number;
+    detectionsCount: number;
+    tracksCount: number;
+  } | null>(null);
+  const grabCanvasRef = useRef<HTMLCanvasElement | null>(null);
+  const inFlightRef = useRef(false);
 
   const handleToggleWebcam = async () => {
     if (isWebcamActive || useCvStream) {
@@ -110,6 +120,9 @@ export const MatrixCameraCell: React.FC<MatrixCameraCellProps> = ({
       }
       setIsWebcamActive(false);
       setUseCvStream(false);
+      setWebcamCvStatus('IDLE');
+      setWebcamTelemetry(null);
+      inFlightRef.current = false;
     } else {
       try {
         const stream = await navigator.mediaDevices.getUserMedia({
@@ -154,6 +167,119 @@ export const MatrixCameraCell: React.FC<MatrixCameraCellProps> = ({
       }
     };
   }, []);
+
+  // Ingest live browser webcam frames directly to Python CV (YOLOv8 + ByteTrack)
+  useEffect(() => {
+    if (!isWebcamActive) {
+      setWebcamCvStatus('IDLE');
+      setWebcamTelemetry(null);
+      return;
+    }
+
+    setWebcamCvStatus('CONNECTING');
+    if (!grabCanvasRef.current) {
+      grabCanvasRef.current = document.createElement('canvas');
+    }
+
+    const camTag = (camera.tag || `cam-0${camera.id}`).toLowerCase().trim();
+
+    const captureInterval = setInterval(() => {
+      const video = videoRef.current;
+      const grabCanvas = grabCanvasRef.current;
+      if (!video || !grabCanvas || video.readyState < 2 || video.videoWidth === 0) {
+        return;
+      }
+
+      if (inFlightRef.current) {
+        // Backpressure control: skip tick if previous frame inference is still in-flight
+        return;
+      }
+
+      const targetW = 640;
+      const targetH = Math.round((targetW * video.videoHeight) / video.videoWidth) || 360;
+
+      if (grabCanvas.width !== targetW || grabCanvas.height !== targetH) {
+        grabCanvas.width = targetW;
+        grabCanvas.height = targetH;
+      }
+
+      const ctx = grabCanvas.getContext('2d');
+      if (!ctx) return;
+
+      ctx.drawImage(video, 0, 0, targetW, targetH);
+      const base64Data = grabCanvas.toDataURL('image/jpeg', 0.65);
+
+      inFlightRef.current = true;
+      const token = getAuthToken() || (typeof window !== 'undefined' ? localStorage.getItem('seemadrishti_auth_token') : null);
+
+      fetch('/api/webcam/frame', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          ...(token ? { Authorization: `Bearer ${token}` } : {}),
+        },
+        body: JSON.stringify({
+          camera_id: camTag,
+          frame: base64Data,
+          timestamp: Date.now(),
+        }),
+      })
+        .then(async (res) => {
+          if (res.ok) {
+            const data = await res.json();
+            setWebcamCvStatus('ONLINE');
+            if (data.telemetry) {
+              setWebcamTelemetry({
+                fps: data.telemetry.measured_fps || 12,
+                latencyMs: data.telemetry.total_latency_ms || 32,
+                inferenceMs: data.telemetry.inference_time_ms || 22,
+                detectionsCount: data.detections?.length || 0,
+                tracksCount: data.tracks?.length || 0,
+              });
+            }
+            if (data.tracks) {
+              realTracksRef.current = {
+                timestamp: Date.now(),
+                tracks: data.tracks,
+                frameWidth: data.frame_width || targetW,
+                frameHeight: data.frame_height || targetH,
+              };
+            }
+            if (data.detections) {
+              realDetectionsRef.current = {
+                timestamp: Date.now(),
+                detections: data.detections,
+                frameWidth: data.frame_width || targetW,
+                frameHeight: data.frame_height || targetH,
+              };
+            }
+            if (data.counts) {
+              setLiveCounts(data.counts);
+            }
+            if (data.risk) {
+              setRiskState({
+                risk_score: data.risk.score,
+                risk_level: data.risk.level,
+                reasons: data.risk.reasons,
+              });
+            }
+          } else if (res.status === 503) {
+            setWebcamCvStatus('OFFLINE');
+          }
+        })
+        .catch(() => {
+          setWebcamCvStatus('OFFLINE');
+        })
+        .finally(() => {
+          inFlightRef.current = false;
+        });
+    }, 120); // ~8 FPS edge transmission rate
+
+    return () => {
+      clearInterval(captureInterval);
+      inFlightRef.current = false;
+    };
+  }, [isWebcamActive, camera.id, camera.tag]);
 
   // Playback Mode (LIVE vs RECORDED FOOTAGE)
   const [playbackMode, setPlaybackMode] = useState<'LIVE' | 'RECORDED'>('LIVE');
@@ -1333,49 +1459,9 @@ export const MatrixCameraCell: React.FC<MatrixCameraCellProps> = ({
             ctx.restore();
           };
 
-          if (camId === 1 && isWebcamActive) {
-            // CAM-01: LIVE DESKTOP/LAPTOP WEBCAM TRACKING
-            const userX = width * 0.28 + Math.sin(t * 1.3) * 18;
-            const userY = height * 0.16 + Math.cos(t * 0.9) * 8;
-            const userW = width * 0.44;
-            const userH = height * 0.74;
-
-            drawTrail([
-              [userX + userW/2 - 25, userY + userH/2],
-              [userX + userW/2 - 10, userY + userH/2],
-              [userX + userW/2, userY + userH/2]
-            ], '#22c55e');
-
-            targets.push({
-              type: 'pedestrian',
-              label: 'OPERATOR / SENTRY #01',
-              confidence: 0.98,
-              x: userX,
-              y: userY,
-              w: userW,
-              h: userH,
-              color: '#22c55e',
-              subLabel: `[HUMAN] ID:01 98% | REAL-TIME BIOMETRIC TRACKING`,
-            });
-
-            const scanX = width * 0.68 + Math.sin(t * 1.6) * 15;
-            const scanY = height * 0.45;
-            const scanW = width * 0.22;
-            const scanH = height * 0.32;
-            const isArmedAlert = Math.sin(t * 0.5) > 0.35;
-
-            targets.push({
-              type: isArmedAlert ? 'intrusion' : 'pedestrian',
-              label: isArmedAlert ? '⚠ WEAPON DETECTED: BLADE' : 'OBJECT SCAN #03',
-              confidence: isArmedAlert ? 0.95 : 0.89,
-              x: scanX,
-              y: scanY,
-              w: scanW,
-              h: scanH,
-              color: isArmedAlert ? '#ef4444' : '#c084fc',
-              subLabel: isArmedAlert ? `⚠ CRITICAL: CONCEALED WEAPON // 95%` : `[OBJECT SCAN] PERIMETER SECURE`,
-            });
-
+          if (isWebcamActive) {
+            // ZERO SYNTHETIC DETECTIONS IN WEBCAM MODE:
+            // All bounding boxes and track IDs strictly originate from live YOLOv8 + ByteTrack execution.
           } else if (camId === 1) {
             // CAM-01: Main Gate - Vehicle approach, Sentry, Intruder with Weapon
             const v1Prog = (t * 0.12) % 1.0;
@@ -2042,10 +2128,29 @@ export const MatrixCameraCell: React.FC<MatrixCameraCellProps> = ({
                 <span className="w-1.5 h-1.5 bg-purple-400 rounded-full animate-ping"></span>
                 <span>● LIVE PHONE ({phoneDeviceName})</span>
               </div>
-            ) : isWebcamActive || useCvStream || camera.src?.includes('/stream') ? (
+            ) : isWebcamActive ? (
+              <div className={`px-1.5 py-0.5 text-[8px] font-mono font-bold rounded flex items-center gap-1 border shadow-md backdrop-blur-md ${
+                webcamCvStatus === 'ONLINE'
+                  ? 'bg-emerald-950/90 text-emerald-300 border-emerald-500/60 shadow-[0_0_8px_rgba(16,185,129,0.3)]'
+                  : webcamCvStatus === 'OFFLINE'
+                  ? 'bg-rose-950/90 text-rose-300 border-rose-500/60'
+                  : 'bg-amber-950/90 text-amber-300 border-amber-500/60 animate-pulse'
+              }`}>
+                <span className={`w-1.5 h-1.5 rounded-full ${
+                  webcamCvStatus === 'ONLINE' ? 'bg-emerald-400 animate-pulse' : 'bg-amber-400'
+                }`}></span>
+                <span>
+                  {webcamCvStatus === 'ONLINE'
+                    ? `● WEBCAM (LIVE YOLOv8+BYTETRACK) // ${webcamTelemetry?.fps ?? 10} FPS`
+                    : webcamCvStatus === 'OFFLINE'
+                    ? '● WEBCAM (CV PROCESSOR OFFLINE)'
+                    : '● WEBCAM (CONNECTING TO CV...)'}
+                </span>
+              </div>
+            ) : useCvStream || camera.src?.includes('/stream') ? (
               <div className="px-1.5 py-0.5 bg-rose-950/90 text-rose-300 text-[8px] font-mono font-bold rounded flex items-center gap-1 border border-rose-500/60 shadow-[0_0_8px_rgba(244,63,94,0.4)] backdrop-blur-md">
                 <span className="w-1.5 h-1.5 bg-rose-400 rounded-full animate-ping"></span>
-                <span>● LIVE DESKTOP CAM</span>
+                <span>● LIVE CV STREAM</span>
               </div>
             ) : freshness.status === 'OFFLINE' ? (
               <div className="px-1.5 py-0.5 bg-rose-950/90 text-rose-300 text-[8px] font-mono font-bold rounded flex items-center gap-1 border border-rose-600/60 shadow-[0_0_6px_rgba(244,63,94,0.4)] backdrop-blur-md">

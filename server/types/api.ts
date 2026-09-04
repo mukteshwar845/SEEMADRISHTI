@@ -350,6 +350,8 @@ export type WebSocketMessageType =
   | 'pong'
   | 'connection_ack'
   | 'frame_state'
+  | 'browser_webcam_frame'
+  | 'webcam_frame'
   | 'demo_reset'
   | 'broadcast_test';
 

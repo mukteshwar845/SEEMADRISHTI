@@ -19,14 +19,16 @@ import { searchRouter } from './routes/search';
 import { intelligenceRouter } from './routes/intelligence';
 import { agentsRouter } from './routes/agents';
 import { chatRouter } from './routes/chat';
+import { webcamRouter } from './routes/webcam';
 import { errorHandler, notFoundHandler } from './middleware/errorHandler';
 import { requireAuth } from './middleware/auth';
 
 export function createApp(): express.Application {
   const app = express();
 
-  // JSON Body Parser
-  app.use(express.json());
+  // JSON Body Parser with 10MB payload capacity for base64 camera frame ingestion
+  app.use(express.json({ limit: '10mb' }));
+  app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 
   // CORS Middleware (Restricted origins in production)
   const isProd = process.env.NODE_ENV === 'production';
@@ -102,6 +104,8 @@ export function createApp(): express.Application {
     if (
       p === '/health' ||
       p === '/v1/health' ||
+      p === '/webcam/status' ||
+      p === '/v1/webcam/status' ||
       p === '/auth/login' ||
       p === '/v1/auth/login' ||
       p === '/auth/register' ||
@@ -159,6 +163,7 @@ export function createApp(): express.Application {
   app.use('/api/intelligence', intelligenceRouter);
   app.use('/api/agents', agentsRouter);
   app.use('/api/chat', chatRouter);
+  app.use('/api/webcam', webcamRouter);
 
   // V1 Alias Sub-Routers
   app.use('/api/v1/intelligence/search', searchRouter);
@@ -176,6 +181,7 @@ export function createApp(): express.Application {
   app.use('/api/v1/behavior-chains', behaviorChainsRouter);
   app.use('/api/v1/intelligence', intelligenceRouter);
   app.use('/api/v1/agents', agentsRouter);
+  app.use('/api/v1/webcam', webcamRouter);
 
   // 404 for unhandled API routes only
   app.use('/api', notFoundHandler);

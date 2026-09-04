@@ -222,7 +222,9 @@ async function runTests() {
       }
 
       const frameData = getTestFrameBase64();
-      const res = await request('/api/webcam/frame', {
+
+      // Ingest sequential frames to confirm ByteTrack temporal track association
+      await request('/api/webcam/frame', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -232,6 +234,19 @@ async function runTests() {
           camera_id: 'cam-01',
           frame: frameData,
           timestamp: Date.now(),
+        }),
+      });
+
+      const res = await request('/api/webcam/frame', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${operatorToken}`,
+        },
+        body: JSON.stringify({
+          camera_id: 'cam-01',
+          frame: frameData,
+          timestamp: Date.now() + 100,
         }),
       });
 

@@ -18,13 +18,17 @@ let isStarting = false;
 let lastHealthCheckTime = 0;
 let isHealthy = false;
 let autoRestartEnabled = true;
+let forceOffline = false;
 
 export function disableCvAutoRestart(): void {
   autoRestartEnabled = false;
+  forceOffline = true;
+  shutdownCvProcessor();
 }
 
 export function enableCvAutoRestart(): void {
   autoRestartEnabled = true;
+  forceOffline = false;
 }
 
 export interface FrameProcessingResult {
@@ -54,6 +58,9 @@ export interface FrameProcessingResult {
  * Check if the Python CV processor is running and responsive.
  */
 export async function checkCvHealth(): Promise<boolean> {
+  if (forceOffline) {
+    return false;
+  }
   const now = Date.now();
   if (now - lastHealthCheckTime < 2000 && isHealthy) {
     return true;
@@ -80,6 +87,9 @@ export async function checkCvHealth(): Promise<boolean> {
  * Ensure the Python CV processor is running, spawning it if necessary.
  */
 export async function ensureCvProcessor(): Promise<boolean> {
+  if (forceOffline) {
+    return false;
+  }
   if (await checkCvHealth()) {
     return true;
   }

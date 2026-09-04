@@ -46,6 +46,18 @@ async function request<T>(endpoint: string, options: RequestInit = {}): Promise<
   const data = await response.json();
 
   if (!response.ok) {
+    if (
+      response.status === 401 ||
+      (response.status === 403 &&
+        (data.error?.includes('token') ||
+          data.error?.includes('expired') ||
+          data.error?.includes('invalid') ||
+          data.error?.includes('denied')))
+    ) {
+      if (authToken) {
+        setAuthToken(null);
+      }
+    }
     throw new Error(data.error || `HTTP error ${response.status}: ${response.statusText}`);
   }
 

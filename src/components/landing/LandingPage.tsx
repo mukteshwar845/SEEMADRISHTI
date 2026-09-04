@@ -459,8 +459,11 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onEnterAuth, onEnterDe
               <button
                 key={preset.username}
                 onClick={async () => {
-                  await enterDemoMode(preset.role);
-                  setPortal('app');
+                  try {
+                    await enterDemoMode(preset.role);
+                  } catch (err) {
+                    console.error('[AUTH] Failed to log in as demo preset:', err);
+                  }
                 }}
                 className="p-3 rounded-xl border border-slate-800 bg-slate-900/60 hover:bg-cyan-950/40 hover:border-cyan-500/50 text-left transition-all cursor-pointer group active:scale-95"
               >
@@ -847,8 +850,11 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onEnterAuth, onEnterDe
 
                 <button
                   onClick={async () => {
-                    await enterDemoMode(rc.role as any);
-                    setPortal('app');
+                    try {
+                      await enterDemoMode(rc.role as any);
+                    } catch (err) {
+                      console.error('[AUTH] Failed to log in as demo role:', err);
+                    }
                   }}
                   className="mt-6 w-full py-2.5 rounded-xl text-xs font-black tracking-wider transition-all cursor-pointer active:scale-95"
                   style={{

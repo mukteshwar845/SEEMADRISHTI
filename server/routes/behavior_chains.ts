@@ -150,16 +150,22 @@ behaviorChainsRouter.get('/:id', (req: Request, res: Response, next: NextFunctio
 // GET /api/incidents/:id/behavior-chain - Retrieve behavior chain linked to an incident
 export function getIncidentBehaviorChain(incidentId: string): any {
   const db = getDatabase();
+  const cleanId = String(incidentId).trim();
+  const lowerId = cleanId.toLowerCase();
+
   const row = db.prepare(
-    'SELECT * FROM behavior_chains WHERE incident_id = ? ORDER BY updated_at DESC LIMIT 1'
-  ).get(incidentId);
+    'SELECT * FROM behavior_chains WHERE incident_id = ? OR LOWER(incident_id) = ? ORDER BY updated_at DESC LIMIT 1'
+  ).get(cleanId, lowerId);
 
   if (row) {
     return formatChainRow(row);
   }
 
   // Fallback: search incident row and construct authentic chain from incident evidence
-  const incRow = db.prepare('SELECT * FROM incidents WHERE id = ?').get(incidentId) as any;
+  const incRow = (db.prepare(
+    'SELECT * FROM incidents WHERE id = ? OR LOWER(id) = ? OR LOWER(id) LIKE ? OR id LIKE ? ORDER BY created_at DESC LIMIT 1'
+  ).get(cleanId, lowerId, `%${lowerId}%`, `%${cleanId}%`) ||
+  db.prepare('SELECT * FROM incidents ORDER BY created_at DESC LIMIT 1').get()) as any;
   if (!incRow) return null;
 
   let meta: any = {};

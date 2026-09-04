@@ -467,10 +467,17 @@ class WebSocketService {
     this.latestFrameStates.forEach((state, camId) => {
       if (state.counts) {
         perCamera[camId] = state.counts;
-        visibleTotal += state.counts.visible.total || 0;
-        personTotal += state.counts.visible.person || 0;
-        vehicleTotal += (state.counts.visible.car || 0) + (state.counts.visible.truck || 0) + (state.counts.visible.bus || 0) + (state.counts.visible.motorcycle || 0);
-        uniqueSessionTotal += state.counts.unique_session.total || 0;
+        const visible = (state.counts as any).visible || state.counts;
+        const countTotal = Number(visible.total ?? visible.total_count ?? (visible.persons || 0) + (visible.vehicles || 0) ?? 0);
+        const countPersons = Number(visible.person ?? visible.persons ?? 0);
+        const countVehicles = Number(
+          visible.vehicles ??
+          ((visible.car || 0) + (visible.truck || 0) + (visible.bus || 0) + (visible.motorcycle || 0))
+        );
+        visibleTotal += countTotal;
+        personTotal += countPersons;
+        vehicleTotal += countVehicles;
+        uniqueSessionTotal += Number((state.counts as any).unique_session?.total ?? countTotal);
       } else if (state.tracks) {
         visibleTotal += state.tracks.length;
         const persons = state.tracks.filter((t) => t.class_name.toLowerCase() === 'person').length;

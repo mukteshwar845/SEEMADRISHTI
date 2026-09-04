@@ -1379,3 +1379,25 @@ incidentsRouter.post('/:id/evidence/restore-demo', requireRole(['Admin', 'Comman
     next(err);
   }
 });
+
+// GET /api/incidents/:id/behavior-chain - Retrieve behavior chain for an incident
+incidentsRouter.get('/:id/behavior-chain', (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const { id } = req.params;
+    const chain = getIncidentBehaviorChain(id);
+    if (!chain) {
+      return res.status(404).json({
+        success: false,
+        error: `No behavior chain found for incident '${id}'`,
+        insufficient_data: true,
+      });
+    }
+    return res.json({
+      success: true,
+      chain,
+    });
+  } catch (err) {
+    next(err);
+  }
+});
+

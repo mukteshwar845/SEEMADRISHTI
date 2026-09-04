@@ -103,10 +103,14 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           setAuthToken(null);
           setToken(null);
           setUser(null);
+          setCurrentPortal('landing');
         }
       } catch (err) {
-        // Fallback: If backend is offline, preserve local fallback session if token exists
-        console.warn('[AUTH] Offline or token validation warning:', err);
+        console.warn('[AUTH] Offline or token validation warning, clearing stale session:', err);
+        setAuthToken(null);
+        setToken(null);
+        setUser(null);
+        setCurrentPortal('landing');
       } finally {
         setIsLoading(false);
       }

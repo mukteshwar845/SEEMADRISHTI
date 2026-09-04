@@ -833,8 +833,11 @@ function RootAppPortal() {
       <LandingPage
         onEnterAuth={() => setPortal('auth')}
         onEnterDemo={async () => {
-          await enterDemoMode('Commander');
-          setPortal('app');
+          try {
+            await enterDemoMode('Commander');
+          } catch (err) {
+            console.error('[AUTH] Failed to enter demo mode:', err);
+          }
         }}
       />
     );

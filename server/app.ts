@@ -76,6 +76,9 @@ export function createApp(): express.Application {
   app.use('/api/evidence', evidenceRouter);
   app.use('/api/v1/evidence', evidenceRouter);
 
+  // Static surveillance camera video fixtures for browser player
+  app.use('/fixtures', express.static(path.resolve(process.cwd(), 'cv_service/tests/fixtures')));
+
   // Favicon handler
   app.get('/favicon.ico', (req: Request, res: Response) => {
     const icoPath = path.resolve(process.cwd(), 'public/favicon.svg');
@@ -95,12 +98,14 @@ export function createApp(): express.Application {
     // - Health probes: /health
     // - Authentication: /auth/login, /auth/register, /auth/roles
     // - Local webcam daemon status probe: /webcam/status
+    // - CCTV preview stream feeds for HTML5 <video> elements: /cameras/:id/video
     const isPublic =
       normPath === '/health' ||
       normPath === '/auth/login' ||
       normPath === '/auth/register' ||
       normPath === '/auth/roles' ||
-      normPath === '/webcam/status';
+      normPath === '/webcam/status' ||
+      /^\/cameras\/[^\/]+\/video/.test(normPath);
 
     if (isPublic) {
       return next();

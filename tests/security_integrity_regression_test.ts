@@ -443,6 +443,7 @@ async function runRegressionSuite() {
   if (passedCount < results.length) {
     process.exit(1);
   }
+  process.exit(0);
 }
 
 runRegressionSuite().catch((err) => {

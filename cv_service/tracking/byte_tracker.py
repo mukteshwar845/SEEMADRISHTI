@@ -119,6 +119,7 @@ class ByteTrackEngine:
             imgsz=self.config.input_size,
             classes=list(self.config.target_classes.keys()) if self.config.target_classes else None,
             verbose=False,
+            save=False,
         )
         inference_time_ms = round((time.perf_counter() - t_det_start) * 1000, 2)
 
@@ -166,41 +167,40 @@ class ByteTrackEngine:
                     })
 
                     # If tracker assigned a track_id, record track lifecycle
-                    if track_ids is not None and i < len(track_ids):
-                        track_id = int(track_ids[i])
+                    track_id = int(track_ids[i]) if (track_ids is not None and i < len(track_ids)) else (i + 1)
 
-                        # Class-Aware Consistency check
-                        if track_id in self.active_tracks:
-                            record = self.active_tracks[track_id]
-                            if record.class_id != cls_id:
-                                class_name = record.class_name
-                                cls_id = record.class_id
-                                category = YoloDetector.get_category_for_class(class_name)
-                            record.mark_detected(bbox_dict)
-                        else:
-                            # New Track
-                            record = TrackLifecycleRecord(track_id, cls_id, class_name)
-                            record.mark_detected(bbox_dict)
-                            self.active_tracks[track_id] = record
+                    # Class-Aware Consistency check
+                    if track_id in self.active_tracks:
+                        record = self.active_tracks[track_id]
+                        if record.class_id != cls_id:
+                            class_name = record.class_name
+                            cls_id = record.class_id
+                            category = YoloDetector.get_category_for_class(class_name)
+                        record.mark_detected(bbox_dict)
+                    else:
+                        # New Track
+                        record = TrackLifecycleRecord(track_id, cls_id, class_name)
+                        record.mark_detected(bbox_dict)
+                        self.active_tracks[track_id] = record
 
-                        observed_track_ids.add(track_id)
+                    observed_track_ids.add(track_id)
 
-                        cx = (x1 + x2) / 2.0
-                        cy = (y1 + y2) / 2.0
+                    cx = (x1 + x2) / 2.0
+                    cy = (y1 + y2) / 2.0
 
-                        tracks.append({
-                            "track_id": track_id,
-                            "class_name": class_name,
-                            "class": class_name,
-                            "class_id": cls_id,
-                            "category": category,
-                            "confidence": conf_val,
-                            "state": record.state,
-                            "bbox": bbox_dict,
-                            "centroid": (cx, cy),
-                            "frame_id": frame_id,
-                            "trajectory": [{"x": p["cx"], "y": p["cy"]} for p in record.history],
-                        })
+                    tracks.append({
+                        "track_id": track_id,
+                        "class_name": class_name,
+                        "class": class_name,
+                        "class_id": cls_id,
+                        "category": category,
+                        "confidence": conf_val,
+                        "state": record.state,
+                        "bbox": bbox_dict,
+                        "centroid": (cx, cy),
+                        "frame_id": frame_id,
+                        "trajectory": [{"x": p["cx"], "y": p["cy"]} for p in record.history],
+                    })
 
         # Step 3: Handle lost and removed tracks
         current_active_ids = list(self.active_tracks.keys())

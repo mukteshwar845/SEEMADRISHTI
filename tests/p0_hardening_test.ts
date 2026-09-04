@@ -273,6 +273,7 @@ async function runP0Tests() {
   if (passedCount < results.length) {
     process.exit(1);
   }
+  process.exit(0);
 }
 
 runP0Tests().catch((err) => {

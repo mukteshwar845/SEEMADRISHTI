@@ -108,58 +108,52 @@ function ensureDefaultThreatIntelligenceData(db: any): void {
       const defaultCorrelations = [
         {
           id: 'CORR-01-02-992',
-          title: 'Perimeter Breach & Cross-Sector Sprint',
           status: 'ACTIVE',
-          correlation_level: 'CROSS_CAMERA',
-          confidence_score: 98,
-          threat_type: 'HIGH_SPEED_INFILTRATION',
+          correlation_score: 98,
+          correlation_level: 'CRITICAL',
           started_at: new Date(Date.now() - 14 * 60 * 1000).toISOString(),
           last_seen_at: nowIso,
           camera_sequence: JSON.stringify(['cam-01', 'cam-02']),
           linked_incidents: JSON.stringify(['INC-000001', 'INC-000002']),
           observations: JSON.stringify([{ track_id: 992, speed_kmh: 18.2, direction: 'EAST_NORTH' }]),
-          reasons: JSON.stringify(['Fence Scaling (+35)', 'Rapid Sprint (+30)', 'Handover Confirmed (+33)']),
+          reasons: JSON.stringify([{ rule: 'Fence Scaling', weight: 35 }, { rule: 'Rapid Sprint', weight: 30 }, { rule: 'Handover Confirmed', weight: 33 }]),
         },
         {
           id: 'CORR-08-09-041',
-          title: 'Riverine Waterway Corridor Incursion',
           status: 'ACTIVE',
-          correlation_level: 'CROSS_CAMERA',
-          confidence_score: 94,
-          threat_type: 'WATERCRAFT_BREACH',
+          correlation_score: 94,
+          correlation_level: 'CRITICAL',
           started_at: new Date(Date.now() - 28 * 60 * 1000).toISOString(),
           last_seen_at: nowIso,
           camera_sequence: JSON.stringify(['cam-08', 'cam-09']),
           linked_incidents: JSON.stringify(['INC-000008', 'INC-000009']),
           observations: JSON.stringify([{ track_id: 41, speed_kmh: 24.8, vessel: true }]),
-          reasons: JSON.stringify(['Restricted Waterway Entry (+40)', 'Stationary Dwell (+25)', 'Night Swimmer (+29)']),
+          reasons: JSON.stringify([{ rule: 'Restricted Waterway Entry', weight: 40 }, { rule: 'Stationary Dwell', weight: 25 }, { rule: 'Night Swimmer', weight: 29 }]),
         },
         {
           id: 'CORR-05-06-114',
-          title: 'High Altitude Forest Pass Infiltration',
           status: 'ACTIVE',
-          correlation_level: 'CROSS_CAMERA',
-          confidence_score: 86,
-          threat_type: 'MOUNTAIN_PASS_TRANSIT',
+          correlation_score: 86,
+          correlation_level: 'HIGH',
           started_at: new Date(Date.now() - 55 * 60 * 1000).toISOString(),
           last_seen_at: nowIso,
           camera_sequence: JSON.stringify(['cam-05', 'cam-06']),
           linked_incidents: JSON.stringify(['INC-000005', 'INC-000006']),
           observations: JSON.stringify([{ track_id: 114, pattern: 'FOLIAGE_CRAWL' }]),
-          reasons: JSON.stringify(['Thermal Camouflage (+30)', 'Transit Pass Violation (+30)', 'Persistent Track (+26)']),
+          reasons: JSON.stringify([{ rule: 'Thermal Camouflage', weight: 30 }, { rule: 'Transit Pass Violation', weight: 30 }, { rule: 'Persistent Track', weight: 26 }]),
         },
       ];
 
       const insCorr = db.prepare(`
         INSERT OR REPLACE INTO correlated_incidents (
-          id, title, status, correlation_level, confidence_score, threat_type,
+          id, status, correlation_score, correlation_level,
           started_at, last_seen_at, camera_sequence, linked_incidents, observations, reasons, created_at, updated_at
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
       `);
 
       for (const c of defaultCorrelations) {
         insCorr.run(
-          c.id, c.title, c.status, c.correlation_level, c.confidence_score, c.threat_type,
+          c.id, c.status, c.correlation_score, c.correlation_level,
           c.started_at, c.last_seen_at, c.camera_sequence, c.linked_incidents, c.observations, c.reasons, nowIso, nowIso
         );
       }
@@ -212,12 +206,12 @@ function ensureDefaultThreatIntelligenceData(db: any): void {
 
     if (evtCount < 15) {
       const defaultEvents = [
-        { id: 'evt-02-1', camera_id: 'cam-02', event_type: 'RESTRICTED_ZONE_INTRUSION', severity: 'Critical', object_id: 'TRK-992', ts: new Date(Date.now() - 12 * 60 * 1000).toISOString() },
+        { id: 'evt-02-1', camera_id: 'cam-02', event_type: 'RESTRICTED_ZONE_INTRUSION', severity: 'High', object_id: 'TRK-992', ts: new Date(Date.now() - 12 * 60 * 1000).toISOString() },
         { id: 'evt-02-2', camera_id: 'cam-02', event_type: 'TRIPWIRE_CROSSING', severity: 'High', object_id: 'TRK-992', ts: new Date(Date.now() - 14 * 60 * 1000).toISOString() },
-        { id: 'evt-02-3', camera_id: 'cam-02', event_type: 'PRONE_CRAWLING', severity: 'Critical', object_id: 'TRK-13', ts: new Date(Date.now() - 22 * 60 * 1000).toISOString() },
-        { id: 'evt-09-1', camera_id: 'cam-09', event_type: 'RESTRICTED_WATERWAY_BREACH', severity: 'Critical', object_id: 'TRK-41', ts: new Date(Date.now() - 8 * 60 * 1000).toISOString() },
+        { id: 'evt-02-3', camera_id: 'cam-02', event_type: 'PRONE_CRAWLING', severity: 'High', object_id: 'TRK-13', ts: new Date(Date.now() - 22 * 60 * 1000).toISOString() },
+        { id: 'evt-09-1', camera_id: 'cam-09', event_type: 'RESTRICTED_WATERWAY_BREACH', severity: 'High', object_id: 'TRK-41', ts: new Date(Date.now() - 8 * 60 * 1000).toISOString() },
         { id: 'evt-09-2', camera_id: 'cam-09', event_type: 'SUSPICIOUS_VESSEL_DWELL', severity: 'High', object_id: 'TRK-41', ts: new Date(Date.now() - 18 * 60 * 1000).toISOString() },
-        { id: 'evt-09-3', camera_id: 'cam-09', event_type: 'NIGHT_WATERWAY_INFILTRATION', severity: 'Critical', object_id: 'TRK-42', ts: new Date(Date.now() - 32 * 60 * 1000).toISOString() },
+        { id: 'evt-09-3', camera_id: 'cam-09', event_type: 'NIGHT_WATERWAY_INFILTRATION', severity: 'High', object_id: 'TRK-42', ts: new Date(Date.now() - 32 * 60 * 1000).toISOString() },
         { id: 'evt-01-1', camera_id: 'cam-01', event_type: 'RESTRICTED_LINE_CROSSING', severity: 'High', object_id: 'TRK-27', ts: new Date(Date.now() - 25 * 60 * 1000).toISOString() },
         { id: 'evt-01-2', camera_id: 'cam-01', event_type: 'VEHICLE_OVERSPEED', severity: 'High', object_id: 'TRK-17', ts: new Date(Date.now() - 38 * 60 * 1000).toISOString() },
         { id: 'evt-06-1', camera_id: 'cam-06', event_type: 'TRIPWIRE_CROSSING', severity: 'High', object_id: 'TRK-114', ts: new Date(Date.now() - 48 * 60 * 1000).toISOString() },

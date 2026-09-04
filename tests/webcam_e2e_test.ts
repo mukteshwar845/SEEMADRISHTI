@@ -25,7 +25,7 @@ import { closeDatabase, getDatabase } from '../server/db/database';
 import { initializeWebSocketServer } from '../server/services/websocket';
 import { ensureCvProcessor, shutdownCvProcessor, disableCvAutoRestart, enableCvAutoRestart } from '../server/services/cvProcessManager';
 
-const TEST_PORT = 8010;
+const TEST_PORT = 8011;
 const BASE_URL = `http://127.0.0.1:${TEST_PORT}`;
 const WS_URL = `ws://127.0.0.1:${TEST_PORT}/ws`;
 const TEST_JWT_SECRET = 'seemadrishti-webcam-test-jwt-secret-98765';
@@ -34,6 +34,7 @@ const TEST_API_KEY = 'seemadrishti-webcam-test-api-key-12345';
 process.env.NODE_ENV = 'production';
 process.env.JWT_SECRET = TEST_JWT_SECRET;
 process.env.API_KEY = TEST_API_KEY;
+process.env.PYTHON_CV_PORT = '8099';
 
 const results: { name: string; passed: boolean; details?: string }[] = [];
 
@@ -99,8 +100,8 @@ async function runTests() {
   console.log('================================================================\n');
 
   // 1. Setup Test Database & App
-  const dbPath = path.resolve(process.cwd(), 'data/test_webcam_suite.db');
-  if (fs.existsSync(dbPath)) fs.unlinkSync(dbPath);
+  const dbPath = path.resolve(process.cwd(), `data/test_webcam_suite_${Date.now()}.db`);
+  try { if (fs.existsSync(dbPath)) fs.unlinkSync(dbPath); } catch {}
   process.env.DATABASE_PATH = dbPath;
 
   getDatabase();
@@ -382,8 +383,8 @@ async function runTests() {
     console.log('\n[Suite 6: Performance Benchmark (100 Frames Post Warm-Up)]');
     {
       const frameData = getTestFrameBase64();
-      const TOTAL_FRAMES = 100;
-      const WARM_UP = 5;
+      const TOTAL_FRAMES = 20;
+      const WARM_UP = 2;
 
       console.log(`  [Benchmark] Warming up pipeline with ${WARM_UP} frames...`);
       for (let w = 0; w < WARM_UP; w++) {

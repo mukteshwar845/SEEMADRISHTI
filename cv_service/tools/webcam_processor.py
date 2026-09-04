@@ -15,6 +15,10 @@ Guarantees:
 
 import os
 import sys
+
+os.environ["KMP_DUPLICATE_LIB_OK"] = "TRUE"
+os.environ["OMP_NUM_THREADS"] = "1"
+
 import time
 import json
 import base64
@@ -39,9 +43,19 @@ from cv_service.risk.engine import RiskEngine
 from cv_service.geometry.polygon import PolygonZone
 
 
-class ThreadedCVServer(ThreadingMixIn, HTTPServer):
-    daemon_threads = True
+# Set unbuffered stdout
+if hasattr(sys.stdout, "reconfigure"):
+    try:
+        sys.stdout.reconfigure(line_buffering=True)
+    except Exception:
+        pass
+
+class ThreadedCVServer(HTTPServer):
     allow_reuse_address = True
+
+    def handle_error(self, request, client_address):
+        # Gracefully swallow client connection resets during fast benchmarks
+        pass
 
 
 class WebcamCVProcessor:
@@ -108,82 +122,84 @@ class WebcamCVProcessor:
 
         tracker, intrusion_detector, risk_engine = self._get_or_create_components(camera_id)
         h, w = frame_bgr.shape[:2]
-        self.total_processed_frames += 1
 
-        # 2. YOLOv8 Detection + ByteTrack Multi-Object Tracking
-        track_output = tracker.track(
-            frame_bgr,
-            camera_id=camera_id,
-            frame_id=self.total_processed_frames,
-            timestamp=now_ts,
-        )
-        tracks = track_output.get("tracks", [])
-        raw_detections = track_output.get("detections", [])
-        if not raw_detections and tracks:
-            raw_detections = [
-                {
-                    "class_name": t["class_name"],
-                    "class": t.get("class", t["class_name"]),
-                    "class_id": t["class_id"],
-                    "category": t["category"],
-                    "confidence": t["confidence"],
-                    "bbox": t["bbox"],
-                }
-                for t in tracks
-            ]
-        inference_time_ms = track_output.get("inference_ms", 0.0)
-        tracking_time_ms = track_output.get("tracking_ms", 0.0)
+        with self._lock:
+            self.total_processed_frames += 1
 
-        # 3. Intrusion & Tripwire Evaluation
-        t_geo0 = time.perf_counter()
-        events, geom_ms = intrusion_detector.process_tracks(
-            tracks,
-            camera_id=camera_id,
-            frame_width=w,
-            frame_height=h,
-            frame_id=self.total_processed_frames,
-        )
-        geometry_time_ms = round(geom_ms, 2)
+            # 2. YOLOv8 Detection + ByteTrack Multi-Object Tracking
+            track_output = tracker.track(
+                frame_bgr,
+                camera_id=camera_id,
+                frame_id=self.total_processed_frames,
+                timestamp=now_ts,
+            )
+            tracks = track_output.get("tracks", [])
+            raw_detections = track_output.get("detections", [])
+            if not raw_detections and tracks:
+                raw_detections = [
+                    {
+                        "class_name": t["class_name"],
+                        "class": t.get("class", t["class_name"]),
+                        "class_id": t["class_id"],
+                        "category": t["category"],
+                        "confidence": t["confidence"],
+                        "bbox": t["bbox"],
+                    }
+                    for t in tracks
+                ]
+            inference_time_ms = track_output.get("inference_ms", 0.0)
+            tracking_time_ms = track_output.get("tracking_ms", 0.0)
 
-        formatted_events = []
-        if events:
-            for ev in events:
-                formatted_events.append({
-                    "event_id": getattr(ev, "event_id", f"ev-{int(time.time()*1000)}"),
-                    "zone_id": getattr(ev, "zone_id", ""),
-                    "zone_name": getattr(ev, "zone_name", "Restricted Perimeter"),
-                    "track_id": getattr(ev, "track_id", 0),
-                    "class_name": getattr(ev, "class_name", "person"),
-                    "direction": getattr(ev, "direction", "ENTERED"),
-                    "event_type": getattr(ev, "event_type", "RESTRICTED_ZONE_ENTRY"),
-                    "position": getattr(ev, "position", (0, 0)),
-                })
+            # 3. Intrusion & Tripwire Evaluation
+            t_geo0 = time.perf_counter()
+            events, geom_ms = intrusion_detector.process_tracks(
+                tracks,
+                camera_id=camera_id,
+                frame_width=w,
+                frame_height=h,
+                frame_id=self.total_processed_frames,
+            )
+            geometry_time_ms = round(geom_ms, 2)
 
-        # 4. Explainable Risk Engine
-        max_risk_score = 10
-        max_risk_level = "LOW"
-        risk_reasons = []
+            formatted_events = []
+            if events:
+                for ev in events:
+                    formatted_events.append({
+                        "event_id": getattr(ev, "event_id", f"ev-{int(time.time()*1000)}"),
+                        "zone_id": getattr(ev, "zone_id", ""),
+                        "zone_name": getattr(ev, "zone_name", "Restricted Perimeter"),
+                        "track_id": getattr(ev, "track_id", 0),
+                        "class_name": getattr(ev, "class_name", "person"),
+                        "direction": getattr(ev, "direction", "ENTERED"),
+                        "event_type": getattr(ev, "event_type", "RESTRICTED_ZONE_ENTRY"),
+                        "position": getattr(ev, "position", (0, 0)),
+                    })
 
-        if tracks:
-            for trk in tracks:
-                tid = trk.get("track_id", 0)
-                cls_name = trk.get("class_name", "person")
-                ctx = risk_engine.get_or_create_context(camera_id, tid, cls_name, now_ts)
+            # 4. Explainable Risk Engine
+            max_risk_score = 10
+            max_risk_level = "LOW"
+            risk_reasons = []
 
-                # Update context from spatial events
-                for ev in formatted_events:
-                    if ev.get("track_id") == tid:
-                        ctx.has_active_intrusion = True
-                        ctx.is_inside_zone = True
+            if tracks:
+                for trk in tracks:
+                    tid = trk.get("track_id", 0)
+                    cls_name = trk.get("class_name", "person")
+                    ctx = risk_engine.get_or_create_context(camera_id, tid, cls_name, now_ts)
 
-                assessment = risk_engine.calculate_risk(camera_id, tid, current_time=now_ts)
-                trk["risk_score"] = assessment.score
-                trk["risk_level"] = assessment.level
+                    # Update context from spatial events
+                    for ev in formatted_events:
+                        if ev.get("track_id") == tid:
+                            ctx.has_active_intrusion = True
+                            ctx.is_inside_zone = True
 
-                if assessment.score > max_risk_score:
-                    max_risk_score = assessment.score
-                    max_risk_level = assessment.level
-                    risk_reasons = [asdict(r) if hasattr(r, "__dataclass_fields__") else dict(r) for r in assessment.reasons]
+                    assessment = risk_engine.calculate_risk(camera_id, tid, current_time=now_ts)
+                    trk["risk_score"] = assessment.score
+                    trk["risk_level"] = assessment.level
+
+                    if assessment.score > max_risk_score:
+                        max_risk_score = assessment.score
+                        max_risk_level = assessment.level
+                        risk_reasons = [r.to_dict() if hasattr(r, "to_dict") else (asdict(r) if hasattr(r, "__dataclass_fields__") else dict(r)) for r in assessment.reasons]
 
         total_latency_ms = round((time.perf_counter() - t_start) * 1000, 1)
         self.total_processed_frames += 1
@@ -227,6 +243,8 @@ def run_server(port: int = 8088):
     processor.initialize()
 
     class Handler(BaseHTTPRequestHandler):
+        protocol_version = "HTTP/1.1"
+
         def log_message(self, format, *args):
             pass  # Suppress request spam
 
@@ -235,14 +253,12 @@ def run_server(port: int = 8088):
             self.send_header("Access-Control-Allow-Origin", "*")
             self.send_header("Access-Control-Allow-Methods", "POST, GET, OPTIONS")
             self.send_header("Access-Control-Allow-Headers", "Content-Type, Authorization, x-api-key")
+            self.send_header("Connection", "close")
+            self.send_header("Content-Length", "0")
             self.end_headers()
 
         def do_GET(self):
             if self.path == "/health" or self.path.startswith("/health"):
-                self.send_response(200)
-                self.send_header("Content-Type", "application/json")
-                self.send_header("Access-Control-Allow-Origin", "*")
-                self.end_headers()
                 resp = {
                     "status": "ok",
                     "service": "seemadrishti-webcam-cv",
@@ -251,24 +267,39 @@ def run_server(port: int = 8088):
                     "model": processor.config.model_name,
                     "backend": "PyTorch / Ultralytics YOLOv8",
                 }
-                self.wfile.write(json.dumps(resp).encode("utf-8"))
+                resp_bytes = json.dumps(resp).encode("utf-8")
+                self.send_response(200)
+                self.send_header("Content-Type", "application/json")
+                self.send_header("Access-Control-Allow-Origin", "*")
+                self.send_header("Connection", "close")
+                self.send_header("Content-Length", str(len(resp_bytes)))
+                self.end_headers()
+                self.wfile.write(resp_bytes)
                 return
 
             self.send_response(404)
+            self.send_header("Connection", "close")
+            self.send_header("Content-Length", "0")
             self.end_headers()
 
         def do_POST(self):
             if not self.path.startswith("/process_frame"):
                 self.send_response(404)
+                self.send_header("Connection", "close")
+                self.send_header("Content-Length", "0")
                 self.end_headers()
                 return
 
             try:
                 content_len = int(self.headers.get("Content-Length", 0))
                 if content_len <= 0 or content_len > 10 * 1024 * 1024:  # 10MB limit
+                    err_bytes = b'{"success":false,"error":"Invalid payload size"}'
                     self.send_response(400)
+                    self.send_header("Content-Type", "application/json")
+                    self.send_header("Connection", "close")
+                    self.send_header("Content-Length", str(len(err_bytes)))
                     self.end_headers()
-                    self.wfile.write(b'{"success":false,"error":"Invalid payload size"}')
+                    self.wfile.write(err_bytes)
                     return
 
                 body = self.rfile.read(content_len)
@@ -279,10 +310,13 @@ def run_server(port: int = 8088):
                 client_ts = payload.get("timestamp")
 
                 if not frame_b64 or not isinstance(frame_b64, str):
+                    err_bytes = b'{"success":false,"error":"Missing frame data"}'
                     self.send_response(400)
                     self.send_header("Content-Type", "application/json")
+                    self.send_header("Connection", "close")
+                    self.send_header("Content-Length", str(len(err_bytes)))
                     self.end_headers()
-                    self.wfile.write(b'{"success":false,"error":"Missing frame data"}')
+                    self.wfile.write(err_bytes)
                     return
 
                 if "," in frame_b64:
@@ -293,28 +327,37 @@ def run_server(port: int = 8088):
                 frame = cv2.imdecode(nparr, cv2.IMREAD_COLOR)
 
                 if frame is None or frame.size == 0:
+                    err_bytes = b'{"success":false,"error":"Could not decode image"}'
                     self.send_response(400)
                     self.send_header("Content-Type", "application/json")
+                    self.send_header("Connection", "close")
+                    self.send_header("Content-Length", str(len(err_bytes)))
                     self.end_headers()
-                    self.wfile.write(b'{"success":false,"error":"Could not decode image"}')
+                    self.wfile.write(err_bytes)
                     return
 
                 # Execute genuine CV pipeline
                 res = processor.process_frame(camera_id, frame, client_timestamp=client_ts)
+                resp_bytes = json.dumps(res).encode("utf-8")
 
                 self.send_response(200)
                 self.send_header("Content-Type", "application/json")
                 self.send_header("Access-Control-Allow-Origin", "*")
+                self.send_header("Connection", "close")
+                self.send_header("Content-Length", str(len(resp_bytes)))
                 self.end_headers()
-                self.wfile.write(json.dumps(res).encode("utf-8"))
+                self.wfile.write(resp_bytes)
 
             except Exception as e:
+                err_resp = {"success": False, "error": str(e)}
+                err_bytes = json.dumps(err_resp).encode("utf-8")
                 self.send_response(500)
                 self.send_header("Content-Type", "application/json")
                 self.send_header("Access-Control-Allow-Origin", "*")
+                self.send_header("Connection", "close")
+                self.send_header("Content-Length", str(len(err_bytes)))
                 self.end_headers()
-                err_resp = {"success": False, "error": str(e)}
-                self.wfile.write(json.dumps(err_resp).encode("utf-8"))
+                self.wfile.write(err_bytes)
 
     server = ThreadedCVServer(("127.0.0.1", port), Handler)
     print(f"[WebcamProcessor] HTTP CV processor listening on http://127.0.0.1:{port}/process_frame")

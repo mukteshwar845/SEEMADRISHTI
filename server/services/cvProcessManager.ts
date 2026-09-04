@@ -10,8 +10,13 @@ import { spawn, ChildProcess } from 'child_process';
 import path from 'path';
 import { broadcastWebSocketMessage } from './websocket';
 
-const PYTHON_CV_PORT = 8088;
-const PYTHON_CV_URL = `http://127.0.0.1:${PYTHON_CV_PORT}`;
+function getPythonCvPort(): number {
+  return parseInt(process.env.PYTHON_CV_PORT || '8088', 10);
+}
+
+function getPythonCvUrl(): string {
+  return `http://127.0.0.1:${getPythonCvPort()}`;
+}
 
 let cvProcess: ChildProcess | null = null;
 let isStarting = false;
@@ -70,7 +75,7 @@ export async function checkCvHealth(): Promise<boolean> {
   try {
     const controller = new AbortController();
     const timeout = setTimeout(() => controller.abort(), 1000);
-    const res = await fetch(`${PYTHON_CV_URL}/health`, { signal: controller.signal });
+    const res = await fetch(`${getPythonCvUrl()}/health`, { signal: controller.signal });
     clearTimeout(timeout);
     if (res.ok) {
       const data = await res.json();
@@ -110,9 +115,9 @@ export async function ensureCvProcessor(): Promise<boolean> {
   isStarting = true;
   try {
     const scriptPath = path.resolve(process.cwd(), 'cv_service/tools/webcam_processor.py');
-    console.log(`[CV-ProcessManager] Spawning Python CV processor: ${scriptPath}...`);
+    console.log(`[CV-ProcessManager] Spawning Python CV processor: ${scriptPath} on port ${getPythonCvPort()}...`);
 
-    cvProcess = spawn('python', [scriptPath, '--port', String(PYTHON_CV_PORT)], {
+    cvProcess = spawn('python', [scriptPath, '--port', String(getPythonCvPort())], {
       cwd: process.cwd(),
       stdio: ['ignore', 'pipe', 'pipe'],
       windowsHide: true,
@@ -171,7 +176,7 @@ export async function dispatchWebcamFrame(
     const controller = new AbortController();
     const timeout = setTimeout(() => controller.abort(), 10000);
 
-    const res = await fetch(`${PYTHON_CV_URL}/process_frame`, {
+    const res = await fetch(`${getPythonCvUrl()}/process_frame`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({

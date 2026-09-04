@@ -245,6 +245,7 @@ async function runSecurityTests() {
   if (passedCount < results.length) {
     process.exit(1);
   }
+  process.exit(0);
 }
 
 runSecurityTests().catch((err) => {

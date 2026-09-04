@@ -21,12 +21,16 @@ data/*.sqlite-shm
 data/*.sqlite-journal
 data/*.db
 data/*.db-journal
+data/*.db-wal
+data/*.db-shm
 *.sqlite
 *.sqlite-wal
 *.sqlite-shm
 *.sqlite-journal
 *.db
 *.db-journal
+*.db-wal
+*.db-shm
 !data/.gitkeep
 
 # -----------------------------------------------------------------------------

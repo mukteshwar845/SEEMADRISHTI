@@ -110,5 +110,89 @@
       "created_at": "2026-09-04T20:41:07.866Z",
       "updated_at": "2026-09-04T20:41:07.866Z"
     }
+  ],
+  "cam-test-1788557743279": [
+    {
+      "id": "zone-test-1788557743316",
+      "camera_id": "cam-test-1788557743279",
+      "name": "Watchtower Sector J Geofence Perimeter",
+      "polygon": [
+        [
+          0.2,
+          0.2
+        ],
+        [
+          0.8,
+          0.2
+        ],
+        [
+          0.8,
+          0.8
+        ],
+        [
+          0.2,
+          0.8
+        ]
+      ],
+      "enabled": true,
+      "created_at": "2026-09-04T21:35:43.318Z",
+      "updated_at": "2026-09-04T21:35:43.318Z"
+    }
+  ],
+  "cam-test-1788558262371": [
+    {
+      "id": "zone-test-1788558262413",
+      "camera_id": "cam-test-1788558262371",
+      "name": "Watchtower Sector J Geofence Perimeter",
+      "polygon": [
+        [
+          0.2,
+          0.2
+        ],
+        [
+          0.8,
+          0.2
+        ],
+        [
+          0.8,
+          0.8
+        ],
+        [
+          0.2,
+          0.8
+        ]
+      ],
+      "enabled": true,
+      "created_at": "2026-09-04T21:44:22.415Z",
+      "updated_at": "2026-09-04T21:44:22.415Z"
+    }
+  ],
+  "cam-test-1788558464054": [
+    {
+      "id": "zone-test-1788558464093",
+      "camera_id": "cam-test-1788558464054",
+      "name": "Watchtower Sector J Geofence Perimeter",
+      "polygon": [
+        [
+          0.2,
+          0.2
+        ],
+        [
+          0.8,
+          0.2
+        ],
+        [
+          0.8,
+          0.8
+        ],
+        [
+          0.2,
+          0.8
+        ]
+      ],
+      "enabled": true,
+      "created_at": "2026-09-04T21:47:44.095Z",
+      "updated_at": "2026-09-04T21:47:44.095Z"
+    }
   ]
 }

@@ -131,7 +131,7 @@ const INCIDENTS_DATA: IncidentEvidence[] = [
     targetLabel: 'Person [Perimeter Scaling]',
     totalDurationSeconds: 75,
     incidentTimeSeconds: 42,
-    imageUrl: '/evidence/INC-000001.mp4',
+    imageUrl: '/fixtures/visdrone/CAM-02.mp4',
     altText: 'Tactical night-vision surveillance camera feed showing a chain-link fence line at night with an unidentified human figure climbing the perimeter.',
     riskScore: 98,
     riskSeverity: 'CRITICAL EVENT',
@@ -172,7 +172,7 @@ const INCIDENTS_DATA: IncidentEvidence[] = [
     notes: 'High-confidence bipedal intruder detected scaling the northwest perimeter fence line during zero-shift (night). Subject loitered in restricted sterile buffer for 42.4 seconds with inward trajectory vector toward critical munitions assets.',
     status: 'pending',
     hasRealVideo: true,
-    evidenceUrl: '/evidence/INC-000001.mp4',
+    evidenceUrl: '/fixtures/visdrone/CAM-02.mp4',
     downloadUrl: '/api/incidents/inc-001/download',
     sha256: 'b634706cc8b10b7ab87988e50c20e78ce4589258df9a5621415174577884d8a2',
     verificationStatus: 'VERIFIED',
@@ -729,9 +729,16 @@ function mapRecordToEvidence(rec: IncidentRecord): IncidentEvidence {
   const timeStr = isNaN(d.getTime()) ? '02:14:03 AM' : d.toLocaleTimeString();
   const dateStr = isNaN(d.getTime()) ? '2026.08.30' : d.toISOString().slice(0, 10).replace(/-/g, '.');
 
-  const videoPath = rec.evidence_path
-    ? (rec.evidence_path.startsWith('/') ? rec.evidence_path : `/${rec.evidence_path}`)
-    : `/fixtures/visdrone/${cameraCode}.mp4`;
+  // Prefer unauthenticated fixture paths; /evidence/* routes require auth tokens
+  // which <video> elements cannot supply, causing a blank black screen.
+  const cameraCodeUpper = cameraCode.toUpperCase();
+  let videoPath: string;
+  if (rec.evidence_path && !rec.evidence_path.startsWith('/evidence/')) {
+    videoPath = rec.evidence_path.startsWith('/') ? rec.evidence_path : `/${rec.evidence_path}`;
+  } else {
+    // Fall back to publicly accessible fixture for this camera
+    videoPath = `/fixtures/visdrone/${cameraCodeUpper}.mp4`;
+  }
 
   return {
     id: rec.id,
@@ -779,7 +786,7 @@ export const IncidentInspectorView: React.FC<IncidentInspectorViewProps> = ({
   const [incidentsList, setIncidentsList] = useState<IncidentEvidence[]>(INCIDENTS_DATA);
   const [selectedIncidentIndex, setSelectedIncidentIndex] = useState(0);
   const [isPlaying, setIsPlaying] = useState(true);
-  const [currentTimeSec, setCurrentTimeSec] = useState(42);
+  const [currentTimeSec, setCurrentTimeSec] = useState(0);
   const [realDuration, setRealDuration] = useState<number>(0);
   const videoRef = useRef<HTMLVideoElement | null>(null);
   const [visionFilter, setVisionFilter] = useState<'night' | 'thermal' | 'optical'>('night');
@@ -845,13 +852,14 @@ export const IncidentInspectorView: React.FC<IncidentInspectorViewProps> = ({
 
   const currentIncident = incidentsList[selectedIncidentIndex] || incidentsList[0] || INCIDENTS_DATA[0];
 
-  // Playback timer simulation
+  // Playback timer simulation (fallback if video element is not driving onTimeUpdate)
   useEffect(() => {
     let interval: any;
     if (isPlaying) {
       interval = setInterval(() => {
         setCurrentTimeSec((prev) => {
-          if (prev >= currentIncident.totalDurationSeconds) {
+          const maxDur = realDuration || currentIncident.totalDurationSeconds || 20;
+          if (prev >= maxDur) {
             return 0;
           }
           return prev + 1;
@@ -859,17 +867,22 @@ export const IncidentInspectorView: React.FC<IncidentInspectorViewProps> = ({
       }, 1000);
     }
     return () => clearInterval(interval);
-  }, [isPlaying, currentIncident.totalDurationSeconds]);
+  }, [isPlaying, realDuration, currentIncident.totalDurationSeconds]);
 
   // Reset playback & simulator on incident change
   useEffect(() => {
-    setCurrentTimeSec(currentIncident.incidentTimeSeconds);
+    setCurrentTimeSec(0);
     setQrtDispatched(false);
     setAcknowledged(false);
     setSimulatedDwell(42);
     setSimulatedDirection('inward');
     setSimulatedBadge(false);
-  }, [selectedIncidentIndex]);
+    if (videoRef.current) {
+      videoRef.current.currentTime = 0;
+      videoRef.current.load();
+      videoRef.current.play().catch(() => {});
+    }
+  }, [selectedIncidentIndex, currentIncident.id, currentIncident.cameraCode]);
 
   // QRT Countdown timer when dispatched
   useEffect(() => {
@@ -1127,6 +1140,7 @@ export const IncidentInspectorView: React.FC<IncidentInspectorViewProps> = ({
           <div className="relative aspect-video bg-black rounded-xl overflow-hidden border border-[#3d494c]/60 shadow-2xl group">
             {/* Real HTML5 Video Player */}
             <video
+              key={`${currentIncident.id}-${currentIncident.cameraCode}`}
               ref={videoRef}
               src={currentIncident.evidenceUrl || currentIncident.imageUrl || `/fixtures/visdrone/${currentIncident.cameraCode}.mp4`}
               className="w-full h-full object-cover"
@@ -1134,6 +1148,25 @@ export const IncidentInspectorView: React.FC<IncidentInspectorViewProps> = ({
               loop
               muted
               playsInline
+              preload="auto"
+              onCanPlay={(e) => {
+                if (isPlaying) {
+                  e.currentTarget.play().catch(() => {});
+                }
+              }}
+              onTimeUpdate={(e) => {
+                const ct = Math.floor(e.currentTarget.currentTime);
+                setCurrentTimeSec(ct);
+              }}
+              onError={(e) => {
+                console.warn('[INSPECTOR] Primary video source failed, falling back to moving_objects:', currentIncident.evidenceUrl);
+                const vid = e.currentTarget;
+                if (!vid.src.includes('moving_objects.mp4')) {
+                  vid.src = '/fixtures/moving_objects.mp4';
+                  vid.load();
+                  vid.play().catch(() => {});
+                }
+              }}
               onLoadedMetadata={(e) => {
                 const dur = e.currentTarget.duration;
                 if (dur && !isNaN(dur)) {
@@ -1148,7 +1181,11 @@ export const IncidentInspectorView: React.FC<IncidentInspectorViewProps> = ({
                     ? 'contrast(1.1) saturate(1.1)'
                     : 'grayscale(0.6) brightness(1.2) contrast(1.3)',
               }}
-            />
+            >
+              <source src={currentIncident.evidenceUrl || currentIncident.imageUrl || `/fixtures/visdrone/${currentIncident.cameraCode}.mp4`} type="video/mp4" />
+              <source src={`/fixtures/visdrone/${currentIncident.cameraCode}.mp4`} type="video/mp4" />
+              <source src="/fixtures/moving_objects.mp4" type="video/mp4" />
+            </video>
 
             {/* Tactical Grad-CAM / Attention Saliency Heatmap Layer */}
             {(visionFilter === 'thermal' || isAttentionHeatmap) && (

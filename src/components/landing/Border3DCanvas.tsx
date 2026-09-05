@@ -335,6 +335,7 @@ export const Border3DCanvas: React.FC<Border3DCanvasProps> = ({
   return (
     <div
       ref={containerRef}
+      style={{ touchAction: 'pan-y' }}
       className={`w-full h-full relative overflow-hidden pointer-events-auto select-none ${className}`}
     />
   );

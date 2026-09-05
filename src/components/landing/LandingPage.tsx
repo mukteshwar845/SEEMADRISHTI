@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import {
   Shield,
   Eye,
@@ -6,6 +6,9 @@ import {
   Cpu,
   Layers,
   ArrowRight,
+  ArrowDown,
+  ChevronDown,
+  ChevronUp,
   Zap,
   Activity,
   Flame,
@@ -50,6 +53,29 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onEnterAuth, onEnterDe
   const [activeTab, setActiveTab] = useState<'capabilities' | 'sectors' | 'architecture' | 'roles'>('capabilities');
   const [liveUtcTime, setLiveUtcTime] = useState('');
   const [liveIstTime, setLiveIstTime] = useState('');
+
+  const pageRef = useRef<HTMLDivElement>(null);
+  const [showScrollTop, setShowScrollTop] = useState(false);
+
+  const scrollToSection = (id: string, tab?: 'capabilities' | 'sectors' | 'architecture' | 'roles') => {
+    if (tab) setActiveTab(tab);
+    const element = document.getElementById(id);
+    if (element) {
+      element.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }
+  };
+
+  const scrollToTop = () => {
+    if (pageRef.current) {
+      pageRef.current.scrollTo({ top: 0, behavior: 'smooth' });
+    }
+  };
+
+  const handlePageScroll = () => {
+    if (pageRef.current) {
+      setShowScrollTop(pageRef.current.scrollTop > 350);
+    }
+  };
 
   // Interactive Live Threat Simulator HUD State
   const [activeScenario, setActiveScenario] = useState<SimulationScenario>('perimeter_scaling');
@@ -288,7 +314,12 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onEnterAuth, onEnterDe
   ];
 
   return (
-    <div className="min-h-screen bg-[#02040a] text-slate-100 font-mono select-none relative overflow-x-hidden">
+    <div
+      ref={pageRef}
+      onScroll={handlePageScroll}
+      id="landing-page-root"
+      className="h-screen h-[100dvh] w-full overflow-y-auto overflow-x-hidden scroll-smooth bg-[#02040a] text-slate-100 font-mono relative selection:bg-cyan-500 selection:text-black"
+    >
       {/* 1. Tactical Defense Telemetry Ribbon */}
       <div className="h-7 px-4 bg-[#010307] border-b border-cyan-500/20 text-cyan-400 flex items-center justify-between text-[10px] select-none overflow-hidden z-50 relative">
         <div className="flex items-center gap-3">
@@ -314,7 +345,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onEnterAuth, onEnterDe
       </div>
 
       {/* 2. Professional Navigation Header */}
-      <header className="sticky top-0 z-40 backdrop-blur-xl bg-black/75 border-b border-cyan-500/20 px-4 sm:px-8 py-3 flex items-center justify-between transition-all">
+      <header className="sticky top-0 z-40 backdrop-blur-xl bg-black/85 border-b border-cyan-500/20 px-4 sm:px-8 py-3 flex items-center justify-between transition-all">
         <div className="flex items-center gap-3">
           <div className="relative flex items-center justify-center p-1.5 rounded-lg bg-cyan-950/60 border border-cyan-400/50 shadow-[0_0_15px_rgba(0,240,255,0.3)]">
             <SeemadrishtiLogo className="w-7 h-7 text-cyan-400" />
@@ -334,6 +365,48 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onEnterAuth, onEnterDe
             </p>
           </div>
         </div>
+
+        {/* Tactical Navigation Links */}
+        <nav className="hidden lg:flex items-center gap-1 text-[11px] font-bold text-slate-300">
+          <button
+            onClick={() => scrollToSection('simulator')}
+            className="px-2.5 py-1 rounded-lg hover:bg-cyan-950/50 hover:text-cyan-300 transition-all cursor-pointer"
+          >
+            SIMULATOR
+          </button>
+          <button
+            onClick={() => scrollToSection('matrix-section', 'capabilities')}
+            className={`px-2.5 py-1 rounded-lg transition-all cursor-pointer ${
+              activeTab === 'capabilities' ? 'text-cyan-300 bg-cyan-950/50 border border-cyan-500/30' : 'hover:bg-cyan-950/50 hover:text-cyan-300'
+            }`}
+          >
+            CAPABILITIES
+          </button>
+          <button
+            onClick={() => scrollToSection('matrix-section', 'sectors')}
+            className={`px-2.5 py-1 rounded-lg transition-all cursor-pointer ${
+              activeTab === 'sectors' ? 'text-cyan-300 bg-cyan-950/50 border border-cyan-500/30' : 'hover:bg-cyan-950/50 hover:text-cyan-300'
+            }`}
+          >
+            SECTORS
+          </button>
+          <button
+            onClick={() => scrollToSection('matrix-section', 'architecture')}
+            className={`px-2.5 py-1 rounded-lg transition-all cursor-pointer ${
+              activeTab === 'architecture' ? 'text-cyan-300 bg-cyan-950/50 border border-cyan-500/30' : 'hover:bg-cyan-950/50 hover:text-cyan-300'
+            }`}
+          >
+            ARCHITECTURE
+          </button>
+          <button
+            onClick={() => scrollToSection('matrix-section', 'roles')}
+            className={`px-2.5 py-1 rounded-lg transition-all cursor-pointer ${
+              activeTab === 'roles' ? 'text-cyan-300 bg-cyan-950/50 border border-cyan-500/30' : 'hover:bg-cyan-950/50 hover:text-cyan-300'
+            }`}
+          >
+            ROLES
+          </button>
+        </nav>
 
         {/* Header Action Buttons */}
         <div className="flex items-center gap-2 sm:gap-3">
@@ -357,7 +430,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onEnterAuth, onEnterDe
       </header>
 
       {/* 3. Hero Section with Interactive 3D Tactical Border Canvas */}
-      <section className="relative z-10 max-w-7xl mx-auto px-4 sm:px-6 pt-8 sm:pt-14 pb-12">
+      <section id="hero" className="relative z-10 max-w-7xl mx-auto px-4 sm:px-6 pt-8 sm:pt-14 pb-12">
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-center">
           {/* Left Hero Column: Tactical Headlines & Direct CTAs */}
           <div className="lg:col-span-6 text-left space-y-6">
@@ -410,6 +483,17 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onEnterAuth, onEnterDe
                 </div>
               ))}
             </div>
+
+            {/* Scroll Explore Indicator */}
+            <div className="pt-3">
+              <button
+                onClick={() => scrollToSection('simulator')}
+                className="inline-flex items-center gap-2 text-[11px] font-bold text-cyan-400 hover:text-cyan-200 bg-cyan-950/60 hover:bg-cyan-900/80 border border-cyan-500/40 px-4 py-2 rounded-full cursor-pointer transition-all group shadow-[0_0_15px_rgba(0,240,255,0.25)] active:scale-95"
+              >
+                <span>EXPLORE THREAT SIMULATOR &amp; DEFENSE MATRIX</span>
+                <ArrowDown size={14} className="animate-bounce text-cyan-400 group-hover:translate-y-0.5 transition-transform" />
+              </button>
+            </div>
           </div>
 
           {/* Right Hero Column: Interactive 3D Border Security Hologram Canvas */}
@@ -444,7 +528,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onEnterAuth, onEnterDe
         </div>
 
         {/* Quick 1-Click Evaluation Accounts */}
-        <div className="mt-8 p-4 rounded-2xl bg-black/70 border border-slate-800/90 backdrop-blur-md">
+        <div id="demo-accounts" className="mt-8 p-4 rounded-2xl bg-black/70 border border-slate-800/90 backdrop-blur-md scroll-mt-20">
           <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between mb-3 px-1 gap-2">
             <span className="text-[11px] font-bold text-slate-300 uppercase tracking-widest flex items-center gap-2">
               <Zap size={14} className="text-cyan-400 animate-bounce" />
@@ -491,7 +575,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onEnterAuth, onEnterDe
       </section>
 
       {/* 4. Interactive Live Threat Simulator HUD (Hands-on Command Deck) */}
-      <section className="relative z-10 max-w-7xl mx-auto px-4 sm:px-6 py-10">
+      <section id="simulator" className="relative z-10 max-w-7xl mx-auto px-4 sm:px-6 py-10 scroll-mt-20">
         <div className="p-6 sm:p-8 rounded-3xl border border-cyan-500/30 bg-[#030714]/95 shadow-[0_0_40px_rgba(0,0,0,0.9)] backdrop-blur-xl">
           <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-cyan-500/20 pb-5 mb-6">
             <div>
@@ -630,7 +714,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onEnterAuth, onEnterDe
       </section>
 
       {/* 5. Feature & Sector Matrix Tab Navigation */}
-      <section className="relative z-10 max-w-7xl mx-auto px-4 sm:px-6 py-10 border-t border-cyan-500/20">
+      <section id="matrix-section" className="relative z-10 max-w-7xl mx-auto px-4 sm:px-6 py-10 border-t border-cyan-500/20 scroll-mt-20">
         <div className="flex flex-wrap items-center justify-center gap-2 mb-8">
           {[
             { id: 'capabilities' as const, label: 'TACTICAL CAPABILITIES' },
@@ -872,7 +956,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onEnterAuth, onEnterDe
       </section>
 
       {/* 6. Professional Footer */}
-      <footer className="relative z-10 border-t border-cyan-500/20 bg-black/90 py-8 px-4 sm:px-8">
+      <footer id="footer" className="relative z-10 border-t border-cyan-500/20 bg-black/90 py-8 px-4 sm:px-8">
         <div className="max-w-7xl mx-auto flex flex-col md:flex-row items-center justify-between gap-4 text-xs text-slate-500">
           <div className="flex items-center gap-3">
             <SeemadrishtiLogo className="w-6 h-6 text-cyan-400" />
@@ -897,6 +981,17 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onEnterAuth, onEnterDe
           </div>
         </div>
       </footer>
+
+      {/* 7. Floating Back to Top Button */}
+      {showScrollTop && (
+        <button
+          onClick={scrollToTop}
+          className="fixed bottom-6 right-6 z-50 p-3 rounded-full bg-cyan-950/95 border-2 border-cyan-400 text-cyan-300 hover:bg-cyan-900 shadow-[0_0_25px_rgba(0,240,255,0.6)] cursor-pointer transition-all active:scale-90 animate-in fade-in slide-in-from-bottom-3 flex items-center justify-center group"
+          title="Scroll to Top"
+        >
+          <ChevronUp size={20} className="group-hover:-translate-y-0.5 transition-transform" />
+        </button>
+      )}
     </div>
   );
 };

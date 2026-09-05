@@ -474,24 +474,44 @@ export const CameraFeedCanvas: React.FC<CameraFeedCanvasProps> = ({
   });
 
   useEffect(() => {
-    const tracks = simState.current.syntheticTracks;
-    let persons = 0;
-    let vehicles = 0;
-    let animals = 0;
+    const reportCounts = () => {
+      const hasLiveWs = Date.now() - lastWsUpdateTimeRef.current < 4000;
+      let persons = 0;
+      let vehicles = 0;
+      let animals = 0;
+      let total = 0;
 
-    tracks.forEach((t) => {
-      const c = t.rawClass.toLowerCase();
-      if (c === 'person' || c === 'intruder' || c === 'patrol') persons++;
-      else if (c === 'car' || c === 'truck' || c === 'van' || c === 'motorcycle' || c === 'vehicle' || c === 'bus') vehicles++;
-      else if (c === 'animal' || c === 'dog' || c === 'canine' || c === 'wildlife' || c === 'cattle') animals++;
-    });
+      if (hasLiveWs && (liveTracksRef.current.length > 0 || liveDetectionsRef.current.length > 0)) {
+        const tracks = liveTracksRef.current;
+        tracks.forEach((t) => {
+          const c = (t.class_name || '').toLowerCase();
+          if (c === 'person' || c === 'intruder' || c === 'patrol' || c === 'pedestrian' || c === 'human' || c === 'guard') persons++;
+          else if (c === 'car' || c === 'truck' || c === 'van' || c === 'motorcycle' || c === 'vehicle' || c === 'bus' || c === 'bicycle' || c === 'suv') vehicles++;
+          else if (c === 'animal' || c === 'dog' || c === 'canine' || c === 'wildlife' || c === 'cattle' || c === 'k9') animals++;
+        });
+        total = tracks.length;
+      } else {
+        const tracks = simState.current.syntheticTracks;
+        tracks.forEach((t) => {
+          const c = (t.rawClass || '').toLowerCase();
+          if (c === 'person' || c === 'intruder' || c === 'patrol' || c === 'pedestrian' || c === 'human' || c === 'guard') persons++;
+          else if (c === 'car' || c === 'truck' || c === 'van' || c === 'motorcycle' || c === 'vehicle' || c === 'bus' || c === 'bicycle' || c === 'suv') vehicles++;
+          else if (c === 'animal' || c === 'dog' || c === 'canine' || c === 'wildlife' || c === 'cattle' || c === 'k9') animals++;
+        });
+        total = tracks.length;
+      }
 
-    onCountsUpdateRef.current?.({
-      persons,
-      vehicles,
-      animals,
-      total: tracks.length,
-    });
+      onCountsUpdateRef.current?.({
+        persons,
+        vehicles,
+        animals,
+        total,
+      });
+    };
+
+    reportCounts();
+    const interval = setInterval(reportCounts, 1000);
+    return () => clearInterval(interval);
   }, [camera.id]);
 
   const syncCanvasDimensions = useCallback(() => {

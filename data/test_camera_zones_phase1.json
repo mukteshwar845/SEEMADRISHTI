@@ -3,28 +3,2420 @@
     {
       "id": "zone-01",
       "camera_id": "cam-01",
-      "name": "Sector A Restricted Line [DEMO_SEED]",
+      "name": "Sector Alpha Restricted Perimeter",
       "polygon": [
         [
-          0.1,
-          0.8
+          0.585,
+          0.231
         ],
         [
-          0.9,
-          0.8
+          0.885,
+          0.231
         ],
         [
-          0.9,
-          0.95
+          0.885,
+          0.833
         ],
         [
-          0.1,
-          0.95
+          0.585,
+          0.833
         ]
       ],
       "enabled": true,
-      "created_at": "2026-08-31T16:50:40.739Z",
-      "updated_at": "2026-08-31T16:50:40.739Z"
+      "created_at": "2026-08-26T20:25:55.691Z",
+      "updated_at": "2026-08-26T21:42:24.008Z"
+    },
+    {
+      "id": "zone-p4-1787779089289",
+      "camera_id": "cam-01",
+      "name": "Phase 4 Test Geofence",
+      "polygon": [
+        [
+          200,
+          200
+        ],
+        [
+          500,
+          200
+        ],
+        [
+          500,
+          500
+        ],
+        [
+          200,
+          500
+        ]
+      ],
+      "enabled": true,
+      "created_at": "2026-08-26T21:18:09.323Z",
+      "updated_at": "2026-08-26T21:18:09.323Z"
+    },
+    {
+      "id": "zone-p4-1787798439186",
+      "camera_id": "cam-01",
+      "name": "Phase 4 Test Geofence",
+      "polygon": [
+        [
+          200,
+          200
+        ],
+        [
+          500,
+          200
+        ],
+        [
+          500,
+          500
+        ],
+        [
+          200,
+          500
+        ]
+      ],
+      "enabled": true,
+      "created_at": "2026-08-27T02:40:39.197Z",
+      "updated_at": "2026-08-27T02:40:39.197Z"
+    },
+    {
+      "id": "zone-p4-1787798575953",
+      "camera_id": "cam-01",
+      "name": "Phase 4 Test Geofence",
+      "polygon": [
+        [
+          200,
+          200
+        ],
+        [
+          500,
+          200
+        ],
+        [
+          500,
+          500
+        ],
+        [
+          200,
+          500
+        ]
+      ],
+      "enabled": true,
+      "created_at": "2026-08-27T02:42:55.968Z",
+      "updated_at": "2026-08-27T02:42:55.968Z"
+    },
+    {
+      "id": "zone-p4-1787802851769",
+      "camera_id": "cam-01",
+      "name": "Phase 4 Test Geofence",
+      "polygon": [
+        [
+          200,
+          200
+        ],
+        [
+          500,
+          200
+        ],
+        [
+          500,
+          500
+        ],
+        [
+          200,
+          500
+        ]
+      ],
+      "enabled": true,
+      "created_at": "2026-08-27T03:54:11.796Z",
+      "updated_at": "2026-08-27T03:54:11.796Z"
+    },
+    {
+      "id": "zone-p4-1787802897557",
+      "camera_id": "cam-01",
+      "name": "Phase 4 Test Geofence",
+      "polygon": [
+        [
+          200,
+          200
+        ],
+        [
+          500,
+          200
+        ],
+        [
+          500,
+          500
+        ],
+        [
+          200,
+          500
+        ]
+      ],
+      "enabled": true,
+      "created_at": "2026-08-27T03:54:57.581Z",
+      "updated_at": "2026-08-27T03:54:57.581Z"
+    },
+    {
+      "id": "zone-p4-1787803021506",
+      "camera_id": "cam-01",
+      "name": "Phase 4 Test Geofence",
+      "polygon": [
+        [
+          200,
+          200
+        ],
+        [
+          500,
+          200
+        ],
+        [
+          500,
+          500
+        ],
+        [
+          200,
+          500
+        ]
+      ],
+      "enabled": true,
+      "created_at": "2026-08-27T03:57:01.513Z",
+      "updated_at": "2026-08-27T03:57:01.513Z"
+    },
+    {
+      "id": "zone-p4-1787804927552",
+      "camera_id": "cam-01",
+      "name": "Phase 4 Test Geofence",
+      "polygon": [
+        [
+          200,
+          200
+        ],
+        [
+          500,
+          200
+        ],
+        [
+          500,
+          500
+        ],
+        [
+          200,
+          500
+        ]
+      ],
+      "enabled": true,
+      "created_at": "2026-08-27T04:28:47.554Z",
+      "updated_at": "2026-08-27T04:28:47.554Z"
+    },
+    {
+      "id": "zone-p4-1787805015656",
+      "camera_id": "cam-01",
+      "name": "Phase 4 Test Geofence",
+      "polygon": [
+        [
+          200,
+          200
+        ],
+        [
+          500,
+          200
+        ],
+        [
+          500,
+          500
+        ],
+        [
+          200,
+          500
+        ]
+      ],
+      "enabled": true,
+      "created_at": "2026-08-27T04:30:15.661Z",
+      "updated_at": "2026-08-27T04:30:15.661Z"
+    },
+    {
+      "id": "zone-p4-1787819000521",
+      "camera_id": "cam-01",
+      "name": "Phase 4 Test Geofence",
+      "polygon": [
+        [
+          200,
+          200
+        ],
+        [
+          500,
+          200
+        ],
+        [
+          500,
+          500
+        ],
+        [
+          200,
+          500
+        ]
+      ],
+      "enabled": true,
+      "created_at": "2026-08-27T08:23:20.554Z",
+      "updated_at": "2026-08-27T08:23:20.554Z"
+    },
+    {
+      "id": "zone-p4-1787819022229",
+      "camera_id": "cam-01",
+      "name": "Phase 4 Test Geofence",
+      "polygon": [
+        [
+          200,
+          200
+        ],
+        [
+          500,
+          200
+        ],
+        [
+          500,
+          500
+        ],
+        [
+          200,
+          500
+        ]
+      ],
+      "enabled": true,
+      "created_at": "2026-08-27T08:23:42.232Z",
+      "updated_at": "2026-08-27T08:23:42.232Z"
+    },
+    {
+      "id": "zone-p4-1787819086697",
+      "camera_id": "cam-01",
+      "name": "Phase 4 Test Geofence",
+      "polygon": [
+        [
+          200,
+          200
+        ],
+        [
+          500,
+          200
+        ],
+        [
+          500,
+          500
+        ],
+        [
+          200,
+          500
+        ]
+      ],
+      "enabled": true,
+      "created_at": "2026-08-27T08:24:46.711Z",
+      "updated_at": "2026-08-27T08:24:46.711Z"
+    },
+    {
+      "id": "zone-p4-1787819137421",
+      "camera_id": "cam-01",
+      "name": "Phase 4 Test Geofence",
+      "polygon": [
+        [
+          200,
+          200
+        ],
+        [
+          500,
+          200
+        ],
+        [
+          500,
+          500
+        ],
+        [
+          200,
+          500
+        ]
+      ],
+      "enabled": true,
+      "created_at": "2026-08-27T08:25:37.438Z",
+      "updated_at": "2026-08-27T08:25:37.438Z"
+    },
+    {
+      "id": "zone-p4-1787853699494",
+      "camera_id": "cam-01",
+      "name": "Phase 4 Test Geofence",
+      "polygon": [
+        [
+          200,
+          200
+        ],
+        [
+          500,
+          200
+        ],
+        [
+          500,
+          500
+        ],
+        [
+          200,
+          500
+        ]
+      ],
+      "enabled": true,
+      "created_at": "2026-08-27T18:01:39.498Z",
+      "updated_at": "2026-08-27T18:01:39.498Z"
+    },
+    {
+      "id": "zone-p4-1787853788937",
+      "camera_id": "cam-01",
+      "name": "Phase 4 Test Geofence",
+      "polygon": [
+        [
+          200,
+          200
+        ],
+        [
+          500,
+          200
+        ],
+        [
+          500,
+          500
+        ],
+        [
+          200,
+          500
+        ]
+      ],
+      "enabled": true,
+      "created_at": "2026-08-27T18:03:08.942Z",
+      "updated_at": "2026-08-27T18:03:08.942Z"
+    },
+    {
+      "id": "zone-p4-1787853817232",
+      "camera_id": "cam-01",
+      "name": "Phase 4 Test Geofence",
+      "polygon": [
+        [
+          200,
+          200
+        ],
+        [
+          500,
+          200
+        ],
+        [
+          500,
+          500
+        ],
+        [
+          200,
+          500
+        ]
+      ],
+      "enabled": true,
+      "created_at": "2026-08-27T18:03:37.236Z",
+      "updated_at": "2026-08-27T18:03:37.236Z"
+    },
+    {
+      "id": "zone-p4-1787853900706",
+      "camera_id": "cam-01",
+      "name": "Phase 4 Test Geofence",
+      "polygon": [
+        [
+          200,
+          200
+        ],
+        [
+          500,
+          200
+        ],
+        [
+          500,
+          500
+        ],
+        [
+          200,
+          500
+        ]
+      ],
+      "enabled": true,
+      "created_at": "2026-08-27T18:05:00.710Z",
+      "updated_at": "2026-08-27T18:05:00.710Z"
+    },
+    {
+      "id": "zone-p4-1787854005892",
+      "camera_id": "cam-01",
+      "name": "Phase 4 Test Geofence",
+      "polygon": [
+        [
+          200,
+          200
+        ],
+        [
+          500,
+          200
+        ],
+        [
+          500,
+          500
+        ],
+        [
+          200,
+          500
+        ]
+      ],
+      "enabled": true,
+      "created_at": "2026-08-27T18:06:45.897Z",
+      "updated_at": "2026-08-27T18:06:45.897Z"
+    },
+    {
+      "id": "zone-p4-1787854095530",
+      "camera_id": "cam-01",
+      "name": "Phase 4 Test Geofence",
+      "polygon": [
+        [
+          200,
+          200
+        ],
+        [
+          500,
+          200
+        ],
+        [
+          500,
+          500
+        ],
+        [
+          200,
+          500
+        ]
+      ],
+      "enabled": true,
+      "created_at": "2026-08-27T18:08:15.534Z",
+      "updated_at": "2026-08-27T18:08:15.534Z"
+    },
+    {
+      "id": "zone-p4-1787854194248",
+      "camera_id": "cam-01",
+      "name": "Phase 4 Test Geofence",
+      "polygon": [
+        [
+          200,
+          200
+        ],
+        [
+          500,
+          200
+        ],
+        [
+          500,
+          500
+        ],
+        [
+          200,
+          500
+        ]
+      ],
+      "enabled": true,
+      "created_at": "2026-08-27T18:09:54.254Z",
+      "updated_at": "2026-08-27T18:09:54.254Z"
+    },
+    {
+      "id": "zone-p4-1787854300756",
+      "camera_id": "cam-01",
+      "name": "Phase 4 Test Geofence",
+      "polygon": [
+        [
+          200,
+          200
+        ],
+        [
+          500,
+          200
+        ],
+        [
+          500,
+          500
+        ],
+        [
+          200,
+          500
+        ]
+      ],
+      "enabled": true,
+      "created_at": "2026-08-27T18:11:40.761Z",
+      "updated_at": "2026-08-27T18:11:40.761Z"
+    },
+    {
+      "id": "zone-p4-1787854403867",
+      "camera_id": "cam-01",
+      "name": "Phase 4 Test Geofence",
+      "polygon": [
+        [
+          200,
+          200
+        ],
+        [
+          500,
+          200
+        ],
+        [
+          500,
+          500
+        ],
+        [
+          200,
+          500
+        ]
+      ],
+      "enabled": true,
+      "created_at": "2026-08-27T18:13:23.881Z",
+      "updated_at": "2026-08-27T18:13:23.881Z"
+    },
+    {
+      "id": "zone-p4-1787854494625",
+      "camera_id": "cam-01",
+      "name": "Phase 4 Test Geofence",
+      "polygon": [
+        [
+          200,
+          200
+        ],
+        [
+          500,
+          200
+        ],
+        [
+          500,
+          500
+        ],
+        [
+          200,
+          500
+        ]
+      ],
+      "enabled": true,
+      "created_at": "2026-08-27T18:14:54.710Z",
+      "updated_at": "2026-08-27T18:14:54.710Z"
+    },
+    {
+      "id": "zone-p4-1787854632282",
+      "camera_id": "cam-01",
+      "name": "Phase 4 Test Geofence",
+      "polygon": [
+        [
+          200,
+          200
+        ],
+        [
+          500,
+          200
+        ],
+        [
+          500,
+          500
+        ],
+        [
+          200,
+          500
+        ]
+      ],
+      "enabled": true,
+      "created_at": "2026-08-27T18:17:12.331Z",
+      "updated_at": "2026-08-27T18:17:12.331Z"
+    },
+    {
+      "id": "zone-p4-1787854721094",
+      "camera_id": "cam-01",
+      "name": "Phase 4 Test Geofence",
+      "polygon": [
+        [
+          200,
+          200
+        ],
+        [
+          500,
+          200
+        ],
+        [
+          500,
+          500
+        ],
+        [
+          200,
+          500
+        ]
+      ],
+      "enabled": true,
+      "created_at": "2026-08-27T18:18:41.098Z",
+      "updated_at": "2026-08-27T18:18:41.098Z"
+    },
+    {
+      "id": "zone-p4-1787854849859",
+      "camera_id": "cam-01",
+      "name": "Phase 4 Test Geofence",
+      "polygon": [
+        [
+          200,
+          200
+        ],
+        [
+          500,
+          200
+        ],
+        [
+          500,
+          500
+        ],
+        [
+          200,
+          500
+        ]
+      ],
+      "enabled": true,
+      "created_at": "2026-08-27T18:20:49.862Z",
+      "updated_at": "2026-08-27T18:20:49.862Z"
+    },
+    {
+      "id": "zone-p4-1787854971900",
+      "camera_id": "cam-01",
+      "name": "Phase 4 Test Geofence",
+      "polygon": [
+        [
+          200,
+          200
+        ],
+        [
+          500,
+          200
+        ],
+        [
+          500,
+          500
+        ],
+        [
+          200,
+          500
+        ]
+      ],
+      "enabled": true,
+      "created_at": "2026-08-27T18:22:51.912Z",
+      "updated_at": "2026-08-27T18:22:51.912Z"
+    },
+    {
+      "id": "zone-p4-1787855069653",
+      "camera_id": "cam-01",
+      "name": "Phase 4 Test Geofence",
+      "polygon": [
+        [
+          200,
+          200
+        ],
+        [
+          500,
+          200
+        ],
+        [
+          500,
+          500
+        ],
+        [
+          200,
+          500
+        ]
+      ],
+      "enabled": true,
+      "created_at": "2026-08-27T18:24:29.656Z",
+      "updated_at": "2026-08-27T18:24:29.656Z"
+    },
+    {
+      "id": "zone-p4-1787855163225",
+      "camera_id": "cam-01",
+      "name": "Phase 4 Test Geofence",
+      "polygon": [
+        [
+          200,
+          200
+        ],
+        [
+          500,
+          200
+        ],
+        [
+          500,
+          500
+        ],
+        [
+          200,
+          500
+        ]
+      ],
+      "enabled": true,
+      "created_at": "2026-08-27T18:26:03.247Z",
+      "updated_at": "2026-08-27T18:26:03.247Z"
+    },
+    {
+      "id": "zone-p4-1787855362044",
+      "camera_id": "cam-01",
+      "name": "Phase 4 Test Geofence",
+      "polygon": [
+        [
+          200,
+          200
+        ],
+        [
+          500,
+          200
+        ],
+        [
+          500,
+          500
+        ],
+        [
+          200,
+          500
+        ]
+      ],
+      "enabled": true,
+      "created_at": "2026-08-27T18:29:22.058Z",
+      "updated_at": "2026-08-27T18:29:22.058Z"
+    },
+    {
+      "id": "zone-p4-1787855458512",
+      "camera_id": "cam-01",
+      "name": "Phase 4 Test Geofence",
+      "polygon": [
+        [
+          200,
+          200
+        ],
+        [
+          500,
+          200
+        ],
+        [
+          500,
+          500
+        ],
+        [
+          200,
+          500
+        ]
+      ],
+      "enabled": true,
+      "created_at": "2026-08-27T18:30:58.533Z",
+      "updated_at": "2026-08-27T18:30:58.533Z"
+    },
+    {
+      "id": "zone-p4-1787855538089",
+      "camera_id": "cam-01",
+      "name": "Phase 4 Test Geofence",
+      "polygon": [
+        [
+          200,
+          200
+        ],
+        [
+          500,
+          200
+        ],
+        [
+          500,
+          500
+        ],
+        [
+          200,
+          500
+        ]
+      ],
+      "enabled": true,
+      "created_at": "2026-08-27T18:32:18.118Z",
+      "updated_at": "2026-08-27T18:32:18.118Z"
+    },
+    {
+      "id": "zone-p4-1787855613704",
+      "camera_id": "cam-01",
+      "name": "Phase 4 Test Geofence",
+      "polygon": [
+        [
+          200,
+          200
+        ],
+        [
+          500,
+          200
+        ],
+        [
+          500,
+          500
+        ],
+        [
+          200,
+          500
+        ]
+      ],
+      "enabled": true,
+      "created_at": "2026-08-27T18:33:33.724Z",
+      "updated_at": "2026-08-27T18:33:33.724Z"
+    },
+    {
+      "id": "zone-p4-1787893221602",
+      "camera_id": "cam-01",
+      "name": "Phase 4 Test Geofence",
+      "polygon": [
+        [
+          200,
+          200
+        ],
+        [
+          500,
+          200
+        ],
+        [
+          500,
+          500
+        ],
+        [
+          200,
+          500
+        ]
+      ],
+      "enabled": true,
+      "created_at": "2026-08-28T05:00:21.605Z",
+      "updated_at": "2026-08-28T05:00:21.605Z"
+    },
+    {
+      "id": "zone-p4-1787893276963",
+      "camera_id": "cam-01",
+      "name": "Phase 4 Test Geofence",
+      "polygon": [
+        [
+          200,
+          200
+        ],
+        [
+          500,
+          200
+        ],
+        [
+          500,
+          500
+        ],
+        [
+          200,
+          500
+        ]
+      ],
+      "enabled": true,
+      "created_at": "2026-08-28T05:01:16.990Z",
+      "updated_at": "2026-08-28T05:01:16.990Z"
+    },
+    {
+      "id": "zone-p4-1787893343364",
+      "camera_id": "cam-01",
+      "name": "Phase 4 Test Geofence",
+      "polygon": [
+        [
+          200,
+          200
+        ],
+        [
+          500,
+          200
+        ],
+        [
+          500,
+          500
+        ],
+        [
+          200,
+          500
+        ]
+      ],
+      "enabled": true,
+      "created_at": "2026-08-28T05:02:23.366Z",
+      "updated_at": "2026-08-28T05:02:23.366Z"
+    },
+    {
+      "id": "zone-p4-1787893392230",
+      "camera_id": "cam-01",
+      "name": "Phase 4 Test Geofence",
+      "polygon": [
+        [
+          200,
+          200
+        ],
+        [
+          500,
+          200
+        ],
+        [
+          500,
+          500
+        ],
+        [
+          200,
+          500
+        ]
+      ],
+      "enabled": true,
+      "created_at": "2026-08-28T05:03:12.233Z",
+      "updated_at": "2026-08-28T05:03:12.233Z"
+    },
+    {
+      "id": "zone-p4-1787893431562",
+      "camera_id": "cam-01",
+      "name": "Phase 4 Test Geofence",
+      "polygon": [
+        [
+          200,
+          200
+        ],
+        [
+          500,
+          200
+        ],
+        [
+          500,
+          500
+        ],
+        [
+          200,
+          500
+        ]
+      ],
+      "enabled": true,
+      "created_at": "2026-08-28T05:03:51.576Z",
+      "updated_at": "2026-08-28T05:03:51.576Z"
+    },
+    {
+      "id": "zone-p4-1787893480018",
+      "camera_id": "cam-01",
+      "name": "Phase 4 Test Geofence",
+      "polygon": [
+        [
+          200,
+          200
+        ],
+        [
+          500,
+          200
+        ],
+        [
+          500,
+          500
+        ],
+        [
+          200,
+          500
+        ]
+      ],
+      "enabled": true,
+      "created_at": "2026-08-28T05:04:40.041Z",
+      "updated_at": "2026-08-28T05:04:40.041Z"
+    },
+    {
+      "id": "zone-p4-1787893537297",
+      "camera_id": "cam-01",
+      "name": "Phase 4 Test Geofence",
+      "polygon": [
+        [
+          200,
+          200
+        ],
+        [
+          500,
+          200
+        ],
+        [
+          500,
+          500
+        ],
+        [
+          200,
+          500
+        ]
+      ],
+      "enabled": true,
+      "created_at": "2026-08-28T05:05:37.299Z",
+      "updated_at": "2026-08-28T05:05:37.299Z"
+    },
+    {
+      "id": "zone-p4-1787893590168",
+      "camera_id": "cam-01",
+      "name": "Phase 4 Test Geofence",
+      "polygon": [
+        [
+          200,
+          200
+        ],
+        [
+          500,
+          200
+        ],
+        [
+          500,
+          500
+        ],
+        [
+          200,
+          500
+        ]
+      ],
+      "enabled": true,
+      "created_at": "2026-08-28T05:06:30.182Z",
+      "updated_at": "2026-08-28T05:06:30.182Z"
+    },
+    {
+      "id": "zone-p4-1787893640147",
+      "camera_id": "cam-01",
+      "name": "Phase 4 Test Geofence",
+      "polygon": [
+        [
+          200,
+          200
+        ],
+        [
+          500,
+          200
+        ],
+        [
+          500,
+          500
+        ],
+        [
+          200,
+          500
+        ]
+      ],
+      "enabled": true,
+      "created_at": "2026-08-28T05:07:20.169Z",
+      "updated_at": "2026-08-28T05:07:20.169Z"
+    },
+    {
+      "id": "zone-p4-1787893749276",
+      "camera_id": "cam-01",
+      "name": "Phase 4 Test Geofence",
+      "polygon": [
+        [
+          200,
+          200
+        ],
+        [
+          500,
+          200
+        ],
+        [
+          500,
+          500
+        ],
+        [
+          200,
+          500
+        ]
+      ],
+      "enabled": true,
+      "created_at": "2026-08-28T05:09:09.289Z",
+      "updated_at": "2026-08-28T05:09:09.289Z"
+    },
+    {
+      "id": "zone-p4-1787893836270",
+      "camera_id": "cam-01",
+      "name": "Phase 4 Test Geofence",
+      "polygon": [
+        [
+          200,
+          200
+        ],
+        [
+          500,
+          200
+        ],
+        [
+          500,
+          500
+        ],
+        [
+          200,
+          500
+        ]
+      ],
+      "enabled": true,
+      "created_at": "2026-08-28T05:10:36.299Z",
+      "updated_at": "2026-08-28T05:10:36.299Z"
+    },
+    {
+      "id": "zone-p4-1787893932291",
+      "camera_id": "cam-01",
+      "name": "Phase 4 Test Geofence",
+      "polygon": [
+        [
+          200,
+          200
+        ],
+        [
+          500,
+          200
+        ],
+        [
+          500,
+          500
+        ],
+        [
+          200,
+          500
+        ]
+      ],
+      "enabled": true,
+      "created_at": "2026-08-28T05:12:12.298Z",
+      "updated_at": "2026-08-28T05:12:12.298Z"
+    },
+    {
+      "id": "zone-p4-1787895206810",
+      "camera_id": "cam-01",
+      "name": "Phase 4 Test Geofence",
+      "polygon": [
+        [
+          200,
+          200
+        ],
+        [
+          500,
+          200
+        ],
+        [
+          500,
+          500
+        ],
+        [
+          200,
+          500
+        ]
+      ],
+      "enabled": true,
+      "created_at": "2026-08-28T05:33:26.835Z",
+      "updated_at": "2026-08-28T05:33:26.835Z"
+    },
+    {
+      "id": "zone-p4-1787895274724",
+      "camera_id": "cam-01",
+      "name": "Phase 4 Test Geofence",
+      "polygon": [
+        [
+          200,
+          200
+        ],
+        [
+          500,
+          200
+        ],
+        [
+          500,
+          500
+        ],
+        [
+          200,
+          500
+        ]
+      ],
+      "enabled": true,
+      "created_at": "2026-08-28T05:34:34.728Z",
+      "updated_at": "2026-08-28T05:34:34.728Z"
+    },
+    {
+      "id": "zone-p4-1787895344839",
+      "camera_id": "cam-01",
+      "name": "Phase 4 Test Geofence",
+      "polygon": [
+        [
+          200,
+          200
+        ],
+        [
+          500,
+          200
+        ],
+        [
+          500,
+          500
+        ],
+        [
+          200,
+          500
+        ]
+      ],
+      "enabled": true,
+      "created_at": "2026-08-28T05:35:44.864Z",
+      "updated_at": "2026-08-28T05:35:44.864Z"
+    },
+    {
+      "id": "zone-p4-1787895404919",
+      "camera_id": "cam-01",
+      "name": "Phase 4 Test Geofence",
+      "polygon": [
+        [
+          200,
+          200
+        ],
+        [
+          500,
+          200
+        ],
+        [
+          500,
+          500
+        ],
+        [
+          200,
+          500
+        ]
+      ],
+      "enabled": true,
+      "created_at": "2026-08-28T05:36:44.943Z",
+      "updated_at": "2026-08-28T05:36:44.943Z"
+    },
+    {
+      "id": "zone-p4-1787895445266",
+      "camera_id": "cam-01",
+      "name": "Phase 4 Test Geofence",
+      "polygon": [
+        [
+          200,
+          200
+        ],
+        [
+          500,
+          200
+        ],
+        [
+          500,
+          500
+        ],
+        [
+          200,
+          500
+        ]
+      ],
+      "enabled": true,
+      "created_at": "2026-08-28T05:37:25.279Z",
+      "updated_at": "2026-08-28T05:37:25.279Z"
+    },
+    {
+      "id": "zone-p4-1787895503983",
+      "camera_id": "cam-01",
+      "name": "Phase 4 Test Geofence",
+      "polygon": [
+        [
+          200,
+          200
+        ],
+        [
+          500,
+          200
+        ],
+        [
+          500,
+          500
+        ],
+        [
+          200,
+          500
+        ]
+      ],
+      "enabled": true,
+      "created_at": "2026-08-28T05:38:23.997Z",
+      "updated_at": "2026-08-28T05:38:23.997Z"
+    },
+    {
+      "id": "zone-p4-1787895506028",
+      "camera_id": "cam-01",
+      "name": "Phase 4 Test Geofence",
+      "polygon": [
+        [
+          200,
+          200
+        ],
+        [
+          500,
+          200
+        ],
+        [
+          500,
+          500
+        ],
+        [
+          200,
+          500
+        ]
+      ],
+      "enabled": true,
+      "created_at": "2026-08-28T05:38:26.031Z",
+      "updated_at": "2026-08-28T05:38:26.031Z"
+    },
+    {
+      "id": "zone-p4-1787895585722",
+      "camera_id": "cam-01",
+      "name": "Phase 4 Test Geofence",
+      "polygon": [
+        [
+          200,
+          200
+        ],
+        [
+          500,
+          200
+        ],
+        [
+          500,
+          500
+        ],
+        [
+          200,
+          500
+        ]
+      ],
+      "enabled": true,
+      "created_at": "2026-08-28T05:39:45.746Z",
+      "updated_at": "2026-08-28T05:39:45.746Z"
+    },
+    {
+      "id": "zone-p4-1787895644866",
+      "camera_id": "cam-01",
+      "name": "Phase 4 Test Geofence",
+      "polygon": [
+        [
+          200,
+          200
+        ],
+        [
+          500,
+          200
+        ],
+        [
+          500,
+          500
+        ],
+        [
+          200,
+          500
+        ]
+      ],
+      "enabled": true,
+      "created_at": "2026-08-28T05:40:44.892Z",
+      "updated_at": "2026-08-28T05:40:44.892Z"
+    },
+    {
+      "id": "zone-p4-1787896595947",
+      "camera_id": "cam-01",
+      "name": "Phase 4 Test Geofence",
+      "polygon": [
+        [
+          200,
+          200
+        ],
+        [
+          500,
+          200
+        ],
+        [
+          500,
+          500
+        ],
+        [
+          200,
+          500
+        ]
+      ],
+      "enabled": true,
+      "created_at": "2026-08-28T05:56:35.951Z",
+      "updated_at": "2026-08-28T05:56:35.951Z"
+    },
+    {
+      "id": "zone-p4-1787896676760",
+      "camera_id": "cam-01",
+      "name": "Phase 4 Test Geofence",
+      "polygon": [
+        [
+          200,
+          200
+        ],
+        [
+          500,
+          200
+        ],
+        [
+          500,
+          500
+        ],
+        [
+          200,
+          500
+        ]
+      ],
+      "enabled": true,
+      "created_at": "2026-08-28T05:57:56.771Z",
+      "updated_at": "2026-08-28T05:57:56.771Z"
+    },
+    {
+      "id": "zone-p4-1787896762290",
+      "camera_id": "cam-01",
+      "name": "Phase 4 Test Geofence",
+      "polygon": [
+        [
+          200,
+          200
+        ],
+        [
+          500,
+          200
+        ],
+        [
+          500,
+          500
+        ],
+        [
+          200,
+          500
+        ]
+      ],
+      "enabled": true,
+      "created_at": "2026-08-28T05:59:22.294Z",
+      "updated_at": "2026-08-28T05:59:22.294Z"
+    },
+    {
+      "id": "zone-p4-1787896881733",
+      "camera_id": "cam-01",
+      "name": "Phase 4 Test Geofence",
+      "polygon": [
+        [
+          200,
+          200
+        ],
+        [
+          500,
+          200
+        ],
+        [
+          500,
+          500
+        ],
+        [
+          200,
+          500
+        ]
+      ],
+      "enabled": true,
+      "created_at": "2026-08-28T06:01:21.736Z",
+      "updated_at": "2026-08-28T06:01:21.736Z"
+    },
+    {
+      "id": "zone-p4-1787897029019",
+      "camera_id": "cam-01",
+      "name": "Phase 4 Test Geofence",
+      "polygon": [
+        [
+          200,
+          200
+        ],
+        [
+          500,
+          200
+        ],
+        [
+          500,
+          500
+        ],
+        [
+          200,
+          500
+        ]
+      ],
+      "enabled": true,
+      "created_at": "2026-08-28T06:03:49.021Z",
+      "updated_at": "2026-08-28T06:03:49.021Z"
+    },
+    {
+      "id": "zone-p4-1787897110620",
+      "camera_id": "cam-01",
+      "name": "Phase 4 Test Geofence",
+      "polygon": [
+        [
+          200,
+          200
+        ],
+        [
+          500,
+          200
+        ],
+        [
+          500,
+          500
+        ],
+        [
+          200,
+          500
+        ]
+      ],
+      "enabled": true,
+      "created_at": "2026-08-28T06:05:10.622Z",
+      "updated_at": "2026-08-28T06:05:10.622Z"
+    },
+    {
+      "id": "zone-p4-1787897148616",
+      "camera_id": "cam-01",
+      "name": "Phase 4 Test Geofence",
+      "polygon": [
+        [
+          200,
+          200
+        ],
+        [
+          500,
+          200
+        ],
+        [
+          500,
+          500
+        ],
+        [
+          200,
+          500
+        ]
+      ],
+      "enabled": true,
+      "created_at": "2026-08-28T06:05:48.631Z",
+      "updated_at": "2026-08-28T06:05:48.631Z"
+    },
+    {
+      "id": "zone-p4-1787897204786",
+      "camera_id": "cam-01",
+      "name": "Phase 4 Test Geofence",
+      "polygon": [
+        [
+          200,
+          200
+        ],
+        [
+          500,
+          200
+        ],
+        [
+          500,
+          500
+        ],
+        [
+          200,
+          500
+        ]
+      ],
+      "enabled": true,
+      "created_at": "2026-08-28T06:06:44.789Z",
+      "updated_at": "2026-08-28T06:06:44.789Z"
+    },
+    {
+      "id": "zone-p4-1787897256866",
+      "camera_id": "cam-01",
+      "name": "Phase 4 Test Geofence",
+      "polygon": [
+        [
+          200,
+          200
+        ],
+        [
+          500,
+          200
+        ],
+        [
+          500,
+          500
+        ],
+        [
+          200,
+          500
+        ]
+      ],
+      "enabled": true,
+      "created_at": "2026-08-28T06:07:36.905Z",
+      "updated_at": "2026-08-28T06:07:36.905Z"
+    },
+    {
+      "id": "zone-p4-1787897268194",
+      "camera_id": "cam-01",
+      "name": "Phase 4 Test Geofence",
+      "polygon": [
+        [
+          200,
+          200
+        ],
+        [
+          500,
+          200
+        ],
+        [
+          500,
+          500
+        ],
+        [
+          200,
+          500
+        ]
+      ],
+      "enabled": true,
+      "created_at": "2026-08-28T06:07:48.220Z",
+      "updated_at": "2026-08-28T06:07:48.220Z"
+    },
+    {
+      "id": "zone-p4-1787897710239",
+      "camera_id": "cam-01",
+      "name": "Phase 4 Test Geofence",
+      "polygon": [
+        [
+          200,
+          200
+        ],
+        [
+          500,
+          200
+        ],
+        [
+          500,
+          500
+        ],
+        [
+          200,
+          500
+        ]
+      ],
+      "enabled": true,
+      "created_at": "2026-08-28T06:15:10.244Z",
+      "updated_at": "2026-08-28T06:15:10.244Z"
+    },
+    {
+      "id": "zone-p4-1787897731508",
+      "camera_id": "cam-01",
+      "name": "Phase 4 Test Geofence",
+      "polygon": [
+        [
+          200,
+          200
+        ],
+        [
+          500,
+          200
+        ],
+        [
+          500,
+          500
+        ],
+        [
+          200,
+          500
+        ]
+      ],
+      "enabled": true,
+      "created_at": "2026-08-28T06:15:31.511Z",
+      "updated_at": "2026-08-28T06:15:31.511Z"
+    },
+    {
+      "id": "zone-p4-1787897804145",
+      "camera_id": "cam-01",
+      "name": "Phase 4 Test Geofence",
+      "polygon": [
+        [
+          200,
+          200
+        ],
+        [
+          500,
+          200
+        ],
+        [
+          500,
+          500
+        ],
+        [
+          200,
+          500
+        ]
+      ],
+      "enabled": true,
+      "created_at": "2026-08-28T06:16:44.148Z",
+      "updated_at": "2026-08-28T06:16:44.148Z"
+    },
+    {
+      "id": "zone-p4-1787897852533",
+      "camera_id": "cam-01",
+      "name": "Phase 4 Test Geofence",
+      "polygon": [
+        [
+          200,
+          200
+        ],
+        [
+          500,
+          200
+        ],
+        [
+          500,
+          500
+        ],
+        [
+          200,
+          500
+        ]
+      ],
+      "enabled": true,
+      "created_at": "2026-08-28T06:17:32.536Z",
+      "updated_at": "2026-08-28T06:17:32.536Z"
+    },
+    {
+      "id": "zone-p4-1787897971583",
+      "camera_id": "cam-01",
+      "name": "Phase 4 Test Geofence",
+      "polygon": [
+        [
+          200,
+          200
+        ],
+        [
+          500,
+          200
+        ],
+        [
+          500,
+          500
+        ],
+        [
+          200,
+          500
+        ]
+      ],
+      "enabled": true,
+      "created_at": "2026-08-28T06:19:31.601Z",
+      "updated_at": "2026-08-28T06:19:31.601Z"
+    },
+    {
+      "id": "zone-p4-1787898268941",
+      "camera_id": "cam-01",
+      "name": "Phase 4 Test Geofence",
+      "polygon": [
+        [
+          200,
+          200
+        ],
+        [
+          500,
+          200
+        ],
+        [
+          500,
+          500
+        ],
+        [
+          200,
+          500
+        ]
+      ],
+      "enabled": true,
+      "created_at": "2026-08-28T06:24:28.946Z",
+      "updated_at": "2026-08-28T06:24:28.946Z"
+    },
+    {
+      "id": "zone-p4-1787898663022",
+      "camera_id": "cam-01",
+      "name": "Phase 4 Test Geofence",
+      "polygon": [
+        [
+          200,
+          200
+        ],
+        [
+          500,
+          200
+        ],
+        [
+          500,
+          500
+        ],
+        [
+          200,
+          500
+        ]
+      ],
+      "enabled": true,
+      "created_at": "2026-08-28T06:31:03.053Z",
+      "updated_at": "2026-08-28T06:31:03.053Z"
+    },
+    {
+      "id": "zone-p4-1787901400905",
+      "camera_id": "cam-01",
+      "name": "Phase 4 Test Geofence",
+      "polygon": [
+        [
+          200,
+          200
+        ],
+        [
+          500,
+          200
+        ],
+        [
+          500,
+          500
+        ],
+        [
+          200,
+          500
+        ]
+      ],
+      "enabled": true,
+      "created_at": "2026-08-28T07:16:40.910Z",
+      "updated_at": "2026-08-28T07:16:40.910Z"
+    },
+    {
+      "id": "zone-p4-1787936261702",
+      "camera_id": "cam-01",
+      "name": "Phase 4 Test Geofence",
+      "polygon": [
+        [
+          200,
+          200
+        ],
+        [
+          500,
+          200
+        ],
+        [
+          500,
+          500
+        ],
+        [
+          200,
+          500
+        ]
+      ],
+      "enabled": true,
+      "created_at": "2026-08-28T16:57:41.717Z",
+      "updated_at": "2026-08-28T16:57:41.717Z"
+    },
+    {
+      "id": "zone-p4-1787936305190",
+      "camera_id": "cam-01",
+      "name": "Phase 4 Test Geofence",
+      "polygon": [
+        [
+          200,
+          200
+        ],
+        [
+          500,
+          200
+        ],
+        [
+          500,
+          500
+        ],
+        [
+          200,
+          500
+        ]
+      ],
+      "enabled": true,
+      "created_at": "2026-08-28T16:58:25.215Z",
+      "updated_at": "2026-08-28T16:58:25.215Z"
+    },
+    {
+      "id": "zone-p4-1787938108937",
+      "camera_id": "cam-01",
+      "name": "Phase 4 Test Geofence",
+      "polygon": [
+        [
+          200,
+          200
+        ],
+        [
+          500,
+          200
+        ],
+        [
+          500,
+          500
+        ],
+        [
+          200,
+          500
+        ]
+      ],
+      "enabled": true,
+      "created_at": "2026-08-28T17:28:28.950Z",
+      "updated_at": "2026-08-28T17:28:28.950Z"
+    },
+    {
+      "id": "zone-p4-1787938156352",
+      "camera_id": "cam-01",
+      "name": "Phase 4 Test Geofence",
+      "polygon": [
+        [
+          200,
+          200
+        ],
+        [
+          500,
+          200
+        ],
+        [
+          500,
+          500
+        ],
+        [
+          200,
+          500
+        ]
+      ],
+      "enabled": true,
+      "created_at": "2026-08-28T17:29:16.373Z",
+      "updated_at": "2026-08-28T17:29:16.373Z"
+    },
+    {
+      "id": "zone-p4-1787940380940",
+      "camera_id": "cam-01",
+      "name": "Phase 4 Test Geofence",
+      "polygon": [
+        [
+          200,
+          200
+        ],
+        [
+          500,
+          200
+        ],
+        [
+          500,
+          500
+        ],
+        [
+          200,
+          500
+        ]
+      ],
+      "enabled": true,
+      "created_at": "2026-08-28T18:06:20.966Z",
+      "updated_at": "2026-08-28T18:06:20.966Z"
+    },
+    {
+      "id": "zone-p4-1787942322505",
+      "camera_id": "cam-01",
+      "name": "Phase 4 Test Geofence",
+      "polygon": [
+        [
+          200,
+          200
+        ],
+        [
+          500,
+          200
+        ],
+        [
+          500,
+          500
+        ],
+        [
+          200,
+          500
+        ]
+      ],
+      "enabled": true,
+      "created_at": "2026-08-28T18:38:42.508Z",
+      "updated_at": "2026-08-28T18:38:42.508Z"
+    },
+    {
+      "id": "zone-p4-1787942391927",
+      "camera_id": "cam-01",
+      "name": "Phase 4 Test Geofence",
+      "polygon": [
+        [
+          200,
+          200
+        ],
+        [
+          500,
+          200
+        ],
+        [
+          500,
+          500
+        ],
+        [
+          200,
+          500
+        ]
+      ],
+      "enabled": true,
+      "created_at": "2026-08-28T18:39:51.954Z",
+      "updated_at": "2026-08-28T18:39:51.954Z"
+    },
+    {
+      "id": "zone-p4-1787943617203",
+      "camera_id": "cam-01",
+      "name": "Phase 4 Test Geofence",
+      "polygon": [
+        [
+          200,
+          200
+        ],
+        [
+          500,
+          200
+        ],
+        [
+          500,
+          500
+        ],
+        [
+          200,
+          500
+        ]
+      ],
+      "enabled": true,
+      "created_at": "2026-08-28T19:00:17.227Z",
+      "updated_at": "2026-08-28T19:00:17.227Z"
+    },
+    {
+      "id": "zone-p4-1787943654111",
+      "camera_id": "cam-01",
+      "name": "Phase 4 Test Geofence",
+      "polygon": [
+        [
+          200,
+          200
+        ],
+        [
+          500,
+          200
+        ],
+        [
+          500,
+          500
+        ],
+        [
+          200,
+          500
+        ]
+      ],
+      "enabled": true,
+      "created_at": "2026-08-28T19:00:54.114Z",
+      "updated_at": "2026-08-28T19:00:54.114Z"
+    },
+    {
+      "id": "zone-p4-1787981869177",
+      "camera_id": "cam-01",
+      "name": "Phase 4 Test Geofence",
+      "polygon": [
+        [
+          200,
+          200
+        ],
+        [
+          500,
+          200
+        ],
+        [
+          500,
+          500
+        ],
+        [
+          200,
+          500
+        ]
+      ],
+      "enabled": true,
+      "created_at": "2026-08-29T05:37:49.183Z",
+      "updated_at": "2026-08-29T05:37:49.183Z"
+    },
+    {
+      "id": "zone-p4-1787981920773",
+      "camera_id": "cam-01",
+      "name": "Phase 4 Test Geofence",
+      "polygon": [
+        [
+          200,
+          200
+        ],
+        [
+          500,
+          200
+        ],
+        [
+          500,
+          500
+        ],
+        [
+          200,
+          500
+        ]
+      ],
+      "enabled": true,
+      "created_at": "2026-08-29T05:38:40.779Z",
+      "updated_at": "2026-08-29T05:38:40.779Z"
+    },
+    {
+      "id": "zone-p4-1787987370530",
+      "camera_id": "cam-01",
+      "name": "Phase 4 Test Geofence",
+      "polygon": [
+        [
+          200,
+          200
+        ],
+        [
+          500,
+          200
+        ],
+        [
+          500,
+          500
+        ],
+        [
+          200,
+          500
+        ]
+      ],
+      "enabled": true,
+      "created_at": "2026-08-29T07:09:30.566Z",
+      "updated_at": "2026-08-29T07:09:30.566Z"
+    },
+    {
+      "id": "zone-p4-1787987546703",
+      "camera_id": "cam-01",
+      "name": "Phase 4 Test Geofence",
+      "polygon": [
+        [
+          200,
+          200
+        ],
+        [
+          500,
+          200
+        ],
+        [
+          500,
+          500
+        ],
+        [
+          200,
+          500
+        ]
+      ],
+      "enabled": true,
+      "created_at": "2026-08-29T07:12:26.709Z",
+      "updated_at": "2026-08-29T07:12:26.709Z"
+    },
+    {
+      "id": "zone-p4-1787989261824",
+      "camera_id": "cam-01",
+      "name": "Phase 4 Test Geofence",
+      "polygon": [
+        [
+          200,
+          200
+        ],
+        [
+          500,
+          200
+        ],
+        [
+          500,
+          500
+        ],
+        [
+          200,
+          500
+        ]
+      ],
+      "enabled": true,
+      "created_at": "2026-08-29T07:41:01.828Z",
+      "updated_at": "2026-08-29T07:41:01.828Z"
+    },
+    {
+      "id": "zone-p4-1787989321970",
+      "camera_id": "cam-01",
+      "name": "Phase 4 Test Geofence",
+      "polygon": [
+        [
+          200,
+          200
+        ],
+        [
+          500,
+          200
+        ],
+        [
+          500,
+          500
+        ],
+        [
+          200,
+          500
+        ]
+      ],
+      "enabled": true,
+      "created_at": "2026-08-29T07:42:01.995Z",
+      "updated_at": "2026-08-29T07:42:01.995Z"
+    },
+    {
+      "id": "zone-p4-1788022533067",
+      "camera_id": "cam-01",
+      "name": "Phase 4 Test Geofence",
+      "polygon": [
+        [
+          200,
+          200
+        ],
+        [
+          500,
+          200
+        ],
+        [
+          500,
+          500
+        ],
+        [
+          200,
+          500
+        ]
+      ],
+      "enabled": true,
+      "created_at": "2026-08-29T16:55:33.094Z",
+      "updated_at": "2026-08-29T16:55:33.094Z"
+    },
+    {
+      "id": "zone-p4-1788022572088",
+      "camera_id": "cam-01",
+      "name": "Phase 4 Test Geofence",
+      "polygon": [
+        [
+          200,
+          200
+        ],
+        [
+          500,
+          200
+        ],
+        [
+          500,
+          500
+        ],
+        [
+          200,
+          500
+        ]
+      ],
+      "enabled": true,
+      "created_at": "2026-08-29T16:56:12.104Z",
+      "updated_at": "2026-08-29T16:56:12.104Z"
+    },
+    {
+      "id": "zone-p4-1788031289227",
+      "camera_id": "cam-01",
+      "name": "Phase 4 Test Geofence",
+      "polygon": [
+        [
+          200,
+          200
+        ],
+        [
+          500,
+          200
+        ],
+        [
+          500,
+          500
+        ],
+        [
+          200,
+          500
+        ]
+      ],
+      "enabled": true,
+      "created_at": "2026-08-29T19:21:29.253Z",
+      "updated_at": "2026-08-29T19:21:29.253Z"
+    },
+    {
+      "id": "zone-p4-1788031341946",
+      "camera_id": "cam-01",
+      "name": "Phase 4 Test Geofence",
+      "polygon": [
+        [
+          200,
+          200
+        ],
+        [
+          500,
+          200
+        ],
+        [
+          500,
+          500
+        ],
+        [
+          200,
+          500
+        ]
+      ],
+      "enabled": true,
+      "created_at": "2026-08-29T19:22:21.948Z",
+      "updated_at": "2026-08-29T19:22:21.948Z"
+    },
+    {
+      "id": "zone-p4-1788031678446",
+      "camera_id": "cam-01",
+      "name": "Phase 4 Test Geofence",
+      "polygon": [
+        [
+          200,
+          200
+        ],
+        [
+          500,
+          200
+        ],
+        [
+          500,
+          500
+        ],
+        [
+          200,
+          500
+        ]
+      ],
+      "enabled": true,
+      "created_at": "2026-08-29T19:27:58.471Z",
+      "updated_at": "2026-08-29T19:27:58.471Z"
+    },
+    {
+      "id": "zone-p4-1788031722009",
+      "camera_id": "cam-01",
+      "name": "Phase 4 Test Geofence",
+      "polygon": [
+        [
+          200,
+          200
+        ],
+        [
+          500,
+          200
+        ],
+        [
+          500,
+          500
+        ],
+        [
+          200,
+          500
+        ]
+      ],
+      "enabled": true,
+      "created_at": "2026-08-29T19:28:42.010Z",
+      "updated_at": "2026-08-29T19:28:42.010Z"
     }
   ],
   "cam-02": [
@@ -51,14 +2443,14 @@
         ]
       ],
       "enabled": true,
-      "created_at": "2026-08-31T16:50:40.739Z",
-      "updated_at": "2026-08-31T16:50:40.739Z"
+      "created_at": "2026-08-26T20:25:55.691Z",
+      "updated_at": "2026-08-26T20:25:55.691Z"
     }
   ],
-  "cam-test-1788195040782": [
+  "cam-test-1788563061896": [
     {
-      "id": "zone-test-1788195040813",
-      "camera_id": "cam-test-1788195040782",
+      "id": "zone-test-1788563063020",
+      "camera_id": "cam-test-1788563061896",
       "name": "Watchtower Sector J Geofence Perimeter",
       "polygon": [
         [
@@ -79,14 +2471,14 @@
         ]
       ],
       "enabled": true,
-      "created_at": "2026-08-31T16:50:40.815Z",
-      "updated_at": "2026-08-31T16:50:40.815Z"
+      "created_at": "2026-09-04T23:04:23.024Z",
+      "updated_at": "2026-09-04T23:04:23.024Z"
     }
   ],
-  "cam-test-1788554467801": [
+  "cam-test-1788563203021": [
     {
-      "id": "zone-test-1788554467864",
-      "camera_id": "cam-test-1788554467801",
+      "id": "zone-test-1788563203657",
+      "camera_id": "cam-test-1788563203021",
       "name": "Watchtower Sector J Geofence Perimeter",
       "polygon": [
         [
@@ -107,14 +2499,14 @@
         ]
       ],
       "enabled": true,
-      "created_at": "2026-09-04T20:41:07.866Z",
-      "updated_at": "2026-09-04T20:41:07.866Z"
+      "created_at": "2026-09-04T23:06:43.664Z",
+      "updated_at": "2026-09-04T23:06:43.664Z"
     }
   ],
-  "cam-test-1788557743279": [
+  "cam-test-1788563320241": [
     {
-      "id": "zone-test-1788557743316",
-      "camera_id": "cam-test-1788557743279",
+      "id": "zone-test-1788563320733",
+      "camera_id": "cam-test-1788563320241",
       "name": "Watchtower Sector J Geofence Perimeter",
       "polygon": [
         [
@@ -135,14 +2527,14 @@
         ]
       ],
       "enabled": true,
-      "created_at": "2026-09-04T21:35:43.318Z",
-      "updated_at": "2026-09-04T21:35:43.318Z"
+      "created_at": "2026-09-04T23:08:40.737Z",
+      "updated_at": "2026-09-04T23:08:40.737Z"
     }
   ],
-  "cam-test-1788558262371": [
+  "cam-test-1788563452226": [
     {
-      "id": "zone-test-1788558262413",
-      "camera_id": "cam-test-1788558262371",
+      "id": "zone-test-1788563452527",
+      "camera_id": "cam-test-1788563452226",
       "name": "Watchtower Sector J Geofence Perimeter",
       "polygon": [
         [
@@ -163,14 +2555,14 @@
         ]
       ],
       "enabled": true,
-      "created_at": "2026-09-04T21:44:22.415Z",
-      "updated_at": "2026-09-04T21:44:22.415Z"
+      "created_at": "2026-09-04T23:10:52.539Z",
+      "updated_at": "2026-09-04T23:10:52.539Z"
     }
   ],
-  "cam-test-1788558464054": [
+  "cam-test-1788563528300": [
     {
-      "id": "zone-test-1788558464093",
-      "camera_id": "cam-test-1788558464054",
+      "id": "zone-test-1788563529424",
+      "camera_id": "cam-test-1788563528300",
       "name": "Watchtower Sector J Geofence Perimeter",
       "polygon": [
         [
@@ -191,8 +2583,64 @@
         ]
       ],
       "enabled": true,
-      "created_at": "2026-09-04T21:47:44.095Z",
-      "updated_at": "2026-09-04T21:47:44.095Z"
+      "created_at": "2026-09-04T23:12:09.433Z",
+      "updated_at": "2026-09-04T23:12:09.433Z"
+    }
+  ],
+  "cam-test-1788567646362": [
+    {
+      "id": "zone-test-1788567646419",
+      "camera_id": "cam-test-1788567646362",
+      "name": "Watchtower Sector J Geofence Perimeter",
+      "polygon": [
+        [
+          0.2,
+          0.2
+        ],
+        [
+          0.8,
+          0.2
+        ],
+        [
+          0.8,
+          0.8
+        ],
+        [
+          0.2,
+          0.8
+        ]
+      ],
+      "enabled": true,
+      "created_at": "2026-09-05T00:20:46.422Z",
+      "updated_at": "2026-09-05T00:20:46.422Z"
+    }
+  ],
+  "cam-test-1788575474351": [
+    {
+      "id": "zone-test-1788575474403",
+      "camera_id": "cam-test-1788575474351",
+      "name": "Watchtower Sector J Geofence Perimeter",
+      "polygon": [
+        [
+          0.2,
+          0.2
+        ],
+        [
+          0.8,
+          0.2
+        ],
+        [
+          0.8,
+          0.8
+        ],
+        [
+          0.2,
+          0.8
+        ]
+      ],
+      "enabled": true,
+      "created_at": "2026-09-05T02:31:14.405Z",
+      "updated_at": "2026-09-05T02:31:14.405Z"
     }
   ]
 }

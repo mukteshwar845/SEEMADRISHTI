@@ -517,7 +517,22 @@ class WebSocketService {
     });
   }
 
-  private pushAlert(uiAlert: AlertItem) {
+  public broadcastFleetCounts(counts: Partial<FleetCounts>) {
+    const current = this.getFleetCounts();
+    const updated: FleetCounts = {
+      ...current,
+      ...counts,
+    };
+    this.fleetCountsListeners.forEach((listener) => {
+      try {
+        listener(updated);
+      } catch (e) {
+        console.warn('[WS] Error in broadcastFleetCounts listener:', e);
+      }
+    });
+  }
+
+  public pushAlert(uiAlert: AlertItem) {
     if (this.recentAlertIds.has(uiAlert.id)) return;
     this.recentAlertIds.add(uiAlert.id);
     if (this.recentAlertIds.size > 200) {
@@ -526,6 +541,7 @@ class WebSocketService {
     }
     this.alertListeners.forEach((listener) => listener(uiAlert));
   }
+
 
   public subscribe(eventType: string, listener: (data: any) => void): () => void {
     if (!this.genericListeners.has(eventType)) {

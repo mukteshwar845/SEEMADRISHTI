@@ -114,6 +114,7 @@ async function runRegressionSuite() {
 
   const db = getDatabase();
   initializeSchema();
+  db.exec('DELETE FROM users; DELETE FROM incidents; DELETE FROM cameras; DELETE FROM zones; DELETE FROM alerts; DELETE FROM events;');
 
   // Create isolated evidence fixture for tamper & streaming tests
   const evidenceDir = path.resolve(process.cwd(), 'evidence');
@@ -125,13 +126,13 @@ async function runRegressionSuite() {
 
   // Insert test camera to satisfy foreign key constraints
   db.prepare(`
-    INSERT INTO cameras (id, name, location, source_type, source_url, status, created_at, updated_at)
+    INSERT OR REPLACE INTO cameras (id, name, location, source_type, source_url, status, created_at, updated_at)
     VALUES (?, ?, ?, ?, ?, ?, ?, ?)
   `).run('cam-01', 'Test Border Camera', 'Sector 4', 'mp4', 'evidence/INC-REG-001.mp4', 'Online', new Date().toISOString(), new Date().toISOString());
 
   // Insert test incident sealed with genuine hash
   db.prepare(`
-    INSERT INTO incidents (
+    INSERT OR REPLACE INTO incidents (
       id, camera_id, track_id, event_type, risk_score, risk_level,
       started_at, evidence_path, evidence_status, metadata, acknowledged, created_at
     ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
@@ -153,13 +154,13 @@ async function runRegressionSuite() {
   // Insert a test operator and commander
   const opPasswordHash = bcrypt.hashSync('ValidOperatorPass@2026', 10);
   db.prepare(`
-    INSERT INTO users (id, username, password_hash, name, role, email, shift, status, assigned_sector, created_at, updated_at)
+    INSERT OR REPLACE INTO users (id, username, password_hash, name, role, email, shift, status, assigned_sector, created_at, updated_at)
     VALUES (?, ?, ?, ?, ?, ?, ?, 'active', 'Sector 1', ?, ?)
   `).run('usr-op-01', 'operator1', opPasswordHash, 'Surveillance Operator One', 'Surveillance Operator', 'op1@seemadrishti.in', 'Morning', new Date().toISOString(), new Date().toISOString());
 
   const cmdPasswordHash = bcrypt.hashSync('CommanderSecret@2026', 10);
   db.prepare(`
-    INSERT INTO users (id, username, password_hash, name, role, email, shift, status, assigned_sector, created_at, updated_at)
+    INSERT OR REPLACE INTO users (id, username, password_hash, name, role, email, shift, status, assigned_sector, created_at, updated_at)
     VALUES (?, ?, ?, ?, ?, ?, ?, 'active', 'HQ', ?, ?)
   `).run('usr-cmd-01', 'commander1', cmdPasswordHash, 'Chief Commander Rao', 'Commander', 'commander@seemadrishti.in', 'Day', new Date().toISOString(), new Date().toISOString());
 

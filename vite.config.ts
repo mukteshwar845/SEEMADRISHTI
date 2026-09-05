@@ -37,7 +37,16 @@ export default defineConfig(() => {
       hmr: process.env.DISABLE_HMR !== 'true',
       // Disable watching data, sqlite, cv_service and logs to prevent full client reload on DB writes
       watch: process.env.DISABLE_HMR === 'true' ? null : {
-        ignored: ['**/data/**', '**/cv_service/**', '**/*.sqlite*', '**/*.log', '**/.system_generated/**'],
+        ignored: [
+          '**/data/**',
+          '**/cv_service/**',
+          '**/*.sqlite*',
+          '**/*.log',
+          '**/.system_generated/**',
+          '**/public/fixtures/**',
+          '**/evidence/**',
+          '**/*.mp4',
+        ],
       },
     },
   };

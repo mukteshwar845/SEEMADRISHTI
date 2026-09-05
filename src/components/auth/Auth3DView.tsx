@@ -156,7 +156,7 @@ export const Auth3DView: React.FC<Auth3DViewProps> = ({
   };
 
   return (
-    <div className="relative min-h-screen w-full bg-[#02040a] text-slate-200 flex flex-col justify-between overflow-hidden font-mono select-none">
+    <div className="relative h-screen h-[100dvh] w-full bg-[#02040a] text-slate-200 flex flex-col justify-between overflow-y-auto overflow-x-hidden font-mono select-none">
       {/* 3D Holographic Canvas Background */}
       <Auth3DCanvas />
 

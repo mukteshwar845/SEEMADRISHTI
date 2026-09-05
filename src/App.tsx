@@ -55,6 +55,7 @@ import { Auth3DView } from './components/auth/Auth3DView';
 import { webSocketService } from './services/websocketService';
 import { voiceCommandService } from './services/voiceCommandService';
 import { fetchAlerts, fetchCameras, fetchTelemetry } from './services/api';
+import { tacticalAlertDispatcher } from './utils/tacticalAlertDispatcher';
 import { Siren, ShieldAlert, AlertTriangle } from 'lucide-react';
 
 function SeemadrishtiMainApp() {
@@ -308,10 +309,18 @@ function SeemadrishtiMainApp() {
       setIsBackendOffline(st.status === 'DISCONNECTED');
     });
 
+    const unsubTactical = tacticalAlertDispatcher.subscribe((incomingAlert) => {
+      setAlerts((prev) => {
+        if (prev.some((a) => a.id === incomingAlert.id)) return prev;
+        return [incomingAlert, ...prev];
+      });
+    });
+
     return () => {
       unsubAlerts();
       unsubTelemetry();
       unsubWs();
+      unsubTactical();
     };
   }, [triggerGlobalFlash]);
 

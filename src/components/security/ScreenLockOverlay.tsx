@@ -267,7 +267,7 @@ export const ScreenLockOverlay: React.FC = () => {
           className="flex items-center gap-1.5 text-rose-400 hover:text-rose-300 transition-colors cursor-pointer text-xs font-bold uppercase tracking-wider"
         >
           <LogOut size={13} />
-          <span>Exit / Return to Landing</span>
+          <span>Logout</span>
         </button>
       </div>
     </div>

@@ -431,7 +431,11 @@ export const CameraFeedCanvas: React.FC<CameraFeedCanvasProps> = ({
   // Fix for React video muted attribute not updating reactively
   useEffect(() => {
     if (videoRef.current) {
-      videoRef.current.muted = muted;
+      videoRef.current.muted = Boolean(muted);
+      if (!muted) {
+        videoRef.current.volume = 1.0;
+        videoRef.current.play().catch(() => {});
+      }
     }
   }, [muted]);
 
@@ -548,9 +552,30 @@ export const CameraFeedCanvas: React.FC<CameraFeedCanvasProps> = ({
     };
   }, [syncCanvasDimensions]);
 
-  const videoUrl = camera.rtspUrl?.includes('/api/cameras/')
-    ? camera.rtspUrl
-    : `/api/cameras/${camera.id.toLowerCase()}/video`;
+  const getReliableVideoUrl = useCallback(() => {
+    if (camera.rtspUrl && !camera.rtspUrl.startsWith('/api/cameras/')) {
+      return camera.rtspUrl;
+    }
+    const idDigits = (camera.code || camera.id).match(/\d+/);
+    const num = idDigits ? parseInt(idDigits[0], 10) : 1;
+    const padded = String(Math.max(1, Math.min(9, num))).padStart(2, '0');
+    return `/fixtures/visdrone/CAM-${padded}.mp4`;
+  }, [camera.rtspUrl, camera.code, camera.id]);
+
+  const [currentVideoSrc, setCurrentVideoSrc] = useState<string>(getReliableVideoUrl);
+
+  useEffect(() => {
+    setCurrentVideoSrc(getReliableVideoUrl());
+  }, [getReliableVideoUrl]);
+
+  const handleVideoError = useCallback(() => {
+    if (!currentVideoSrc.includes('moving_objects.mp4')) {
+      setCurrentVideoSrc('/fixtures/moving_objects.mp4');
+    } else {
+      setVideoError(true);
+      setVideoLoaded(false);
+    }
+  }, [currentVideoSrc]);
 
   useEffect(() => {
     const camIdNorm = camera.id.toLowerCase();
@@ -981,7 +1006,7 @@ export const CameraFeedCanvas: React.FC<CameraFeedCanvasProps> = ({
     >
       <video
         ref={videoRef}
-        src={videoUrl}
+        src={currentVideoSrc}
         autoPlay
         loop
         muted={muted}
@@ -990,10 +1015,7 @@ export const CameraFeedCanvas: React.FC<CameraFeedCanvasProps> = ({
           setVideoLoaded(true);
           setVideoError(false);
         }}
-        onError={() => {
-          setVideoError(true);
-          setVideoLoaded(false);
-        }}
+        onError={handleVideoError}
         className={`absolute inset-0 w-full h-full object-cover transition-opacity duration-300 ${
           videoLoaded && !videoError ? 'opacity-100' : 'opacity-0'
         }`}

@@ -224,6 +224,13 @@ class AudioAlertEngine {
   }
 
   /**
+   * Synthesizes and plays a quick tactical acoustic sonar ping for feedback.
+   */
+  public playSonarPing(): boolean {
+    return this.playTone('tactical_sonar', { force: true, volumeOverride: 0.4 });
+  }
+
+  /**
    * Synthesizes and plays a specified alarm tone directly.
    */
   public playTone(toneType: AlertToneType = this.activeTone, options?: { force?: boolean; volumeOverride?: number }): boolean {

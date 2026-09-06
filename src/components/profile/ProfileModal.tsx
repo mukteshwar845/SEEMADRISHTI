@@ -250,6 +250,7 @@ export const ProfileModal: React.FC = () => {
           <div className="pt-4 border-t border-slate-800 flex items-center justify-between">
             <button
               type="button"
+              id="profile-modal-logout-btn"
               onClick={async () => {
                 setIsProfileModalOpen(false);
                 await logout();
@@ -257,7 +258,7 @@ export const ProfileModal: React.FC = () => {
               className="flex items-center gap-1.5 px-3 py-2 rounded-xl border border-rose-500/40 text-rose-400 hover:bg-rose-950/40 text-xs font-bold uppercase tracking-wider transition-colors cursor-pointer"
             >
               <LogOut size={13} />
-              <span>Logout & Terminate</span>
+              <span>Logout</span>
             </button>
 
             <div className="flex items-center gap-3">

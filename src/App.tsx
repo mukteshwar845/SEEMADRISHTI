@@ -93,7 +93,6 @@ function SeemadrishtiMainApp() {
 
   const [isMobileSidebarOpen, setIsMobileSidebarOpen] = useState(false);
   const [isRefreshing, setIsRefreshing] = useState(false);
-  const [refreshFeedback, setRefreshFeedback] = useState<string | null>(null);
   const [isAudioMuted, setIsAudioMuted] = useState(false);
   const [isAudioPingActive, setIsAudioPingActive] = useState(false);
   const [audioVolume, setAudioVolume] = useState(85);
@@ -360,8 +359,12 @@ function SeemadrishtiMainApp() {
   const handleRefresh = async () => {
     if (isRefreshing) return;
     setIsRefreshing(true);
-    setRefreshFeedback(null);
     const startTime = Date.now();
+
+    // Tactile acoustic confirmation on refresh
+    try {
+      audioAlertEngine.playSonarPing();
+    } catch {}
 
     try {
       await Promise.allSettled([
@@ -448,19 +451,26 @@ function SeemadrishtiMainApp() {
         }),
       ]);
 
+      // Ensure all live HTML5 video feeds across the DOM continue active playback
+      if (typeof document !== 'undefined') {
+        document.querySelectorAll('video').forEach((vid) => {
+          if (vid.paused && vid.readyState >= 2) {
+            vid.play().catch(() => {});
+          }
+        });
+      }
+
       // Reconnect WebSocket if disconnected
       if (webSocketService.getState().status === 'DISCONNECTED') {
         webSocketService.connect();
       }
-
-      setRefreshFeedback('SURVEILLANCE MATRIX, ALERTS & TELEMETRY SYNCHRONIZED');
-      setTimeout(() => setRefreshFeedback(null), 3000);
     } catch (err) {
       console.warn('[REFRESH] Error during refresh:', err);
     } finally {
-      const remaining = 750 - (Date.now() - startTime);
-      if (remaining > 0) {
-        await new Promise((r) => setTimeout(r, remaining));
+      // Smooth 600ms visual spin feedback
+      const elapsed = Date.now() - startTime;
+      if (elapsed < 600) {
+        await new Promise((r) => setTimeout(r, 600 - elapsed));
       }
       setIsRefreshing(false);
     }
@@ -669,21 +679,6 @@ function SeemadrishtiMainApp() {
           onOpenSwarmHelp={() => setIsSwarmHelpOpen(true)}
         />
 
-        {/* Real-time Refresh Confirmation Banner */}
-        {refreshFeedback && (
-          <div className="shrink-0 flex-none bg-emerald-950/90 border-b border-emerald-500/50 px-4 py-1.5 flex items-center justify-between text-xs font-mono text-emerald-200 z-30 shadow-[0_4px_20px_rgba(16,185,129,0.3)] animate-fadeIn">
-            <div className="flex items-center gap-2">
-              <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
-              <span className="font-bold tracking-wider">{refreshFeedback}</span>
-            </div>
-            <button
-              onClick={() => setRefreshFeedback(null)}
-              className="text-emerald-400 hover:text-white text-[10px] uppercase font-bold cursor-pointer"
-            >
-              DISMISS
-            </button>
-          </div>
-        )}
 
         {/* Real-time Backend Offline Indicator Banner */}
         {isBackendOffline && (
@@ -1048,21 +1043,19 @@ function RootAppPortal() {
 
   const isLandingRoute = location.pathname === '/' || location.pathname === '';
 
-  // Auto-initiate evaluation session if accessing dashboard or tactical routes directly
+  // If unauthenticated and accessing protected tactical routes, redirect to login
   useEffect(() => {
     if (!isAuthenticated && !isLandingRoute && !isAuthRoute && !isSignupRoute) {
-      login('admin', 'admin').catch(() => {});
+      navigate('/login', { replace: true });
     }
-  }, [isAuthenticated, isLandingRoute, isAuthRoute, isSignupRoute, login]);
+  }, [isAuthenticated, isLandingRoute, isAuthRoute, isSignupRoute, navigate]);
 
-  // If authenticated, seamlessly navigate from auth routes to dashboard
+  // If authenticated and on auth/signup routes, seamlessly navigate to dashboard
   useEffect(() => {
-    if (isAuthenticated && (isAuthRoute || isSignupRoute || currentPortal === 'app')) {
-      if (location.pathname === '/login' || location.pathname === '/auth' || location.pathname === '/signup' || location.pathname === '/register') {
-        navigate('/dashboard', { replace: true });
-      }
+    if (isAuthenticated && (isAuthRoute || isSignupRoute)) {
+      navigate('/dashboard', { replace: true });
     }
-  }, [isAuthenticated, isAuthRoute, isSignupRoute, currentPortal, location.pathname, navigate]);
+  }, [isAuthenticated, isAuthRoute, isSignupRoute, navigate]);
 
   if (isAuthenticated && (currentPortal !== 'landing' || !isLandingRoute)) {
     return <SeemadrishtiMainApp />;
@@ -1083,13 +1076,8 @@ function RootAppPortal() {
   return (
     <LandingPage
       onEnterAuth={async () => {
-        try {
-          await login('admin', 'admin');
-          navigate('/dashboard');
-        } catch {
-          setPortal('auth');
-          navigate('/login');
-        }
+        setPortal('auth');
+        navigate('/login');
       }}
     />
   );

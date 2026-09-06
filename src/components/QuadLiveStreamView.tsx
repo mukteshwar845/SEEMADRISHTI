@@ -69,19 +69,118 @@ export const QuadLiveStreamView: React.FC<QuadLiveStreamViewProps> = ({
   const [liveTimestamp, setLiveTimestamp] = useState('10:45:22 AM');
   const [activeRecordings, setActiveRecordings] = useState<Map<string, ActiveRecording>>(new Map());
   const [freshnessMap, setFreshnessMap] = useState<Record<string, { status: string; measuredFps: number }>>({});
-  const [fleetCounts, setFleetCounts] = useState<{
-    visibleTotal: number;
-    personTotal: number;
-    vehicleTotal: number;
-    uniqueSessionTotal: number;
-  }>({ visibleTotal: 50, personTotal: 42, vehicleTotal: 8, uniqueSessionTotal: 164 });
   const [cumulativeUniqueTargets, setCumulativeUniqueTargets] = useState<number>(164);
   const [targetIncrementTick, setTargetIncrementTick] = useState<number>(0);
   const [countPulseActive, setCountPulseActive] = useState<boolean>(false);
   const [camCountsMap, setCamCountsMap] = useState<Record<string, { persons: number; vehicles: number; animals: number; total: number }>>({});
   const [recentTacticalAlert, setRecentTacticalAlert] = useState<AlertItem | null>(null);
-  const [isVoiceMuted, setIsVoiceMuted] = useState(false);
-  const [isVideoMuted, setIsVideoMuted] = useState(true);
+  const [isVoiceMuted, setIsVoiceMuted] = useState(() => audioAlertEngine.getIsMuted());
+  const [isVideoMuted, setIsVideoMuted] = useState(() => audioAlertEngine.getIsMuted());
+
+  // Quad Sections Pagination (4 cameras per Quad page)
+  const quadSections = useMemo(() => {
+    const sections: CameraFeed[][] = [];
+    for (let i = 0; i < cameras.length; i += 4) {
+      sections.push(cameras.slice(i, i + 4));
+    }
+    return sections.length > 0 ? sections : [cameras];
+  }, [cameras]);
+
+  const [currentSectionIndex, setCurrentSectionIndex] = useState(0);
+
+  const safeSectionIndex = Math.min(currentSectionIndex, Math.max(0, quadSections.length - 1));
+  const currentQuadCameras = quadSections[safeSectionIndex] || cameras.slice(0, 4);
+
+  const handleNextSection = useCallback(() => {
+    setCurrentSectionIndex((prev) => {
+      const nextIdx = (prev + 1) % quadSections.length;
+      const targetCam = quadSections[nextIdx]?.[0];
+      if (targetCam) {
+        setFocusedCamId(targetCam.id);
+        onSelectCamera(targetCam.id);
+      }
+      return nextIdx;
+    });
+  }, [quadSections, onSelectCamera]);
+
+  const handlePrevSection = useCallback(() => {
+    setCurrentSectionIndex((prev) => {
+      const prevIdx = (prev - 1 + quadSections.length) % quadSections.length;
+      const targetCam = quadSections[prevIdx]?.[0];
+      if (targetCam) {
+        setFocusedCamId(targetCam.id);
+        onSelectCamera(targetCam.id);
+      }
+      return prevIdx;
+    });
+  }, [quadSections, onSelectCamera]);
+
+  const handleSelectSection = useCallback((sIdx: number) => {
+    const safeIdx = Math.max(0, Math.min(quadSections.length - 1, sIdx));
+    setCurrentSectionIndex(safeIdx);
+    const targetCam = quadSections[safeIdx]?.[0];
+    if (targetCam) {
+      setFocusedCamId(targetCam.id);
+      onSelectCamera(targetCam.id);
+    }
+  }, [quadSections, onSelectCamera]);
+
+  // Synchronize focused camera and section index when selectedCameraId prop changes
+  useEffect(() => {
+    if (selectedCameraId) {
+      setFocusedCamId(selectedCameraId);
+      const sIdx = quadSections.findIndex((sec) => sec.some((c) => c.id === selectedCameraId));
+      if (sIdx !== -1 && sIdx !== currentSectionIndex) {
+        setCurrentSectionIndex(sIdx);
+      }
+    }
+  }, [selectedCameraId, quadSections]);
+
+  const handleToggleGlobalAudio = useCallback((forceUnmute?: boolean) => {
+    const next = forceUnmute !== undefined ? !forceUnmute : !isVideoMuted;
+    setIsVideoMuted(next);
+    setIsVoiceMuted(next);
+    audioAlertEngine.setMuted(next);
+    tacticalAlertDispatcher.setVoiceMuted(next);
+    if (!next) {
+      audioAlertEngine.playSonarPing();
+    }
+  }, [isVideoMuted]);
+
+  const handleToggleCamAudio = useCallback((camId: string) => {
+    if (activeAudioCam === camId && !isVideoMuted) {
+      setActiveAudioCam(null);
+      setIsVideoMuted(true);
+    } else {
+      setActiveAudioCam(camId);
+      setIsVideoMuted(false);
+      setIsVoiceMuted(false);
+      audioAlertEngine.setMuted(false);
+      audioAlertEngine.playSonarPing();
+    }
+  }, [activeAudioCam, isVideoMuted]);
+
+  // Keyboard shortcuts for Section navigation: [ or Left Arrow, ] or Right Arrow, M for Mute
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      const target = e.target as HTMLElement;
+      if (target && (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA' || target.isContentEditable)) {
+        return;
+      }
+      if (e.key === ']' || e.key === 'ArrowRight' || e.key === 'n' || e.key === 'N') {
+        e.preventDefault();
+        handleNextSection();
+      } else if (e.key === '[' || e.key === 'ArrowLeft' || e.key === 'p' || e.key === 'P') {
+        e.preventDefault();
+        handlePrevSection();
+      } else if (e.key === 'm' || e.key === 'M') {
+        e.preventDefault();
+        handleToggleGlobalAudio();
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [handleNextSection, handlePrevSection, handleToggleGlobalAudio]);
 
   // Live real-time discovery of unique target tracks across the 9-camera perimeter fleet
   useEffect(() => {
@@ -161,7 +260,7 @@ export const QuadLiveStreamView: React.FC<QuadLiveStreamViewProps> = ({
     const vehicleTotal = Math.max(vehicles + backgroundVehicles, 8 + (targetIncrementTick % 4 === 0 ? 1 : 0));
     const animalTotal = animals;
     const visibleTotal = personTotal + vehicleTotal + animalTotal;
-    const uniqueSessionTotal = Math.max(cumulativeUniqueTargets, fleetCounts.uniqueSessionTotal);
+    const uniqueSessionTotal = Math.max(cumulativeUniqueTargets, 164);
 
     return {
       personTotal,
@@ -170,23 +269,11 @@ export const QuadLiveStreamView: React.FC<QuadLiveStreamViewProps> = ({
       visibleTotal,
       uniqueSessionTotal,
     };
-  }, [camCountsMap, fleetCounts, cameras, cumulativeUniqueTargets, targetIncrementTick]);
+  }, [camCountsMap, cameras, cumulativeUniqueTargets, targetIncrementTick]);
 
   useEffect(() => {
     webSocketService.broadcastFleetCounts(dynamicFleetCounts);
   }, [dynamicFleetCounts]);
-
-  useEffect(() => {
-    const unsub = webSocketService.onFleetCounts((counts) => {
-      setFleetCounts({
-        visibleTotal: counts.visibleTotal,
-        personTotal: counts.personTotal,
-        vehicleTotal: counts.vehicleTotal,
-        uniqueSessionTotal: counts.uniqueSessionTotal,
-      });
-    });
-    return unsub;
-  }, []);
 
   useEffect(() => {
     const updateFreshness = () => {
@@ -336,7 +423,14 @@ export const QuadLiveStreamView: React.FC<QuadLiveStreamViewProps> = ({
     }
   };
 
-  const activeFocusCam = cameras.find((c) => c.id === focusedCamId) || cameras[0];
+  const activeFocusCam = currentQuadCameras.find((c) => c.id === focusedCamId) || currentQuadCameras[0] || cameras.find((c) => c.id === focusedCamId) || cameras[0];
+
+  const companionStreams = useMemo(() => {
+    const inSection = currentQuadCameras.filter((c) => c.id !== activeFocusCam?.id);
+    if (inSection.length >= 3) return inSection.slice(0, 3);
+    const others = cameras.filter((c) => c.id !== activeFocusCam?.id && !inSection.some((s) => s.id === c.id));
+    return [...inSection, ...others].slice(0, 3);
+  }, [currentQuadCameras, activeFocusCam?.id, cameras]);
 
   return (
     <div
@@ -623,294 +717,402 @@ export const QuadLiveStreamView: React.FC<QuadLiveStreamViewProps> = ({
         <div className="fixed inset-0 bg-white/20 z-50 pointer-events-none transition-opacity duration-200" />
       )}
 
+      {/* Quad Section / Channel Paging Bar */}
+      <div className="p-3 bg-slate-900/90 border border-white/10 rounded-2xl flex flex-wrap items-center justify-between gap-3 shadow-lg backdrop-blur-md">
+        <div className="flex items-center gap-2">
+          <span className="text-xs font-mono font-bold text-slate-400 uppercase">QUAD SECTIONS:</span>
+          <div className="flex items-center gap-1.5">
+            {quadSections.map((sec, sIdx) => {
+              const isActive = sIdx === safeSectionIndex;
+              const camStart = sIdx * 4 + 1;
+              const camEnd = Math.min((sIdx + 1) * 4, cameras.length);
+              return (
+                <button
+                  key={sIdx}
+                  id={`btn-quad-section-${sIdx + 1}`}
+                  onClick={() => handleSelectSection(sIdx)}
+                  className={`px-3 py-1.5 rounded-xl text-xs font-mono font-bold tracking-wider transition-all cursor-pointer border ${
+                    isActive
+                      ? 'bg-cyan-500/25 text-cyan-300 border-cyan-400/50 shadow-[0_0_15px_rgba(0,240,255,0.3)] ring-1 ring-cyan-400/50'
+                      : 'bg-white/[0.04] text-slate-400 border-white/[0.08] hover:text-white hover:bg-white/[0.08]'
+                  }`}
+                >
+                  SECTION {sIdx + 1} ({camStart}-{camEnd})
+                </button>
+              );
+            })}
+          </div>
+        </div>
+
+        <div className="flex items-center gap-3">
+          <span className="text-xs font-mono text-slate-400 hidden sm:inline">
+            SECTION {safeSectionIndex + 1} OF {quadSections.length} ({currentQuadCameras.length} CAMERAS)
+          </span>
+          <div className="flex items-center gap-1">
+            <button
+              id="btn-prev-quad-section"
+              onClick={handlePrevSection}
+              className="px-3 py-1.5 rounded-xl bg-white/[0.05] hover:bg-white/[0.12] text-slate-200 border border-white/10 text-xs font-mono font-bold flex items-center gap-1.5 transition-all cursor-pointer active:scale-95"
+              title="Go to Previous Quad Section (Shortcut: [ or Left Arrow)"
+            >
+              <ArrowLeft size={13} />
+              <span>PREV</span>
+            </button>
+            <button
+              id="btn-next-quad-section"
+              onClick={handleNextSection}
+              className="px-3 py-1.5 rounded-xl bg-cyan-500/20 hover:bg-cyan-500/30 text-cyan-300 border border-cyan-400/40 text-xs font-mono font-bold flex items-center gap-1.5 shadow-[0_0_10px_rgba(0,240,255,0.2)] transition-all cursor-pointer active:scale-95"
+              title="Go to Next Quad Section (Shortcut: ] or Right Arrow)"
+            >
+              <span>NEXT</span>
+              <ArrowRight size={13} />
+            </button>
+          </div>
+        </div>
+      </div>
+
       {/* 2. Primary Video Feeds Container */}
       {layoutMode === '2x2' && (
-        <div
-          id="livestream-2x2-grid"
-          className="grid grid-cols-1 md:grid-cols-2 gap-4"
-        >
-          {cameras.map((cam, idx) => {
-            const isFocused = focusedCamId === cam.id;
-            const isAudioActive = activeAudioCam === cam.id;
-            const isNight = nightVisionMap[cam.id] || false;
-            const zoom = zoomLevels[cam.id] || 1;
-            const pan = panOffsets[cam.id] || { x: 0, y: 0 };
-            const camFreshness = freshnessMap[cam.id] || { status: 'LIVE', measuredFps: cam.fps || 30 };
-            const isOffline = cam.status === 'offline';
-            const displayFps = isOffline ? 0 : (camFreshness.measuredFps || cam.fps || (idx % 2 === 0 ? 60 : 30));
+        <>
+          <div
+            id="livestream-2x2-grid"
+            className="grid grid-cols-1 md:grid-cols-2 gap-4"
+          >
+            {currentQuadCameras.map((cam, idx) => {
+              const isFocused = focusedCamId === cam.id;
+              const isAudioActive = (activeAudioCam === cam.id) || (!isVideoMuted && activeAudioCam === null);
+              const isNight = nightVisionMap[cam.id] || false;
+              const zoom = zoomLevels[cam.id] || 1;
+              const pan = panOffsets[cam.id] || { x: 0, y: 0 };
+              const camFreshness = freshnessMap[cam.id] || { status: 'LIVE', measuredFps: cam.fps || 30 };
+              const isOffline = cam.status === 'offline';
+              const displayFps = isOffline ? 0 : (camFreshness.measuredFps || cam.fps || (idx % 2 === 0 ? 60 : 30));
 
-            return (
-              <div
-                key={cam.id}
-                id={`grid-cell-${cam.id}`}
-                onClick={() => {
-                  setFocusedCamId(cam.id);
-                  onSelectCamera(cam.id);
-                }}
-                className={`flex flex-col bg-[#0a0f1d] rounded-2xl border transition-all duration-200 overflow-hidden shadow-[0_4px_25px_rgba(0,0,0,0.7)] group ${
-                  isFocused
-                    ? 'border-blue-500 shadow-[0_0_20px_rgba(59,130,246,0.3)] ring-1 ring-blue-500/50'
-                    : 'border-white/[0.08] hover:border-white/30'
-                }`}
-              >
-                {/* Cell Header */}
-                <div className="px-3.5 py-2.5 bg-[#0d1424]/90 border-b border-white/[0.06] flex items-center justify-between">
-                  <div className="flex items-center gap-2">
-                    <span className="font-mono font-bold text-xs text-blue-400 bg-blue-500/10 border border-blue-500/20 px-2 py-0.5 rounded">
-                      {cam.code}
-                    </span>
-                    <span className="text-xs font-bold text-white truncate font-mono">{cam.name}</span>
-                  </div>
-
-                  <div className="flex items-center gap-2">
-                    {/* Live Object Counts Pill */}
-                    <div className="hidden lg:flex items-center gap-1.5 px-2 py-0.5 rounded bg-black/60 border border-white/10 text-[9px] font-mono text-slate-300">
-                      <span className="text-emerald-400 font-bold" title="Active Persons">👥 {camCountsMap[cam.id]?.persons ?? (cam.id.includes('8') ? 2 : 15)}</span>
-                      <span className="text-slate-600">•</span>
-                      <span className="text-cyan-400 font-bold" title="Active Vehicles">🚗 {camCountsMap[cam.id]?.vehicles ?? (cam.id.includes('8') ? 8 : 0)}</span>
-                      <span className="text-slate-600">•</span>
-                      <span className="text-purple-400 font-bold" title="Active Animals">🐕 {camCountsMap[cam.id]?.animals ?? 0}</span>
-                    </div>
-
-                    {/* Resolution & Bitrate */}
-                    <span className="hidden sm:inline font-mono text-[10px] text-slate-400">
-                      {cam.resolution.split(' ')[0]} • {displayFps}fps
-                    </span>
-
-                    {/* Online status indicator */}
-                    <div className="flex items-center gap-1 text-[10px] font-mono font-bold uppercase">
-                      <span
-                        className={`w-1.5 h-1.5 rounded-full ${
-                          isOffline
-                            ? 'bg-rose-500'
-                            : 'bg-emerald-400 animate-pulse'
-                        }`}
-                      />
-                      <span
-                        className={
-                          isOffline
-                            ? 'text-rose-400 font-bold'
-                            : 'text-emerald-400'
-                        }
-                      >
-                        {isOffline
-                          ? '[ DATA LINK OFFLINE ]'
-                          : '● LIVE'}
+              return (
+                <div
+                  key={cam.id}
+                  id={`grid-cell-${cam.id}`}
+                  onClick={() => {
+                    setFocusedCamId(cam.id);
+                    onSelectCamera(cam.id);
+                  }}
+                  className={`flex flex-col bg-[#0a0f1d] rounded-2xl border transition-all duration-200 overflow-hidden shadow-[0_4px_25px_rgba(0,0,0,0.7)] group ${
+                    isFocused
+                      ? 'border-blue-500 shadow-[0_0_20px_rgba(59,130,246,0.3)] ring-1 ring-blue-500/50'
+                      : 'border-white/[0.08] hover:border-white/30'
+                  }`}
+                >
+                  {/* Cell Header */}
+                  <div className="px-3.5 py-2.5 bg-[#0d1424]/90 border-b border-white/[0.06] flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                      <span className="font-mono font-bold text-xs text-blue-400 bg-blue-500/10 border border-blue-500/20 px-2 py-0.5 rounded">
+                        {cam.code}
                       </span>
+                      <span className="text-xs font-bold text-white truncate font-mono">{cam.name}</span>
                     </div>
-                  </div>
-                </div>
 
-                {/* Video Viewport */}
-                <div className="relative aspect-[16/9] bg-black overflow-hidden flex items-center justify-center">
-                  {/* Canvas View */}
-                  <div
-                    className="w-full h-full transition-transform duration-100 ease-out"
-                    style={{
-                      transform: `scale(${zoom}) translate(${pan.x}px, ${pan.y}px)`,
-                    }}
-                  >
-                    <CameraFeedCanvas
-                      camera={cam}
-                      showAiBoxes={globalAiBoxes}
-                      showZones={globalZones}
-                      isNightVision={isNight}
-                      muted={isVideoMuted}
-                      onCountsUpdate={(counts) => handleCountsUpdate(cam.id, counts)}
-                    />
-                  </div>
+                    <div className="flex items-center gap-2">
+                      {/* Live Object Counts Pill */}
+                      <div className="hidden lg:flex items-center gap-1.5 px-2 py-0.5 rounded bg-black/60 border border-white/10 text-[9px] font-mono text-slate-300">
+                        <span className="text-emerald-400 font-bold" title="Active Persons">👥 {camCountsMap[cam.id]?.persons ?? (cam.id.includes('8') ? 2 : 15)}</span>
+                        <span className="text-slate-600">•</span>
+                        <span className="text-cyan-400 font-bold" title="Active Vehicles">🚗 {camCountsMap[cam.id]?.vehicles ?? (cam.id.includes('8') ? 8 : 0)}</span>
+                        <span className="text-slate-600">•</span>
+                        <span className="text-purple-400 font-bold" title="Active Animals">🐕 {camCountsMap[cam.id]?.animals ?? 0}</span>
+                      </div>
 
-                  {/* Disconnected / Offline Overlay */}
-                  {isOffline && (
-                    <div className="absolute inset-0 z-15 bg-slate-950/90 flex flex-col items-center justify-center p-4 pointer-events-none backdrop-blur-sm">
-                      <AlertTriangle size={28} className="text-rose-500 mb-1 animate-pulse" />
-                      <span className="text-rose-400 font-mono font-bold tracking-widest text-[11px] uppercase">
-                        [ DATA LINK OFFLINE ]
+                      {/* Resolution & Bitrate */}
+                      <span className="hidden sm:inline font-mono text-[10px] text-slate-400">
+                        {cam.resolution.split(' ')[0]} • {displayFps}fps
                       </span>
-                      <span className="text-slate-500 font-mono text-[9px] tracking-wider text-center">
-                        NO ACTIVE FRAMES // RECONNECTING
-                      </span>
-                    </div>
-                  )}
 
-                  {/* Tactical Corner Brackets */}
-                  <div className="absolute top-2 left-2 w-3.5 h-3.5 border-t-2 border-l-2 border-cyan-400/50 pointer-events-none z-10" />
-                  <div className="absolute top-2 right-2 w-3.5 h-3.5 border-t-2 border-r-2 border-cyan-400/50 pointer-events-none z-10" />
-                  <div className="absolute bottom-2 left-2 w-3.5 h-3.5 border-b-2 border-l-2 border-cyan-400/50 pointer-events-none z-10" />
-                  <div className="absolute bottom-2 right-2 w-3.5 h-3.5 border-b-2 border-r-2 border-cyan-400/50 pointer-events-none z-10" />
-
-                  {/* Top-Left Live HUD Badge */}
-                  <div className="absolute top-2.5 left-2.5 flex items-center gap-1.5 z-20 pointer-events-none">
-                    {isOffline ? (
-                      <div className="px-2 py-0.5 bg-rose-950 text-rose-300 text-[9px] font-mono font-bold rounded-md flex items-center gap-1 border border-rose-600/50 shadow-sm">
-                        <AlertTriangle size={9} className="text-rose-400" />
-                        <span>OFFLINE</span>
-                      </div>
-                    ) : activeRecordings.has(cam.id) ? (
-                      <div className="px-2 py-0.5 bg-rose-600 text-white text-[9px] font-mono font-bold rounded-md flex items-center gap-1 shadow-[0_0_10px_rgba(244,63,94,0.8)] border border-rose-400 animate-pulse">
-                        <Disc size={9} className="animate-spin text-white" />
-                        <span>REC [{String(Math.floor(recordingEngine.getRecordingDuration(cam.id) / 60)).padStart(2, '0')}:{String(recordingEngine.getRecordingDuration(cam.id) % 60).padStart(2, '0')}]</span>
-                      </div>
-                    ) : (
-                      <div className="px-2 py-0.5 bg-rose-600/90 text-white text-[9px] font-mono font-bold rounded-md flex items-center gap-1 shadow-sm">
-                        <span className="w-1.5 h-1.5 bg-white rounded-full animate-ping"></span>
-                        <span>LIVE</span>
-                      </div>
-                    )}
-                    <div className="px-2 py-0.5 bg-black/80 text-amber-400 text-[9px] font-mono font-bold border border-amber-500/30 rounded-md backdrop-blur-md">
-                      {liveTimestamp}
-                    </div>
-                    {zoom > 1 && (
-                      <div className="px-2 py-0.5 bg-blue-600/90 text-white text-[9px] font-mono rounded-md shadow-sm">
-                        {zoom.toFixed(1)}x ZOOM
-                      </div>
-                    )}
-                  </div>
-
-                  {/* Top-Right Quick Cell Actions */}
-                  <div className="absolute top-2.5 right-2.5 flex items-center gap-1 z-20 opacity-0 group-hover:opacity-100 transition-opacity">
-                    {/* Session Recording Toggle Button */}
-                    <button
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        recordingEngine.toggleRecording(cam);
-                      }}
-                      title={activeRecordings.has(cam.id) ? 'Stop Recording & Save Clip' : 'Start RTSP Session Recording'}
-                      className={`p-1.5 rounded-lg text-xs backdrop-blur-md transition-all cursor-pointer border ${
-                        activeRecordings.has(cam.id)
-                          ? 'bg-rose-600 text-white border-rose-400 shadow-[0_0_12px_rgba(244,63,94,0.8)] animate-pulse'
-                          : 'bg-black/70 text-rose-300 border-rose-500/30 hover:bg-rose-950/80 hover:text-white'
-                      }`}
-                    >
-                      <Disc size={13} className={activeRecordings.has(cam.id) ? 'animate-spin text-white' : 'text-rose-400'} />
-                    </button>
-                    {/* Night Vision Toggle */}
-                    <button
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        toggleNightVision(cam.id);
-                      }}
-                      title={isNight ? 'Switch to Normal Color' : 'Switch to IR Night Vision'}
-                      className={`p-1.5 rounded-lg text-xs backdrop-blur-md transition-all cursor-pointer ${
-                        isNight
-                          ? 'bg-emerald-600/90 text-white border border-emerald-400/50 shadow-[0_0_10px_rgba(16,185,129,0.3)]'
-                          : 'bg-black/70 text-slate-300 border border-white/10 hover:bg-black/90'
-                      }`}
-                    >
-                      {isNight ? <Moon size={13} /> : <Sun size={13} />}
-                    </button>
-
-                    {/* Audio Listen toggle */}
-                    <button
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        setActiveAudioCam(isAudioActive ? null : cam.id);
-                      }}
-                      title={isAudioActive ? 'Mute Audio' : 'Listen to Audio Channel'}
-                      className={`p-1.5 rounded-lg text-xs backdrop-blur-md transition-all cursor-pointer ${
-                        isAudioActive
-                          ? 'bg-blue-600/90 text-white border border-blue-400/50 shadow-[0_0_10px_rgba(59,130,246,0.3)]'
-                          : 'bg-black/70 text-slate-300 border border-white/10 hover:bg-black/90'
-                      }`}
-                    >
-                      {isAudioActive ? <Volume2 size={13} /> : <VolumeX size={13} />}
-                    </button>
-
-                    {/* Snapshot */}
-                    <button
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        handleCaptureCameraSnapshot(cam);
-                      }}
-                      title="Snapshot Feed"
-                      className="p-1.5 rounded-lg bg-black/70 hover:bg-black/90 text-slate-200 border border-white/10 text-xs transition-colors cursor-pointer"
-                    >
-                      <Camera size={13} />
-                    </button>
-
-                    {/* Expand to Solo Focus */}
-                    <button
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        setFocusedCamId(cam.id);
-                        setLayoutMode('single');
-                      }}
-                      title="Expand to Full View"
-                      className="p-1.5 rounded-lg bg-black/70 hover:bg-black/90 text-slate-200 border border-white/10 text-xs transition-colors cursor-pointer"
-                    >
-                      <Maximize size={13} />
-                    </button>
-                  </div>
-
-                  {/* Bottom Hover PTZ & Anomaly Toolbar */}
-                  <div className="absolute bottom-0 inset-x-0 p-2 bg-gradient-to-t from-black/95 via-black/60 to-transparent flex items-center justify-between opacity-0 group-hover:opacity-100 transition-opacity duration-200 z-20">
-                    <div className="flex items-center gap-1">
-                      {/* Zoom controls */}
-                      <button
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          handleZoom(cam.id, 0.5);
-                        }}
-                        className="p-1 rounded-lg bg-black/70 hover:bg-black/90 text-slate-300 text-[10px] flex items-center border border-white/10"
-                        title="Digital Zoom In"
-                      >
-                        <ZoomIn size={12} />
-                      </button>
-                      <button
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          handleZoom(cam.id, -0.5);
-                        }}
-                        className="p-1 rounded-lg bg-black/70 hover:bg-black/90 text-slate-300 text-[10px] flex items-center border border-white/10"
-                        title="Digital Zoom Out"
-                      >
-                        <ZoomOut size={12} />
-                      </button>
-                      {zoom > 1 && (
-                        <button
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            resetPanZoom(cam.id);
-                          }}
-                          className="px-2 py-0.5 rounded-lg bg-black/70 hover:bg-black/90 text-slate-300 text-[9px] font-mono border border-white/10"
+                      {/* Online status indicator */}
+                      <div className="flex items-center gap-1 text-[10px] font-mono font-bold uppercase">
+                        <span
+                          className={`w-1.5 h-1.5 rounded-full ${
+                            isOffline
+                              ? 'bg-rose-500'
+                              : 'bg-emerald-400 animate-pulse'
+                          }`}
+                        />
+                        <span
+                          className={
+                            isOffline
+                              ? 'text-rose-400 font-bold'
+                              : 'text-emerald-400'
+                          }
                         >
-                          1x
-                        </button>
+                          {isOffline
+                            ? '[ DATA LINK OFFLINE ]'
+                            : '● LIVE'}
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Video Viewport */}
+                  <div className="relative aspect-[16/9] bg-black overflow-hidden flex items-center justify-center">
+                    {/* Canvas View */}
+                    <div
+                      className="w-full h-full transition-transform duration-100 ease-out"
+                      style={{
+                        transform: `scale(${zoom}) translate(${pan.x}px, ${pan.y}px)`,
+                      }}
+                    >
+                      <CameraFeedCanvas
+                        camera={cam}
+                        showAiBoxes={globalAiBoxes}
+                        showZones={globalZones}
+                        isNightVision={isNight}
+                        muted={isVideoMuted || (activeAudioCam !== null && activeAudioCam !== cam.id)}
+                        onCountsUpdate={(counts) => handleCountsUpdate(cam.id, counts)}
+                      />
+                    </div>
+
+                    {/* Disconnected / Offline Overlay */}
+                    {isOffline && (
+                      <div className="absolute inset-0 z-15 bg-slate-950/90 flex flex-col items-center justify-center p-4 pointer-events-none backdrop-blur-sm">
+                        <AlertTriangle size={28} className="text-rose-500 mb-1 animate-pulse" />
+                        <span className="text-rose-400 font-mono font-bold tracking-widest text-[11px] uppercase">
+                          [ DATA LINK OFFLINE ]
+                        </span>
+                        <span className="text-slate-500 font-mono text-[9px] tracking-wider text-center">
+                          NO ACTIVE FRAMES // RECONNECTING
+                        </span>
+                      </div>
+                    )}
+
+                    {/* Tactical Corner Brackets */}
+                    <div className="absolute top-2 left-2 w-3.5 h-3.5 border-t-2 border-l-2 border-cyan-400/50 pointer-events-none z-10" />
+                    <div className="absolute top-2 right-2 w-3.5 h-3.5 border-t-2 border-r-2 border-cyan-400/50 pointer-events-none z-10" />
+                    <div className="absolute bottom-2 left-2 w-3.5 h-3.5 border-b-2 border-l-2 border-cyan-400/50 pointer-events-none z-10" />
+                    <div className="absolute bottom-2 right-2 w-3.5 h-3.5 border-b-2 border-r-2 border-cyan-400/50 pointer-events-none z-10" />
+
+                    {/* Top-Left Live HUD Badge */}
+                    <div className="absolute top-2.5 left-2.5 flex items-center gap-1.5 z-20 pointer-events-none">
+                      {isOffline ? (
+                        <div className="px-2 py-0.5 bg-rose-950 text-rose-300 text-[9px] font-mono font-bold rounded-md flex items-center gap-1 border border-rose-600/50 shadow-sm">
+                          <AlertTriangle size={9} className="text-rose-400" />
+                          <span>OFFLINE</span>
+                        </div>
+                      ) : activeRecordings.has(cam.id) ? (
+                        <div className="px-2 py-0.5 bg-rose-600 text-white text-[9px] font-mono font-bold rounded-md flex items-center gap-1 shadow-[0_0_10px_rgba(244,63,94,0.8)] border border-rose-400 animate-pulse">
+                          <Disc size={9} className="animate-spin text-white" />
+                          <span>REC [{String(Math.floor(recordingEngine.getRecordingDuration(cam.id) / 60)).padStart(2, '0')}:{String(recordingEngine.getRecordingDuration(cam.id) % 60).padStart(2, '0')}]</span>
+                        </div>
+                      ) : (
+                        <div className="px-2 py-0.5 bg-rose-600/90 text-white text-[9px] font-mono font-bold rounded-md flex items-center gap-1 shadow-sm">
+                          <span className="w-1.5 h-1.5 bg-white rounded-full animate-ping"></span>
+                          <span>LIVE</span>
+                        </div>
+                      )}
+                      <div className="px-2 py-0.5 bg-black/80 text-amber-400 text-[9px] font-mono font-bold border border-amber-500/30 rounded-md backdrop-blur-md">
+                        {liveTimestamp}
+                      </div>
+                      {zoom > 1 && (
+                        <div className="px-2 py-0.5 bg-blue-600/90 text-white text-[9px] font-mono rounded-md shadow-sm">
+                          {zoom.toFixed(1)}x ZOOM
+                        </div>
+                      )}
+                      {/* Audio status indicator pill on feed */}
+                      {!isVideoMuted && (activeAudioCam === null || activeAudioCam === cam.id) && (
+                        <div className="px-2 py-0.5 bg-cyan-600/90 text-white text-[9px] font-mono rounded-md shadow-sm flex items-center gap-1 animate-pulse">
+                          <Volume2 size={9} />
+                          <span>AUDIO</span>
+                        </div>
                       )}
                     </div>
 
-                    <div className="flex items-center gap-1.5">
-                      {/* Simulate Breach button on this feed */}
+                    {/* Top-Right Quick Cell Actions */}
+                    <div className="absolute top-2.5 right-2.5 flex items-center gap-1 z-20 opacity-0 group-hover:opacity-100 transition-opacity">
+                      {/* Session Recording Toggle Button */}
                       <button
                         onClick={(e) => {
                           e.stopPropagation();
-                          onTriggerIntrusion();
+                          recordingEngine.toggleRecording(cam);
                         }}
-                        className="flex items-center gap-1 px-2.5 py-0.5 rounded-lg bg-rose-600 hover:bg-rose-500 text-white text-[10px] font-mono font-bold tracking-wide border border-rose-400/40 shadow-[0_0_10px_rgba(244,63,94,0.3)] cursor-pointer"
+                        title={activeRecordings.has(cam.id) ? 'Stop Recording & Save Clip' : 'Start RTSP Session Recording'}
+                        className={`p-1.5 rounded-lg text-xs backdrop-blur-md transition-all cursor-pointer border ${
+                          activeRecordings.has(cam.id)
+                            ? 'bg-rose-600 text-white border-rose-400 shadow-[0_0_12px_rgba(244,63,94,0.8)] animate-pulse'
+                            : 'bg-black/70 text-rose-300 border-rose-500/30 hover:bg-rose-950/80 hover:text-white'
+                        }`}
                       >
-                        <AlertTriangle size={11} />
-                        <span>BREACH</span>
+                        <Disc size={13} className={activeRecordings.has(cam.id) ? 'animate-spin text-white' : 'text-rose-400'} />
                       </button>
+                      {/* Night Vision Toggle */}
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          toggleNightVision(cam.id);
+                        }}
+                        title={isNight ? 'Switch to Normal Color' : 'Switch to IR Night Vision'}
+                        className={`p-1.5 rounded-lg text-xs backdrop-blur-md transition-all cursor-pointer ${
+                          isNight
+                            ? 'bg-emerald-600/90 text-white border border-emerald-400/50 shadow-[0_0_10px_rgba(16,185,129,0.3)]'
+                            : 'bg-black/70 text-slate-300 border border-white/10 hover:bg-black/90'
+                        }`}
+                      >
+                        {isNight ? <Moon size={13} /> : <Sun size={13} />}
+                      </button>
+
+                      {/* Audio Listen toggle */}
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleToggleCamAudio(cam.id);
+                        }}
+                        title={isAudioActive && !isVideoMuted ? `Mute Audio (${cam.name})` : `Unmute Audio (${cam.name})`}
+                        className={`p-1.5 rounded-lg text-xs backdrop-blur-md transition-all cursor-pointer border ${
+                          isAudioActive && !isVideoMuted
+                            ? 'bg-cyan-600 text-white border-cyan-400 shadow-[0_0_10px_rgba(0,240,255,0.6)] animate-pulse'
+                            : 'bg-black/70 text-slate-300 border border-white/10 hover:bg-black/90'
+                        }`}
+                      >
+                        {isAudioActive && !isVideoMuted ? <Volume2 size={13} /> : <VolumeX size={13} />}
+                      </button>
+
+                      {/* Snapshot */}
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleCaptureCameraSnapshot(cam);
+                        }}
+                        title="Snapshot Feed"
+                        className="p-1.5 rounded-lg bg-black/70 hover:bg-black/90 text-slate-200 border border-white/10 text-xs transition-colors cursor-pointer"
+                      >
+                        <Camera size={13} />
+                      </button>
+
+                      {/* Expand to Solo Focus */}
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setFocusedCamId(cam.id);
+                          onSelectCamera(cam.id);
+                          setLayoutMode('single');
+                        }}
+                        title="Expand to Full View"
+                        className="p-1.5 rounded-lg bg-black/70 hover:bg-black/90 text-slate-200 border border-white/10 text-xs transition-colors cursor-pointer"
+                      >
+                        <Maximize size={13} />
+                      </button>
+                    </div>
+
+                    {/* Bottom Hover PTZ & Anomaly Toolbar */}
+                    <div className="absolute bottom-0 inset-x-0 p-2 bg-gradient-to-t from-black/95 via-black/60 to-transparent flex items-center justify-between opacity-0 group-hover:opacity-100 transition-opacity duration-200 z-20">
+                      <div className="flex items-center gap-1">
+                        {/* Zoom controls */}
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleZoom(cam.id, 0.5);
+                          }}
+                          className="p-1 rounded-lg bg-black/70 hover:bg-black/90 text-slate-300 text-[10px] flex items-center border border-white/10"
+                          title="Digital Zoom In"
+                        >
+                          <ZoomIn size={12} />
+                        </button>
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleZoom(cam.id, -0.5);
+                          }}
+                          className="p-1 rounded-lg bg-black/70 hover:bg-black/90 text-slate-300 text-[10px] flex items-center border border-white/10"
+                          title="Digital Zoom Out"
+                        >
+                          <ZoomOut size={12} />
+                        </button>
+                        {zoom > 1 && (
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              resetPanZoom(cam.id);
+                            }}
+                            className="px-2 py-0.5 rounded-lg bg-black/70 hover:bg-black/90 text-slate-300 text-[9px] font-mono border border-white/10"
+                          >
+                            1x
+                          </button>
+                        )}
+                      </div>
+
+                      <div className="flex items-center gap-1.5">
+                        {/* Simulate Breach button on this feed */}
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            onTriggerIntrusion();
+                          }}
+                          className="flex items-center gap-1 px-2.5 py-0.5 rounded-lg bg-rose-600 hover:bg-rose-500 text-white text-[10px] font-mono font-bold tracking-wide border border-rose-400/40 shadow-[0_0_10px_rgba(244,63,94,0.3)] cursor-pointer"
+                        >
+                          <AlertTriangle size={11} />
+                          <span>BREACH</span>
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Footer Metadata */}
+                  <div className="px-3.5 py-2 bg-[#0d1424]/80 border-t border-white/[0.06] flex items-center justify-between text-[10px] font-mono text-slate-400">
+                    <div className="flex items-center gap-2 truncate">
+                      <span className="text-slate-500">LOC:</span>
+                      <span className="text-slate-300 truncate font-semibold">{cam.location}</span>
+                    </div>
+                    <div className="flex items-center gap-2 shrink-0">
+                      <span className="text-emerald-400 font-bold">{cam.bitrate}</span>
+                      <span className="text-slate-600">•</span>
+                      <span className="text-blue-400">{cam.aiModels[0]}</span>
                     </div>
                   </div>
                 </div>
+              );
+            })}
+          </div>
 
-                {/* Footer Metadata */}
-                <div className="px-3.5 py-2 bg-[#0d1424]/80 border-t border-white/[0.06] flex items-center justify-between text-[10px] font-mono text-slate-400">
-                  <div className="flex items-center gap-2 truncate">
-                    <span className="text-slate-500">LOC:</span>
-                    <span className="text-slate-300 truncate font-semibold">{cam.location}</span>
-                  </div>
-                  <div className="flex items-center gap-2 shrink-0">
-                    <span className="text-emerald-400 font-bold">{cam.bitrate}</span>
-                    <span className="text-slate-600">•</span>
-                    <span className="text-blue-400">{cam.aiModels[0]}</span>
-                  </div>
-                </div>
+          {/* Bottom Quick Section Switcher Bar */}
+          <div className="p-3 bg-[#0a0f1d] border border-white/[0.08] rounded-2xl flex flex-wrap items-center justify-between gap-3 shadow-md font-mono text-xs">
+            <div className="flex items-center gap-2">
+              <span className="text-slate-400 font-bold uppercase text-[11px]">SWITCH SECTION:</span>
+              <div className="flex items-center gap-1.5">
+                {quadSections.map((sec, sIdx) => {
+                  const isActive = sIdx === safeSectionIndex;
+                  const camStart = sIdx * 4 + 1;
+                  const camEnd = Math.min((sIdx + 1) * 4, cameras.length);
+                  return (
+                    <button
+                      key={sIdx}
+                      onClick={() => handleSelectSection(sIdx)}
+                      className={`px-3 py-1 rounded-xl font-bold transition-all cursor-pointer border text-xs ${
+                        isActive
+                          ? 'bg-cyan-500/25 text-cyan-300 border-cyan-400/50 shadow-[0_0_12px_rgba(0,240,255,0.3)]'
+                          : 'bg-white/[0.04] text-slate-400 border-white/[0.08] hover:text-white'
+                      }`}
+                    >
+                      SEC {sIdx + 1} ({camStart}–{camEnd})
+                    </button>
+                  );
+                })}
               </div>
-            );
-          })}
-        </div>
+            </div>
+
+            <div className="flex items-center gap-2">
+              <button
+                onClick={handlePrevSection}
+                className="px-3 py-1 rounded-xl bg-white/[0.04] hover:bg-white/[0.10] text-slate-200 border border-white/10 font-bold flex items-center gap-1 cursor-pointer active:scale-95"
+              >
+                <ArrowLeft size={12} />
+                <span>PREV SEC</span>
+              </button>
+              <button
+                onClick={handleNextSection}
+                className="px-3 py-1 rounded-xl bg-cyan-500/20 hover:bg-cyan-500/30 text-cyan-300 border border-cyan-400/40 font-bold flex items-center gap-1 shadow-[0_0_8px_rgba(0,240,255,0.2)] cursor-pointer active:scale-95"
+              >
+                <span>NEXT SEC</span>
+                <ArrowRight size={12} />
+              </button>
+            </div>
+          </div>
+        </>
       )}
 
       {/* 3. Layout: 1+3 Master Split */}
@@ -978,37 +1180,35 @@ export const QuadLiveStreamView: React.FC<QuadLiveStreamViewProps> = ({
 
           {/* 3 Synchronous Companion Streams (4 cols) */}
           <div className="lg:col-span-4 flex flex-col gap-3">
-            {cameras
-              .filter((c) => c.id !== activeFocusCam.id)
-              .map((cam) => (
-                <div
-                  key={cam.id}
-                  onClick={() => {
-                    setFocusedCamId(cam.id);
-                    onSelectCamera(cam.id);
-                  }}
-                  className="bg-[#0a0f1d] border border-white/[0.08] hover:border-blue-500/50 rounded-xl overflow-hidden cursor-pointer transition-all flex flex-col shadow-[0_4px_15px_rgba(0,0,0,0.6)] group"
-                >
-                  <div className="px-3 py-1.5 bg-[#0d1424] flex items-center justify-between text-xs border-b border-white/[0.06]">
-                    <span className="font-bold text-white font-mono">{cam.code}: {cam.name}</span>
-                    <span className="text-[10px] text-emerald-400 font-mono font-bold">● LIVE</span>
-                  </div>
-                  <div className="relative aspect-[16/9] bg-black">
-                    <CameraFeedCanvas
-                      camera={cam}
-                      showAiBoxes={globalAiBoxes}
-                      showZones={globalZones}
-                      isNightVision={nightVisionMap[cam.id] || false}
-                      muted={isVideoMuted}
-                    />
-                    <div className="absolute inset-0 bg-black/30 hover:bg-transparent transition-colors flex items-center justify-center opacity-0 hover:opacity-100">
-                      <span className="px-3 py-1.5 rounded-lg bg-blue-600 text-white text-[11px] font-mono font-bold shadow-[0_0_12px_rgba(59,130,246,0.5)]">
-                        SWITCH TO MASTER
-                      </span>
-                    </div>
+            {companionStreams.map((cam) => (
+              <div
+                key={cam.id}
+                onClick={() => {
+                  setFocusedCamId(cam.id);
+                  onSelectCamera(cam.id);
+                }}
+                className="bg-[#0a0f1d] border border-white/[0.08] hover:border-blue-500/50 rounded-xl overflow-hidden cursor-pointer transition-all flex flex-col shadow-[0_4px_15px_rgba(0,0,0,0.6)] group"
+              >
+                <div className="px-3 py-1.5 bg-[#0d1424] flex items-center justify-between text-xs border-b border-white/[0.06]">
+                  <span className="font-bold text-white font-mono">{cam.code}: {cam.name}</span>
+                  <span className="text-[10px] text-emerald-400 font-mono font-bold">● LIVE</span>
+                </div>
+                <div className="relative aspect-[16/9] bg-black">
+                  <CameraFeedCanvas
+                    camera={cam}
+                    showAiBoxes={globalAiBoxes}
+                    showZones={globalZones}
+                    isNightVision={nightVisionMap[cam.id] || false}
+                    muted={isVideoMuted}
+                  />
+                  <div className="absolute inset-0 bg-black/30 hover:bg-transparent transition-colors flex items-center justify-center opacity-0 hover:opacity-100">
+                    <span className="px-3 py-1.5 rounded-lg bg-blue-600 text-white text-[11px] font-mono font-bold shadow-[0_0_12px_rgba(59,130,246,0.5)]">
+                      SWITCH TO MASTER
+                    </span>
                   </div>
                 </div>
-              ))}
+              </div>
+            ))}
           </div>
         </div>
       )}

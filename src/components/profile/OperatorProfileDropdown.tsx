@@ -205,6 +205,7 @@ export const OperatorProfileDropdown: React.FC<OperatorProfileDropdownProps> = (
           <div className="p-2">
             <button
               type="button"
+              id="profile-dropdown-logout-btn"
               onClick={async () => {
                 setIsOpen(false);
                 await logout();
@@ -212,7 +213,7 @@ export const OperatorProfileDropdown: React.FC<OperatorProfileDropdownProps> = (
               className="w-full flex items-center gap-3 px-3.5 py-2.5 rounded-xl hover:bg-rose-950/40 text-rose-400 hover:text-rose-300 transition-colors cursor-pointer text-xs font-black uppercase tracking-wider text-left"
             >
               <LogOut size={16} className="shrink-0 text-rose-500" />
-              <span>Logout & Terminate</span>
+              <span>Logout</span>
             </button>
           </div>
         </div>

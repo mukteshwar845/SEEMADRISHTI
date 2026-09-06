@@ -13,6 +13,7 @@ import { useSecurity } from '../context/SecurityContext';
 import { OperatorProfileDropdown } from './profile/OperatorProfileDropdown';
 import { webSocketService, WebSocketServiceState } from '../services/websocketService';
 import { AiSystemStatusModal } from './AiSystemStatusModal';
+import { SeemadrishtiLogo } from './SeemadrishtiLogo';
 
 interface HeaderProps {
   onToggleSidebarMobile: () => void;
@@ -119,6 +120,7 @@ export const Header: React.FC<HeaderProps> = ({
         </button>
 
         <div className="flex items-center gap-3">
+          <SeemadrishtiLogo size={28} className="hidden xs:inline-flex" />
           <div>
             <div className="flex items-center gap-2">
               <h2

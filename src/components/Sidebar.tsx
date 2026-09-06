@@ -162,11 +162,11 @@ export const Sidebar: React.FC<SidebarProps> = ({
             <div
               className={`w-9 h-9 flex items-center justify-center rounded-lg shrink-0 ${
                 isDaylight
-                  ? 'bg-cyan-800 text-white shadow-sm'
-                  : 'bg-cyan-950 border border-cyan-400/60 shadow-[0_0_15px_rgba(0,240,255,0.4)] text-cyan-300'
+                  ? 'bg-cyan-900/10 border border-cyan-700/30 shadow-xs'
+                  : 'bg-cyan-950/60 border border-cyan-500/40 shadow-[0_0_15px_rgba(6,182,212,0.3)]'
               }`}
             >
-              <SeemadrishtiLogo size={20} />
+              <SeemadrishtiLogo size={26} />
             </div>
             <div>
               <div className="flex items-center gap-2">
@@ -340,7 +340,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
             <button
               id="nav-logout"
               onClick={logout}
-              title="Terminate Session & Return to Landing Page"
+              title="Logout"
               className={`flex items-center justify-center gap-1.5 px-2 py-2 rounded-lg transition-all cursor-pointer text-[10px] font-mono font-bold ${
                 isDaylight
                   ? 'text-rose-700 hover:bg-rose-100 bg-rose-50 border border-rose-300'

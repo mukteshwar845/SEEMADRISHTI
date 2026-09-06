@@ -100,7 +100,7 @@ export const UserManagementView: React.FC = () => {
   const handleLogout = async () => {
     await logoutOperator();
     setCurrentOperator(null);
-    setToastMessage('Operator session terminated.');
+    setToastMessage('Operator logged out successfully.');
     setTimeout(() => setToastMessage(null), 3000);
   };
 

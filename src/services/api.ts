@@ -42,7 +42,16 @@ async function request<T>(endpoint: string, options: RequestInit = {}): Promise<
     ...(options.headers as Record<string, string> || {}),
   };
 
-  const response = await fetch(url, { ...options, headers });
+  // 5-second timeout so the refresh button doesn't hang when backend is offline
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), 5000);
+
+  let response: Response;
+  try {
+    response = await fetch(url, { ...options, headers, signal: controller.signal });
+  } finally {
+    clearTimeout(timeoutId);
+  }
   const data = await response.json();
 
   if (!response.ok) {
@@ -805,13 +814,17 @@ export async function fetchTelemetry(): Promise<{ success: boolean; data: Backen
 
 export async function measureNetworkPing(endpoint: string = '/api/health'): Promise<{ rttMs: number; status: number; ok: boolean }> {
   const t0 = performance.now();
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), 2000);
   try {
-    const res = await fetch(endpoint, { cache: 'no-store' });
+    const res = await fetch(endpoint, { cache: 'no-store', signal: controller.signal });
     const rttMs = Math.max(1, Math.round(performance.now() - t0));
     return { rttMs, status: res.status, ok: res.ok };
   } catch {
     const rttMs = Math.max(1, Math.round(performance.now() - t0));
     return { rttMs, status: 0, ok: false };
+  } finally {
+    clearTimeout(timeoutId);
   }
 }
 

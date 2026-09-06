@@ -773,11 +773,12 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
             <div className="pt-4 border-t border-slate-800 flex items-center justify-between">
               <button
                 type="button"
+                id="settings-logout-btn"
                 onClick={logout}
                 className="flex items-center gap-1.5 px-4 py-2 rounded-xl border border-rose-500/40 text-rose-400 hover:bg-rose-950/40 text-xs font-bold uppercase tracking-wider transition-colors cursor-pointer"
               >
                 <LogOut size={14} />
-                <span>Terminate Session & Exit</span>
+                <span>Logout</span>
               </button>
 
               <button

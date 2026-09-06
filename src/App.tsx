@@ -1025,7 +1025,7 @@ function SeemadrishtiMainApp() {
 }
 
 function RootAppPortal() {
-  const { currentPortal, setPortal, enterDemoMode, isAuthenticated } = useAuth();
+  const { currentPortal, setPortal, isAuthenticated } = useAuth();
   const location = useLocation();
   const navigate = useNavigate();
 
@@ -1050,19 +1050,12 @@ function RootAppPortal() {
     );
   }
 
-  if (currentPortal === 'landing' && !isAuthenticated) {
+  if (!isAuthenticated) {
     return (
       <LandingPage
         onEnterAuth={() => {
           setPortal('auth');
           navigate('/login');
-        }}
-        onEnterDemo={async () => {
-          try {
-            await enterDemoMode('Commander');
-          } catch (err) {
-            console.error('[AUTH] Failed to enter demo mode:', err);
-          }
         }}
       />
     );

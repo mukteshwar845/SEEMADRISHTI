@@ -365,35 +365,7 @@ export const UserManagementView: React.FC = () => {
               </div>
             )}
 
-            {/* Quick Demo Credentials helper chips */}
-            <div className="p-3 bg-slate-900/80 border border-slate-800 rounded-xl space-y-2">
-              <span className="text-[10px] font-mono text-slate-400 uppercase tracking-wider block font-semibold">
-                TACTICAL RBAC OPERATOR PRESETS:
-              </span>
-              <div className="grid grid-cols-2 gap-1.5">
-                {[
-                  { label: 'Major Vikram Sen', user: 'admin', pass: 'Admin@123', role: 'Commander' },
-                  { label: 'Rajesh Kumar', user: 'operator', pass: 'Operator@123', role: 'Operator' },
-                  { label: 'Amit Patel', user: 'patrol', pass: 'Patrol@123', role: 'Patrol' },
-                  { label: 'Dr. Ananya Sharma', user: 'analyst', pass: 'Analyst@123', role: 'Analyst' },
-                ].map((demo) => (
-                  <button
-                    key={demo.user}
-                    type="button"
-                    onClick={() => {
-                      setLoginUsername(demo.user);
-                      setLoginPassword(demo.pass);
-                    }}
-                    className="p-2 text-left rounded-lg bg-slate-800/80 hover:bg-cyan-950 hover:border-cyan-500/50 border border-slate-700 transition-all text-slate-300 hover:text-cyan-200 cursor-pointer"
-                  >
-                    <div className="font-mono text-[11px] font-bold text-white truncate">{demo.label}</div>
-                    <div className="font-mono text-[10px] text-cyan-400/80">
-                      {demo.user} // {demo.role}
-                    </div>
-                  </button>
-                ))}
-              </div>
-            </div>
+
 
             <form onSubmit={handleLoginSubmit} className="space-y-3.5 font-mono text-xs">
               <div className="space-y-1">

@@ -37,19 +37,18 @@ import {
   Check,
   Copy,
 } from 'lucide-react';
-import { useAuth, DEMO_OPERATOR_PRESETS } from '../../context/AuthContext';
+import { useAuth } from '../../context/AuthContext';
 import { SeemadrishtiLogo } from '../SeemadrishtiLogo';
 import { Border3DCanvas } from './Border3DCanvas';
 
 interface LandingPageProps {
   onEnterAuth: () => void;
-  onEnterDemo: () => void;
 }
 
 type SimulationScenario = 'perimeter_scaling' | 'thermal_night' | 'uav_intercept' | 'sector_lockdown';
 
-export const LandingPage: React.FC<LandingPageProps> = ({ onEnterAuth, onEnterDemo }) => {
-  const { enterDemoMode, setPortal } = useAuth();
+export const LandingPage: React.FC<LandingPageProps> = ({ onEnterAuth }) => {
+  const { setPortal } = useAuth();
   const [activeTab, setActiveTab] = useState<'capabilities' | 'sectors' | 'architecture' | 'roles'>('capabilities');
   const [liveUtcTime, setLiveUtcTime] = useState('');
   const [liveIstTime, setLiveIstTime] = useState('');
@@ -411,14 +410,6 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onEnterAuth, onEnterDe
         {/* Header Action Buttons */}
         <div className="flex items-center gap-2 sm:gap-3">
           <button
-            onClick={() => onEnterDemo()}
-            className="px-3.5 py-2 rounded-lg border border-purple-500/50 bg-purple-950/60 hover:bg-purple-900/80 text-purple-300 text-xs font-bold transition-all cursor-pointer shadow-[0_0_15px_rgba(168,85,247,0.3)] active:scale-95 flex items-center gap-1.5"
-          >
-            <Play size={13} className="text-purple-400 animate-pulse" />
-            <span className="hidden sm:inline">1-Click</span> Live Demo
-          </button>
-
-          <button
             onClick={onEnterAuth}
             className="px-4 py-2 rounded-lg bg-gradient-to-r from-cyan-500 hover:from-cyan-400 to-teal-400 hover:to-teal-300 text-black text-xs font-black tracking-wider transition-all cursor-pointer shadow-[0_0_20px_rgba(0,240,255,0.5)] active:scale-95 flex items-center gap-1.5"
           >
@@ -462,11 +453,11 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onEnterAuth, onEnterDe
               </button>
 
               <button
-                onClick={() => onEnterDemo()}
+                onClick={() => scrollToSection('simulator')}
                 className="px-5 py-3.5 rounded-xl border border-slate-700 bg-slate-900/80 hover:bg-slate-800 text-slate-200 font-bold text-xs tracking-wider flex items-center gap-2 transition-all cursor-pointer active:scale-95 backdrop-blur-md"
               >
-                <Play size={15} className="text-purple-400" />
-                <span>LAUNCH COMMAND DECK</span>
+                <Terminal size={15} className="text-cyan-400" />
+                <span>EXPLORE THREAT SIMULATOR</span>
               </button>
             </div>
 
@@ -527,51 +518,6 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onEnterAuth, onEnterDe
           </div>
         </div>
 
-        {/* Quick 1-Click Evaluation Accounts */}
-        <div id="demo-accounts" className="mt-8 p-4 rounded-2xl bg-black/70 border border-slate-800/90 backdrop-blur-md scroll-mt-20">
-          <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between mb-3 px-1 gap-2">
-            <span className="text-[11px] font-bold text-slate-300 uppercase tracking-widest flex items-center gap-2">
-              <Zap size={14} className="text-cyan-400 animate-bounce" />
-              DIRECT EVALUATION CLEARANCE — 1-CLICK INSTANT LOGIN:
-            </span>
-            <span className="text-[9px] text-cyan-400 font-bold tracking-widest">
-              SELECT DESIRED MILITARY RANK BELOW
-            </span>
-          </div>
-          <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5">
-            {DEMO_OPERATOR_PRESETS.map((preset) => (
-              <button
-                key={preset.username}
-                onClick={async () => {
-                  try {
-                    await enterDemoMode(preset.role);
-                  } catch (err) {
-                    console.error('[AUTH] Failed to log in as demo preset:', err);
-                  }
-                }}
-                className="p-3 rounded-xl border border-slate-800 bg-slate-900/60 hover:bg-cyan-950/40 hover:border-cyan-500/50 text-left transition-all cursor-pointer group active:scale-95"
-              >
-                <div className="flex items-center justify-between mb-1">
-                  <span
-                    className="text-[9px] font-bold tracking-wider px-2 py-0.5 rounded"
-                    style={{
-                      backgroundColor: `${preset.color}20`,
-                      color: preset.color,
-                      border: `1px solid ${preset.color}40`,
-                    }}
-                  >
-                    {preset.tag}
-                  </span>
-                  <ChevronRight size={13} className="text-slate-500 group-hover:text-cyan-400 group-hover:translate-x-0.5 transition-all" />
-                </div>
-                <p className="text-xs font-black text-white group-hover:text-cyan-300">
-                  {preset.name}
-                </p>
-                <p className="text-[9px] text-slate-400 font-mono mt-0.5">{preset.sector}</p>
-              </button>
-            ))}
-          </div>
-        </div>
       </section>
 
       {/* 4. Interactive Live Threat Simulator HUD (Hands-on Command Deck) */}
@@ -933,21 +879,16 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onEnterAuth, onEnterDe
                 </div>
 
                 <button
-                  onClick={async () => {
-                    try {
-                      await enterDemoMode(rc.role as any);
-                    } catch (err) {
-                      console.error('[AUTH] Failed to log in as demo role:', err);
-                    }
-                  }}
-                  className="mt-6 w-full py-2.5 rounded-xl text-xs font-black tracking-wider transition-all cursor-pointer active:scale-95"
+                  onClick={onEnterAuth}
+                  className="mt-6 w-full py-2.5 rounded-xl text-xs font-black tracking-wider transition-all cursor-pointer active:scale-95 flex items-center justify-center gap-1.5"
                   style={{
                     backgroundColor: `${rc.color}20`,
                     color: rc.color,
                     border: `1px solid ${rc.color}50`,
                   }}
                 >
-                  LOG IN AS {rc.role.toUpperCase()}
+                  <Lock size={12} />
+                  <span>AUTHENTICATE AS {rc.role.toUpperCase()}</span>
                 </button>
               </div>
             ))}

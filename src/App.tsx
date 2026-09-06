@@ -1038,6 +1038,19 @@ function RootAppPortal() {
     location.pathname === '/signup' ||
     location.pathname === '/register';
 
+  // If authenticated, seamlessly navigate from auth routes to dashboard
+  useEffect(() => {
+    if (isAuthenticated && (isAuthRoute || isSignupRoute || currentPortal === 'app')) {
+      if (location.pathname === '/login' || location.pathname === '/auth' || location.pathname === '/signup' || location.pathname === '/register') {
+        navigate('/dashboard', { replace: true });
+      }
+    }
+  }, [isAuthenticated, isAuthRoute, isSignupRoute, currentPortal, location.pathname, navigate]);
+
+  if (isAuthenticated && currentPortal !== 'landing') {
+    return <SeemadrishtiMainApp />;
+  }
+
   if (isAuthRoute || isSignupRoute || currentPortal === 'auth') {
     return (
       <Auth3DView
@@ -1050,18 +1063,14 @@ function RootAppPortal() {
     );
   }
 
-  if (!isAuthenticated) {
-    return (
-      <LandingPage
-        onEnterAuth={() => {
-          setPortal('auth');
-          navigate('/login');
-        }}
-      />
-    );
-  }
-
-  return <SeemadrishtiMainApp />;
+  return (
+    <LandingPage
+      onEnterAuth={() => {
+        setPortal('auth');
+        navigate('/login');
+      }}
+    />
+  );
 }
 
 export default function App() {

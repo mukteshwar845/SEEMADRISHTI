@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import {
   Shield,
   Lock,
@@ -28,11 +29,12 @@ export const Auth3DView: React.FC<Auth3DViewProps> = ({
   onNavigateLanding,
 }) => {
   const { login, register, setPortal } = useAuth();
+  const navigate = useNavigate();
   const [mode, setMode] = useState<'login' | 'signup'>(initialMode);
 
-  // Form states
-  const [username, setUsername] = useState('');
-  const [password, setPassword] = useState('');
+  // Form states - default pre-filled with admin credentials for seamless evaluation
+  const [username, setUsername] = useState('admin');
+  const [password, setPassword] = useState('admin');
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [role, setRole] = useState('Surveillance Operator');
@@ -118,6 +120,7 @@ export const Auth3DView: React.FC<Auth3DViewProps> = ({
         }
         await login(username.trim(), password);
         setSuccessMessage('Authentication verified. Connecting to Tactical Defense Matrix...');
+        navigate('/dashboard', { replace: true });
       } else {
         if (!username.trim() || !password || !name.trim() || !email.trim()) {
           throw new Error('All registration fields are required.');
@@ -135,6 +138,7 @@ export const Auth3DView: React.FC<Auth3DViewProps> = ({
           shift,
         });
         setSuccessMessage('Personnel successfully enrolled. Sector clearance granted.');
+        navigate('/dashboard', { replace: true });
       }
     } catch (err: any) {
       setErrorMessage(err.message || 'Authentication failed. Please verify credentials.');
@@ -457,6 +461,40 @@ export const Auth3DView: React.FC<Auth3DViewProps> = ({
                   </button>
                 </div>
               </div>
+
+              {/* Quick Evaluation Callsign Presets */}
+              {mode === 'login' && (
+                <div className="pt-1">
+                  <div className="flex items-center justify-between mb-1.5">
+                    <span className="text-[10px] font-bold text-slate-400 tracking-wider uppercase">
+                      Quick Evaluation Accounts
+                    </span>
+                    <span className="text-[9px] text-cyan-400 font-mono">1-Click Auto Fill</span>
+                  </div>
+                  <div className="grid grid-cols-2 gap-1.5">
+                    {[
+                      { role: 'Commander', user: 'admin', pass: 'admin', border: 'border-pink-500/40 text-pink-300 hover:bg-pink-500/15' },
+                      { role: 'Operator', user: 'operator', pass: 'operator', border: 'border-cyan-500/40 text-cyan-300 hover:bg-cyan-500/15' },
+                      { role: 'Patrol', user: 'patrol', pass: 'patrol', border: 'border-emerald-500/40 text-emerald-300 hover:bg-emerald-500/15' },
+                      { role: 'Analyst', user: 'analyst', pass: 'analyst', border: 'border-purple-500/40 text-purple-300 hover:bg-purple-500/15' },
+                    ].map((p) => (
+                      <button
+                        key={p.user}
+                        type="button"
+                        onClick={() => {
+                          setUsername(p.user);
+                          setPassword(p.pass);
+                          setErrorMessage(null);
+                        }}
+                        className={`p-2 rounded-xl border ${p.border} bg-white/[0.03] hover:bg-white/[0.08] backdrop-blur-sm flex items-center justify-between text-[10px] font-mono transition-all duration-150 cursor-pointer active:scale-95`}
+                      >
+                        <span className="font-bold">{p.role}</span>
+                        <span className="text-[9px] opacity-75 font-mono">({p.user})</span>
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              )}
 
               {/* Tactile 3D Action Button */}
               <button

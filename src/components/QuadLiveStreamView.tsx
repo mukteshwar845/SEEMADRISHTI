@@ -50,6 +50,7 @@ import {
 import { recordingEngine, ActiveRecording } from '../utils/recordingManager';
 import { fetchEnvironmentStates } from '../services/api';
 import { webSocketService } from '../services/websocketService';
+import { useTheme } from '../context/ThemeContext';
 
 interface QuadLiveStreamViewProps {
   cameras: CameraFeed[];
@@ -79,6 +80,7 @@ export const QuadLiveStreamView: React.FC<QuadLiveStreamViewProps> = ({
   onTriggerIntrusion,
   onOpenStitchingView,
 }) => {
+  const { isDaylight, theme } = useTheme();
   // 1. View & Layout State
   const [layoutMode, setLayoutMode] = useState<ViewMode>('2x2');
   const [focusedCamId, setFocusedCamId] = useState<string>(selectedCameraId || 'cam-1');
@@ -601,27 +603,35 @@ export const QuadLiveStreamView: React.FC<QuadLiveStreamViewProps> = ({
       className="space-y-3.5 max-w-7xl mx-auto select-none"
     >
       {/* 1. Command Center Navigation & Unified Control Bar */}
-      <div className="p-3 bg-[#0a0f1d]/80 backdrop-blur-md border border-cyan-500/20 rounded-2xl flex flex-col lg:flex-row lg:items-center justify-between gap-3 shadow-xl">
+      <div className={`p-3 rounded-2xl flex flex-col lg:flex-row lg:items-center justify-between gap-3 shadow-xl backdrop-blur-md border transition-colors ${
+        isDaylight
+          ? 'bg-white/95 border-slate-300 shadow-md text-slate-900'
+          : 'bg-[#0a0f1d]/80 border-cyan-500/20 text-white shadow-xl'
+      }`}>
         {/* Left: Brand / Mode Lockup */}
         <div className="flex items-center gap-3">
           <div className="flex items-center gap-2">
-            <span className="p-1.5 rounded-xl bg-cyan-500/10 text-cyan-400 border border-cyan-500/20">
+            <span className="p-1.5 rounded-xl bg-cyan-500/10 text-cyan-500 border border-cyan-500/20">
               <Grid2X2 size={16} />
             </span>
             <div>
-              <h2 className="text-xs sm:text-sm font-black text-white uppercase tracking-[0.18em] font-mono flex items-center gap-2">
+              <h2 className={`text-xs sm:text-sm font-black uppercase tracking-[0.18em] font-mono flex items-center gap-2 ${
+                isDaylight ? 'text-slate-900' : 'text-white'
+              }`}>
                 <span>TACTICAL CAMERA MONITORING</span>
-                <span className="px-1.5 py-0.2 rounded text-[9px] font-mono font-bold bg-emerald-950/80 border border-emerald-500/30 text-emerald-400">
+                <span className="px-1.5 py-0.2 rounded text-[9px] font-mono font-bold bg-emerald-500/15 border border-emerald-500/30 text-emerald-500">
                   ● 30 FPS SYNC
                 </span>
               </h2>
             </div>
           </div>
 
-          <div className="hidden sm:block h-5 w-px bg-white/10" />
+          <div className={`hidden sm:block h-5 w-px ${isDaylight ? 'bg-slate-300' : 'bg-white/10'}`} />
 
           {/* View Mode Segmented Switcher */}
-          <div className="flex items-center bg-[#060911] border border-white/10 rounded-xl p-0.5">
+          <div className={`flex items-center rounded-xl p-0.5 border ${
+            isDaylight ? 'bg-slate-100 border-slate-300' : 'bg-[#060911] border-white/10'
+          }`}>
             <button
               onClick={() => {
                 setLayoutMode('2x2');
@@ -631,7 +641,7 @@ export const QuadLiveStreamView: React.FC<QuadLiveStreamViewProps> = ({
               className={`flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-mono font-bold uppercase tracking-wider transition-all cursor-pointer ${
                 layoutMode === '2x2'
                   ? 'bg-cyan-500 text-slate-950 shadow-[0_0_12px_rgba(6,182,212,0.4)]'
-                  : 'text-slate-400 hover:text-white'
+                  : isDaylight ? 'text-slate-600 hover:text-slate-900' : 'text-slate-400 hover:text-white'
               }`}
             >
               <Grid2X2 size={12} />
@@ -647,7 +657,7 @@ export const QuadLiveStreamView: React.FC<QuadLiveStreamViewProps> = ({
               className={`flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-mono font-bold uppercase tracking-wider transition-all cursor-pointer ${
                 layoutMode === '1+3'
                   ? 'bg-cyan-500 text-slate-950 shadow-[0_0_12px_rgba(6,182,212,0.4)]'
-                  : 'text-slate-400 hover:text-white'
+                  : isDaylight ? 'text-slate-600 hover:text-slate-900' : 'text-slate-400 hover:text-white'
               }`}
             >
               <LayoutGrid size={12} />
@@ -663,7 +673,7 @@ export const QuadLiveStreamView: React.FC<QuadLiveStreamViewProps> = ({
               className={`flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-mono font-bold uppercase tracking-wider transition-all cursor-pointer ${
                 layoutMode === 'single'
                   ? 'bg-cyan-500 text-slate-950 shadow-[0_0_12px_rgba(6,182,212,0.4)]'
-                  : 'text-slate-400 hover:text-white'
+                  : isDaylight ? 'text-slate-600 hover:text-slate-900' : 'text-slate-400 hover:text-white'
               }`}
             >
               <Maximize size={12} />
@@ -673,10 +683,14 @@ export const QuadLiveStreamView: React.FC<QuadLiveStreamViewProps> = ({
         </div>
 
         {/* Center: Clean Section Segmented Navigation */}
-        <div className="flex items-center gap-1.5 bg-[#060911] border border-white/10 rounded-xl p-1 font-mono text-xs">
+        <div className={`flex items-center gap-1.5 rounded-xl p-1 font-mono text-xs border ${
+          isDaylight ? 'bg-slate-100 border-slate-300' : 'bg-[#060911] border-white/10'
+        }`}>
           <button
             onClick={handlePrevSection}
-            className="p-1 rounded-lg text-slate-400 hover:text-white hover:bg-white/5 transition-colors cursor-pointer"
+            className={`p-1 rounded-lg transition-colors cursor-pointer ${
+              isDaylight ? 'text-slate-600 hover:text-slate-900 hover:bg-slate-200' : 'text-slate-400 hover:text-white hover:bg-white/5'
+            }`}
             title="Previous Section (Shortcut: [ )"
           >
             <ArrowLeft size={13} />
@@ -694,7 +708,9 @@ export const QuadLiveStreamView: React.FC<QuadLiveStreamViewProps> = ({
                   onClick={() => handleSelectSection(sIdx)}
                   className={`px-2.5 py-1 rounded-lg text-xs font-bold transition-all cursor-pointer flex items-center gap-1.5 relative ${
                     isActive
-                      ? 'bg-cyan-500/20 text-cyan-300 border border-cyan-500/40 shadow-sm'
+                      ? 'bg-cyan-500/20 text-cyan-700 dark:text-cyan-300 border border-cyan-500/40 shadow-sm'
+                      : isDaylight
+                      ? 'text-slate-600 hover:text-slate-900 hover:bg-slate-200'
                       : 'text-slate-400 hover:text-white hover:bg-white/[0.04]'
                   }`}
                 >
@@ -709,7 +725,9 @@ export const QuadLiveStreamView: React.FC<QuadLiveStreamViewProps> = ({
 
           <button
             onClick={handleNextSection}
-            className="p-1 rounded-lg text-slate-400 hover:text-white hover:bg-white/5 transition-colors cursor-pointer"
+            className={`p-1 rounded-lg transition-colors cursor-pointer ${
+              isDaylight ? 'text-slate-600 hover:text-slate-900 hover:bg-slate-200' : 'text-slate-400 hover:text-white hover:bg-white/5'
+            }`}
             title="Next Section (Shortcut: ] )"
           >
             <ArrowRight size={13} />
@@ -728,6 +746,8 @@ export const QuadLiveStreamView: React.FC<QuadLiveStreamViewProps> = ({
             className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl text-xs font-mono font-bold border transition-all cursor-pointer ${
               cleanViewMode
                 ? 'bg-cyan-500 text-slate-950 border-cyan-400 shadow-[0_0_10px_rgba(6,182,212,0.5)]'
+                : isDaylight
+                ? 'bg-slate-100 text-slate-700 border-slate-300 hover:bg-slate-200'
                 : 'bg-white/[0.03] text-slate-300 border-white/10 hover:bg-white/[0.08]'
             }`}
           >
@@ -740,7 +760,9 @@ export const QuadLiveStreamView: React.FC<QuadLiveStreamViewProps> = ({
             <button
               onClick={() => setShowOverlaysDropdown(!showOverlaysDropdown)}
               className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl text-xs font-mono font-bold border transition-all cursor-pointer ${
-                showOverlaysDropdown ? 'bg-white/10 text-white border-white/20' : 'bg-white/[0.03] text-slate-300 border-white/10 hover:bg-white/[0.08]'
+                showOverlaysDropdown
+                  ? isDaylight ? 'bg-slate-200 text-slate-900 border-slate-400' : 'bg-white/10 text-white border-white/20'
+                  : isDaylight ? 'bg-slate-100 text-slate-700 border-slate-300 hover:bg-slate-200' : 'bg-white/[0.03] text-slate-300 border-white/10 hover:bg-white/[0.08]'
               }`}
               title="Configure Active Overlays (AI Boxes, Zones, Tracking, Grid)"
             >
@@ -750,69 +772,75 @@ export const QuadLiveStreamView: React.FC<QuadLiveStreamViewProps> = ({
             </button>
 
             {showOverlaysDropdown && (
-              <div className="absolute right-0 top-full mt-2 w-56 p-3 bg-[#0d1424] border border-cyan-500/30 rounded-2xl shadow-2xl z-50 font-mono text-xs space-y-2 animate-in fade-in zoom-in-95 duration-150">
-                <div className="flex items-center justify-between pb-2 border-b border-white/10 text-slate-400 text-[10px] uppercase font-bold">
+              <div className={`absolute right-0 top-full mt-2 w-56 p-3 rounded-2xl shadow-2xl z-50 font-mono text-xs space-y-2 animate-in fade-in zoom-in-95 duration-150 border ${
+                isDaylight
+                  ? 'bg-white border-slate-300 text-slate-800'
+                  : 'bg-[#0d1424] border-cyan-500/30 text-slate-200'
+              }`}>
+                <div className={`flex items-center justify-between pb-2 border-b text-[10px] uppercase font-bold ${
+                  isDaylight ? 'border-slate-200 text-slate-500' : 'border-white/10 text-slate-400'
+                }`}>
                   <span>VIDEO OVERLAY CONTROLS</span>
-                  <button onClick={() => setShowOverlaysDropdown(false)} className="text-slate-400 hover:text-white">✕</button>
+                  <button onClick={() => setShowOverlaysDropdown(false)} className="text-slate-400 hover:text-slate-700 dark:hover:text-white">✕</button>
                 </div>
 
-                <label className="flex items-center justify-between p-1.5 rounded-lg hover:bg-white/5 cursor-pointer">
-                  <span className="flex items-center gap-2 text-slate-200">
-                    <Scan size={13} className="text-emerald-400" /> AI Boxes
+                <label className="flex items-center justify-between p-1.5 rounded-lg hover:bg-black/5 dark:hover:bg-white/5 cursor-pointer">
+                  <span className="flex items-center gap-2">
+                    <Scan size={13} className="text-emerald-500" /> AI Boxes
                   </span>
                   <input
                     type="checkbox"
                     checked={showAiBoxes}
                     onChange={(e) => setShowAiBoxes(e.target.checked)}
-                    className="accent-cyan-400"
+                    className="accent-cyan-500"
                   />
                 </label>
 
-                <label className="flex items-center justify-between p-1.5 rounded-lg hover:bg-white/5 cursor-pointer">
-                  <span className="flex items-center gap-2 text-slate-200">
-                    <Shield size={13} className="text-rose-400" /> Danger Zones
+                <label className="flex items-center justify-between p-1.5 rounded-lg hover:bg-black/5 dark:hover:bg-white/5 cursor-pointer">
+                  <span className="flex items-center gap-2">
+                    <Shield size={13} className="text-rose-500" /> Danger Zones
                   </span>
                   <input
                     type="checkbox"
                     checked={showZones}
                     onChange={(e) => setShowZones(e.target.checked)}
-                    className="accent-cyan-400"
+                    className="accent-cyan-500"
                   />
                 </label>
 
-                <label className="flex items-center justify-between p-1.5 rounded-lg hover:bg-white/5 cursor-pointer">
-                  <span className="flex items-center gap-2 text-slate-200">
-                    <Activity size={13} className="text-cyan-400" /> Tripwire Lines
+                <label className="flex items-center justify-between p-1.5 rounded-lg hover:bg-black/5 dark:hover:bg-white/5 cursor-pointer">
+                  <span className="flex items-center gap-2">
+                    <Activity size={13} className="text-cyan-500" /> Tripwire Lines
                   </span>
                   <input
                     type="checkbox"
                     checked={showLines}
                     onChange={(e) => setShowLines(e.target.checked)}
-                    className="accent-cyan-400"
+                    className="accent-cyan-500"
                   />
                 </label>
 
-                <label className="flex items-center justify-between p-1.5 rounded-lg hover:bg-white/5 cursor-pointer">
-                  <span className="flex items-center gap-2 text-slate-200">
-                    <Crosshair size={13} className="text-cyan-300" /> Optical Reticle Grid
+                <label className="flex items-center justify-between p-1.5 rounded-lg hover:bg-black/5 dark:hover:bg-white/5 cursor-pointer">
+                  <span className="flex items-center gap-2">
+                    <Crosshair size={13} className="text-cyan-500" /> Optical Reticle Grid
                   </span>
                   <input
                     type="checkbox"
                     checked={showOpticalGrid}
                     onChange={(e) => setShowOpticalGrid(e.target.checked)}
-                    className="accent-cyan-400"
+                    className="accent-cyan-500"
                   />
                 </label>
 
-                <label className="flex items-center justify-between p-1.5 rounded-lg hover:bg-white/5 cursor-pointer">
-                  <span className="flex items-center gap-2 text-slate-200">
-                    <Filter size={13} className="text-amber-400" /> Entity Labels
+                <label className="flex items-center justify-between p-1.5 rounded-lg hover:bg-black/5 dark:hover:bg-white/5 cursor-pointer">
+                  <span className="flex items-center gap-2">
+                    <Filter size={13} className="text-amber-500" /> Entity Labels
                   </span>
                   <input
                     type="checkbox"
                     checked={showLabels}
                     onChange={(e) => setShowLabels(e.target.checked)}
-                    className="accent-cyan-400"
+                    className="accent-cyan-500"
                   />
                 </label>
               </div>
@@ -828,7 +856,9 @@ export const QuadLiveStreamView: React.FC<QuadLiveStreamViewProps> = ({
             title="Auto-cycle camera spotlight every 5s"
             className={`p-1.5 rounded-xl border text-xs font-mono transition-all cursor-pointer ${
               isPatrolActive
-                ? 'bg-amber-500/20 text-amber-300 border-amber-500/40 animate-pulse'
+                ? 'bg-amber-500/20 text-amber-600 dark:text-amber-300 border-amber-500/40 animate-pulse'
+                : isDaylight
+                ? 'bg-slate-100 text-slate-700 border-slate-300 hover:bg-slate-200'
                 : 'bg-white/[0.03] text-slate-400 border-white/10 hover:bg-white/[0.08]'
             }`}
           >
@@ -841,8 +871,8 @@ export const QuadLiveStreamView: React.FC<QuadLiveStreamViewProps> = ({
             title={isVideoMuted ? 'Unmute All Streams' : 'Mute All Streams'}
             className={`p-1.5 rounded-xl border text-xs font-mono transition-all cursor-pointer ${
               isVideoMuted
-                ? 'bg-white/[0.03] text-slate-400 border-white/10'
-                : 'bg-cyan-500/20 text-cyan-300 border-cyan-500/40'
+                ? isDaylight ? 'bg-slate-100 text-slate-700 border-slate-300' : 'bg-white/[0.03] text-slate-400 border-white/10'
+                : 'bg-cyan-500/20 text-cyan-600 dark:text-cyan-300 border-cyan-500/40'
             }`}
           >
             {isVideoMuted ? <VolumeX size={14} /> : <Volume2 size={14} />}
@@ -852,7 +882,11 @@ export const QuadLiveStreamView: React.FC<QuadLiveStreamViewProps> = ({
           <button
             onClick={handleCaptureAllSnapshots}
             title="Capture Synchronous 4K Matrix Frame"
-            className="p-1.5 rounded-xl bg-white/[0.03] hover:bg-white/[0.08] text-slate-300 border border-white/10 transition-all cursor-pointer"
+            className={`p-1.5 rounded-xl border transition-all cursor-pointer ${
+              isDaylight
+                ? 'bg-slate-100 hover:bg-slate-200 text-slate-700 border-slate-300'
+                : 'bg-white/[0.03] hover:bg-white/[0.08] text-slate-300 border-white/10'
+            }`}
           >
             <Camera size={14} />
           </button>
@@ -861,7 +895,11 @@ export const QuadLiveStreamView: React.FC<QuadLiveStreamViewProps> = ({
           <button
             onClick={toggleFullscreen}
             title="Toggle Matrix Fullscreen"
-            className="p-1.5 rounded-xl bg-white/[0.03] hover:bg-white/[0.08] text-slate-300 border border-white/10 transition-all cursor-pointer"
+            className={`p-1.5 rounded-xl border transition-all cursor-pointer ${
+              isDaylight
+                ? 'bg-slate-100 hover:bg-slate-200 text-slate-700 border-slate-300'
+                : 'bg-white/[0.03] hover:bg-white/[0.08] text-slate-300 border-white/10'
+            }`}
           >
             {isFullscreen ? <Minimize2 size={14} /> : <Maximize size={14} />}
           </button>
@@ -869,9 +907,15 @@ export const QuadLiveStreamView: React.FC<QuadLiveStreamViewProps> = ({
       </div>
 
       {/* 2. Compact Target Classification Isolation Bar */}
-      <div className="px-3 py-2 bg-[#070b16] border border-white/[0.06] rounded-xl flex flex-wrap items-center justify-between gap-2 text-xs font-mono">
+      <div className={`px-3 py-2 rounded-xl flex flex-wrap items-center justify-between gap-2 text-xs font-mono border ${
+        isDaylight
+          ? 'bg-white/90 border-slate-300 text-slate-800 shadow-sm'
+          : 'bg-[#070b16] border-white/[0.06] text-slate-300'
+      }`}>
         <div className="flex items-center gap-1.5">
-          <span className="text-slate-400 text-[10px] font-bold uppercase tracking-wider mr-1">FILTER TARGETS:</span>
+          <span className={`text-[10px] font-bold uppercase tracking-wider mr-1 ${
+            isDaylight ? 'text-slate-700' : 'text-slate-400'
+          }`}>FILTER TARGETS:</span>
           <button
             onClick={() => {
               setActiveClassFilter('ALL');
@@ -880,6 +924,8 @@ export const QuadLiveStreamView: React.FC<QuadLiveStreamViewProps> = ({
             className={`px-2 py-0.5 rounded-md text-[10px] font-bold border transition-all cursor-pointer ${
               activeClassFilter === 'ALL'
                 ? 'bg-cyan-500 text-slate-950 border-cyan-400 font-black'
+                : isDaylight
+                ? 'bg-slate-100 text-slate-700 border-slate-300 hover:bg-slate-200'
                 : 'bg-white/[0.02] text-slate-400 border-white/[0.06] hover:text-white'
             }`}
           >
@@ -893,7 +939,7 @@ export const QuadLiveStreamView: React.FC<QuadLiveStreamViewProps> = ({
             className={`flex items-center gap-1 px-2 py-0.5 rounded-md text-[10px] font-bold border transition-all cursor-pointer ${
               activeClassFilter === 'CIVILIAN'
                 ? 'bg-emerald-500 text-slate-950 border-emerald-400 font-black'
-                : 'bg-emerald-950/30 text-emerald-300 border-emerald-500/20 hover:bg-emerald-900/40'
+                : 'bg-emerald-950/30 text-emerald-600 dark:text-emerald-300 border-emerald-500/20 hover:bg-emerald-900/40'
             }`}
           >
             <span className="w-1.5 h-1.5 rounded-full bg-emerald-400"></span>
@@ -907,7 +953,7 @@ export const QuadLiveStreamView: React.FC<QuadLiveStreamViewProps> = ({
             className={`flex items-center gap-1 px-2 py-0.5 rounded-md text-[10px] font-bold border transition-all cursor-pointer ${
               activeClassFilter === 'PATROL'
                 ? 'bg-sky-400 text-slate-950 border-sky-300 font-black'
-                : 'bg-sky-950/30 text-sky-300 border-sky-500/20 hover:bg-sky-900/40'
+                : 'bg-sky-950/30 text-sky-600 dark:text-sky-300 border-sky-500/20 hover:bg-sky-900/40'
             }`}
           >
             <span className="w-1.5 h-1.5 rounded-full bg-sky-400"></span>
@@ -921,7 +967,7 @@ export const QuadLiveStreamView: React.FC<QuadLiveStreamViewProps> = ({
             className={`flex items-center gap-1 px-2 py-0.5 rounded-md text-[10px] font-bold border transition-all cursor-pointer ${
               activeClassFilter === 'LOITER'
                 ? 'bg-amber-400 text-slate-950 border-amber-300 font-black'
-                : 'bg-amber-950/30 text-amber-300 border-amber-500/20 hover:bg-amber-900/40'
+                : 'bg-amber-950/30 text-amber-600 dark:text-amber-300 border-amber-500/20 hover:bg-amber-900/40'
             }`}
           >
             <span className="w-1.5 h-1.5 rounded-full bg-amber-400"></span>

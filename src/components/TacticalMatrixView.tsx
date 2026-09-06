@@ -30,6 +30,7 @@ import {
 } from 'lucide-react';
 import { recordingEngine } from '../utils/recordingManager';
 import { voiceCommandService } from '../services/voiceCommandService';
+import { useTheme } from '../context/ThemeContext';
 
 export type MatrixLayoutMode = 'spotlight-1x1' | 'spotlight' | 'quad-2x2' | 'matrix-3x3' | 'wall-4x4' | 'adaptive';
 
@@ -58,6 +59,7 @@ export const TacticalMatrixView: React.FC<TacticalMatrixViewProps> = ({
   highlightedCameraIds = [],
   spotlightCameraOverride,
 }) => {
+  const { isDaylight, theme } = useTheme();
   const [layoutMode, setLayoutMode] = useState<MatrixLayoutMode>('matrix-3x3');
   const [spotlightCameraId, setSpotlightCameraId] = useState<number>(1);
   const [quadPageIndex, setQuadPageIndex] = useState<number>(0);
@@ -257,7 +259,11 @@ export const TacticalMatrixView: React.FC<TacticalMatrixViewProps> = ({
   return (
     <div className="space-y-3.5 flex flex-col w-full" id="tactical-matrix-view-root">
       {/* 1. Sleek Glass Command Toolbar */}
-      <div className="p-3 sm:p-3.5 bg-slate-900/80 border border-white/[0.10] rounded-2xl shadow-[0_8px_32px_rgba(0,0,0,0.6)] backdrop-blur-xl flex flex-col xl:flex-row xl:items-center justify-between gap-3">
+      <div className={`p-3 sm:p-3.5 rounded-2xl backdrop-blur-xl flex flex-col xl:flex-row xl:items-center justify-between gap-3 border transition-colors ${
+        isDaylight
+          ? 'bg-white/95 border-slate-300 shadow-md text-slate-900'
+          : 'bg-slate-900/80 border-white/[0.10] shadow-[0_8px_32px_rgba(0,0,0,0.6)] text-white'
+      }`}>
         {/* Left: Matrix Identity & Real-time Live Badge */}
         <div className="flex items-center gap-3">
           <div className="w-8 h-8 rounded-xl bg-cyan-500/15 border border-cyan-400/40 flex items-center justify-center text-cyan-400 shadow-[0_0_15px_rgba(0,240,255,0.25)]">
@@ -265,7 +271,9 @@ export const TacticalMatrixView: React.FC<TacticalMatrixViewProps> = ({
           </div>
           <div>
             <div className="flex items-center gap-2">
-              <h2 className="text-xs sm:text-sm font-black text-white uppercase tracking-widest font-mono">
+              <h2 className={`text-xs sm:text-sm font-black uppercase tracking-widest font-mono ${
+                isDaylight ? 'text-slate-900' : 'text-white'
+              }`}>
                 CCTV SURVEILLANCE MATRIX
               </h2>
               <span className="px-2 py-0.5 rounded-full bg-emerald-500/15 text-emerald-400 border border-emerald-400/30 text-[9px] font-bold font-mono flex items-center gap-1">
@@ -273,7 +281,9 @@ export const TacticalMatrixView: React.FC<TacticalMatrixViewProps> = ({
                 9/9 ONLINE
               </span>
             </div>
-            <p className="text-[10px] text-slate-400 font-mono hidden sm:block">
+            <p className={`text-[10px] font-mono hidden sm:block ${
+              isDaylight ? 'text-slate-600' : 'text-slate-400'
+            }`}>
               Synchronized border telemetry feeds &bull; 1080p @ 60 FPS &bull; Edge Neural Tracking
             </p>
           </div>
@@ -288,6 +298,8 @@ export const TacticalMatrixView: React.FC<TacticalMatrixViewProps> = ({
             className={`px-3 py-1.5 rounded-xl text-xs font-mono font-bold tracking-wider flex items-center gap-1.5 transition-all cursor-pointer border ${
               globalRecording
                 ? 'bg-rose-600 text-white border-rose-400 animate-pulse shadow-[0_0_15px_rgba(244,63,94,0.6)]'
+                : isDaylight
+                ? 'bg-rose-50 text-rose-700 hover:bg-rose-100 border-rose-200'
                 : 'bg-white/[0.04] text-rose-400 hover:text-white border-rose-500/30 hover:bg-rose-950/40'
             }`}
           >
@@ -296,7 +308,9 @@ export const TacticalMatrixView: React.FC<TacticalMatrixViewProps> = ({
           </button>
 
           {/* Layout Mode Button Group */}
-          <div className="flex items-center bg-black/40 border border-white/10 rounded-xl p-1 backdrop-blur-md">
+          <div className={`flex items-center rounded-xl p-1 backdrop-blur-md border ${
+            isDaylight ? 'bg-slate-100 border-slate-300' : 'bg-black/40 border-white/10'
+          }`}>
             {/* 1x1 Spotlight */}
             <button
               id="btn-layout-1x1"
@@ -304,8 +318,8 @@ export const TacticalMatrixView: React.FC<TacticalMatrixViewProps> = ({
               title="1x1 Spotlight Hero Focus (1 Dominant Feed + Thumbnails)"
               className={`px-2.5 py-1.5 rounded-lg text-xs font-mono font-bold flex items-center gap-1 transition-all cursor-pointer ${
                 layoutMode === 'spotlight-1x1' && !isPatrolMode
-                  ? 'bg-cyan-500/30 text-cyan-300 border border-cyan-400/50 shadow-[0_0_12px_rgba(0,240,255,0.3)]'
-                  : 'text-slate-400 hover:text-white'
+                  ? 'bg-cyan-500/30 text-cyan-600 dark:text-cyan-300 border border-cyan-400/50 shadow-[0_0_12px_rgba(0,240,255,0.3)]'
+                  : isDaylight ? 'text-slate-600 hover:text-slate-900' : 'text-slate-400 hover:text-white'
               }`}
             >
               <Maximize2 size={13} />
@@ -319,8 +333,8 @@ export const TacticalMatrixView: React.FC<TacticalMatrixViewProps> = ({
               title="2x2 Quad High-Resolution Grid"
               className={`px-2.5 py-1.5 rounded-lg text-xs font-mono font-bold flex items-center gap-1 transition-all cursor-pointer ${
                 layoutMode === 'quad-2x2'
-                  ? 'bg-cyan-500/30 text-cyan-300 border border-cyan-400/50 shadow-[0_0_12px_rgba(0,240,255,0.3)]'
-                  : 'text-slate-400 hover:text-white'
+                  ? 'bg-cyan-500/30 text-cyan-600 dark:text-cyan-300 border border-cyan-400/50 shadow-[0_0_12px_rgba(0,240,255,0.3)]'
+                  : isDaylight ? 'text-slate-600 hover:text-slate-900' : 'text-slate-400 hover:text-white'
               }`}
             >
               <Layers size={13} />
@@ -334,8 +348,8 @@ export const TacticalMatrixView: React.FC<TacticalMatrixViewProps> = ({
               title="3x3 Synchronized Tactical Matrix (All 9 Feeds)"
               className={`px-2.5 py-1.5 rounded-lg text-xs font-mono font-bold flex items-center gap-1 transition-all cursor-pointer ${
                 layoutMode === 'matrix-3x3'
-                  ? 'bg-cyan-500/30 text-cyan-300 border border-cyan-400/50 shadow-[0_0_12px_rgba(0,240,255,0.3)]'
-                  : 'text-slate-400 hover:text-white'
+                  ? 'bg-cyan-500/30 text-cyan-600 dark:text-cyan-300 border border-cyan-400/50 shadow-[0_0_12px_rgba(0,240,255,0.3)]'
+                  : isDaylight ? 'text-slate-600 hover:text-slate-900' : 'text-slate-400 hover:text-white'
               }`}
             >
               <Grid size={13} />
@@ -349,8 +363,8 @@ export const TacticalMatrixView: React.FC<TacticalMatrixViewProps> = ({
               title="4x4 Extended Surveillance Wall"
               className={`px-2.5 py-1.5 rounded-lg text-xs font-mono font-bold flex items-center gap-1 transition-all cursor-pointer ${
                 layoutMode === 'wall-4x4'
-                  ? 'bg-cyan-500/30 text-cyan-300 border border-cyan-400/50 shadow-[0_0_12px_rgba(0,240,255,0.3)]'
-                  : 'text-slate-400 hover:text-white'
+                  ? 'bg-cyan-500/30 text-cyan-600 dark:text-cyan-300 border border-cyan-400/50 shadow-[0_0_12px_rgba(0,240,255,0.3)]'
+                  : isDaylight ? 'text-slate-600 hover:text-slate-900' : 'text-slate-400 hover:text-white'
               }`}
             >
               <LayoutGrid size={13} />
@@ -364,8 +378,8 @@ export const TacticalMatrixView: React.FC<TacticalMatrixViewProps> = ({
               title="Smart Adaptive Wall (Auto-Prioritizes Pinned & Alert Feeds)"
               className={`px-2.5 py-1.5 rounded-lg text-xs font-mono font-bold flex items-center gap-1 transition-all cursor-pointer ${
                 layoutMode === 'adaptive'
-                  ? 'bg-purple-500/30 text-purple-300 border border-purple-400/50 shadow-[0_0_12px_rgba(168,85,247,0.3)]'
-                  : 'text-slate-400 hover:text-white'
+                  ? 'bg-purple-500/30 text-purple-600 dark:text-purple-300 border border-purple-400/50 shadow-[0_0_12px_rgba(168,85,247,0.3)]'
+                  : isDaylight ? 'text-slate-600 hover:text-slate-900' : 'text-slate-400 hover:text-white'
               }`}
             >
               <Sparkles size={13} />
@@ -374,14 +388,16 @@ export const TacticalMatrixView: React.FC<TacticalMatrixViewProps> = ({
           </div>
 
           {/* Patrol Mode Toggle */}
-          <div className="flex items-center gap-1 bg-black/40 border border-white/10 rounded-xl p-1">
+          <div className={`flex items-center gap-1 rounded-xl p-1 border ${
+            isDaylight ? 'bg-slate-100 border-slate-300' : 'bg-black/40 border-white/10'
+          }`}>
             <button
               id="btn-layout-patrol"
               onClick={() => setIsPatrolMode(!isPatrolMode)}
               className={`px-2.5 py-1 rounded-lg text-xs font-mono font-bold flex items-center gap-1.5 transition-all cursor-pointer ${
                 isPatrolMode
-                  ? 'bg-amber-500/30 text-amber-300 border border-amber-400/50 shadow-[0_0_12px_rgba(251,191,36,0.3)]'
-                  : 'text-amber-400 hover:text-amber-300'
+                  ? 'bg-amber-500/30 text-amber-700 dark:text-amber-300 border border-amber-400/50 shadow-[0_0_12px_rgba(251,191,36,0.3)]'
+                  : isDaylight ? 'text-amber-700 hover:text-amber-900' : 'text-amber-400 hover:text-amber-300'
               }`}
             >
               <RefreshCcw size={13} className={isPatrolMode ? 'animate-[spin_4s_linear_infinite]' : ''} />
@@ -392,13 +408,13 @@ export const TacticalMatrixView: React.FC<TacticalMatrixViewProps> = ({
               <select
                 value={patrolInterval}
                 onChange={(e) => setPatrolInterval(Number(e.target.value))}
-                className="bg-transparent text-amber-300 border-l border-white/10 text-xs font-mono px-1.5 py-0.5 outline-none cursor-pointer"
+                className="bg-transparent text-amber-600 dark:text-amber-300 border-l border-slate-300 dark:border-white/10 text-xs font-mono px-1.5 py-0.5 outline-none cursor-pointer"
                 title="Patrol Cycle Interval"
               >
-                <option value={3} className="bg-slate-950">3s</option>
-                <option value={5} className="bg-slate-950">5s</option>
-                <option value={10} className="bg-slate-950">10s</option>
-                <option value={30} className="bg-slate-950">30s</option>
+                <option value={3} className="bg-slate-100 dark:bg-slate-950 text-slate-900 dark:text-slate-100">3s</option>
+                <option value={5} className="bg-slate-100 dark:bg-slate-950 text-slate-900 dark:text-slate-100">5s</option>
+                <option value={10} className="bg-slate-100 dark:bg-slate-950 text-slate-900 dark:text-slate-100">10s</option>
+                <option value={30} className="bg-slate-100 dark:bg-slate-950 text-slate-900 dark:text-slate-100">30s</option>
               </select>
             )}
           </div>
@@ -409,7 +425,9 @@ export const TacticalMatrixView: React.FC<TacticalMatrixViewProps> = ({
             onClick={() => setIsHeatmapActive(!isHeatmapActive)}
             className={`px-2.5 py-1.5 rounded-xl text-xs font-mono font-bold flex items-center gap-1.5 transition-all cursor-pointer border ${
               isHeatmapActive
-                ? 'bg-rose-500/30 text-rose-300 border-rose-400/60 shadow-[0_0_15px_rgba(225,29,72,0.4)]'
+                ? 'bg-rose-500/30 text-rose-700 dark:text-rose-300 border-rose-400/60 shadow-[0_0_15px_rgba(225,29,72,0.4)]'
+                : isDaylight
+                ? 'bg-slate-100 text-rose-700 hover:bg-slate-200 border-slate-300'
                 : 'bg-white/[0.04] text-rose-400 hover:text-rose-300 border-white/10'
             }`}
           >
@@ -420,10 +438,16 @@ export const TacticalMatrixView: React.FC<TacticalMatrixViewProps> = ({
       </div>
 
       {/* 2. Compact Multi-Filter & Sector Bar */}
-      <div className="flex flex-wrap items-center justify-between gap-2.5 px-3.5 py-2 bg-slate-950/60 border border-white/[0.08] rounded-xl text-xs font-mono backdrop-blur-md">
+      <div className={`flex flex-wrap items-center justify-between gap-2.5 px-3.5 py-2 rounded-xl text-xs font-mono backdrop-blur-md border ${
+        isDaylight
+          ? 'bg-white/90 border-slate-300 shadow-sm text-slate-800'
+          : 'bg-slate-950/60 border-white/[0.08] text-slate-300'
+      }`}>
         <div className="flex items-center gap-1.5 flex-wrap">
-          <span className="text-[10px] text-slate-400 font-bold uppercase tracking-wider flex items-center gap-1 mr-1">
-            <Filter size={11} className="text-cyan-400" />
+          <span className={`text-[10px] font-bold uppercase tracking-wider flex items-center gap-1 mr-1 ${
+            isDaylight ? 'text-slate-700' : 'text-slate-400'
+          }`}>
+            <Filter size={11} className="text-cyan-500" />
             FILTER:
           </span>
 
@@ -440,7 +464,9 @@ export const TacticalMatrixView: React.FC<TacticalMatrixViewProps> = ({
               onClick={() => setActiveFilter(f.id as any)}
               className={`px-2.5 py-1 rounded-lg text-[10px] font-bold transition-all cursor-pointer ${
                 activeFilter === f.id
-                  ? 'bg-cyan-500/25 text-cyan-300 border border-cyan-400/40 shadow-[0_0_10px_rgba(0,240,255,0.2)]'
+                  ? 'bg-cyan-500/25 text-cyan-700 dark:text-cyan-300 border border-cyan-400/40 shadow-[0_0_10px_rgba(0,240,255,0.2)]'
+                  : isDaylight
+                  ? 'text-slate-700 hover:text-slate-900 bg-slate-100 hover:bg-slate-200 border border-slate-300'
                   : 'text-slate-400 hover:text-white bg-white/[0.02] hover:bg-white/[0.06] border border-transparent'
               }`}
             >
@@ -453,11 +479,15 @@ export const TacticalMatrixView: React.FC<TacticalMatrixViewProps> = ({
         <div className="flex items-center gap-3">
           {/* Sector Selector */}
           <div className="flex items-center gap-1.5">
-            <span className="text-[10px] text-slate-400">SECTOR:</span>
+            <span className={`text-[10px] ${isDaylight ? 'text-slate-700' : 'text-slate-400'}`}>SECTOR:</span>
             <select
               value={selectedSectorFilter}
               onChange={(e) => setSelectedSectorFilter(e.target.value)}
-              className="bg-slate-900 border border-white/10 text-slate-200 text-[10px] font-mono px-2 py-1 rounded-lg outline-none cursor-pointer"
+              className={`text-[10px] font-mono px-2 py-1 rounded-lg outline-none cursor-pointer border ${
+                isDaylight
+                  ? 'bg-slate-50 text-slate-800 border-slate-300'
+                  : 'bg-slate-900 text-slate-200 border-white/10'
+              }`}
             >
               <option value="ALL">All Sectors (HQ)</option>
               <option value="Alpha">Sector Alpha (Main Gate)</option>
@@ -470,17 +500,17 @@ export const TacticalMatrixView: React.FC<TacticalMatrixViewProps> = ({
 
           {/* AI Confidence Filter */}
           <div className="hidden sm:flex items-center gap-1.5">
-            <Sparkles size={11} className="text-purple-400" />
-            <span className="text-[10px] text-slate-400">CONF:</span>
+            <Sparkles size={11} className="text-purple-500 dark:text-purple-400" />
+            <span className={`text-[10px] ${isDaylight ? 'text-slate-700' : 'text-slate-400'}`}>CONF:</span>
             <input
               type="range"
               min="50"
               max="99"
               value={confidenceThreshold}
               onChange={(e) => onConfidenceThresholdChange?.(Number(e.target.value))}
-              className="w-16 h-1 bg-slate-800 rounded-lg appearance-none cursor-pointer accent-purple-400"
+              className="w-16 h-1 bg-slate-300 dark:bg-slate-800 rounded-lg appearance-none cursor-pointer accent-purple-500"
             />
-            <span className="text-purple-300 font-bold text-[10px]">{confidenceThreshold}%</span>
+            <span className="text-purple-600 dark:text-purple-300 font-bold text-[10px]">{confidenceThreshold}%</span>
           </div>
 
           {/* 2x2 Quad Page Nav */}

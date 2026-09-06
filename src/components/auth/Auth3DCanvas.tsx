@@ -61,68 +61,69 @@ export const Auth3DCanvas: React.FC<Auth3DCanvasProps> = ({
     const globeGroup = new THREE.Group();
     scene.add(globeGroup);
 
-    // Inner wireframe sphere
-    const sphereGeo = new THREE.SphereGeometry(3.3, 36, 28);
+    // Outer wireframe sphere
+    const sphereGeo = new THREE.SphereGeometry(3.4, 40, 32);
     const sphereMat = new THREE.MeshBasicMaterial({
       color: 0x00f0ff,
       wireframe: true,
       transparent: true,
-      opacity: 0.16,
+      opacity: 0.28,
     });
     const innerSphere = new THREE.Mesh(sphereGeo, sphereMat);
     globeGroup.add(innerSphere);
 
-    // Solid core with subtle transparency
-    const coreGeo = new THREE.SphereGeometry(3.1, 24, 24);
+    // Inner subtle glowing core
+    const coreGeo = new THREE.SphereGeometry(2.8, 28, 28);
     const coreMat = new THREE.MeshBasicMaterial({
-      color: 0x011326,
+      color: 0x00f0ff,
+      wireframe: true,
       transparent: true,
-      opacity: 0.65,
+      opacity: 0.12,
     });
     const coreSphere = new THREE.Mesh(coreGeo, coreMat);
     globeGroup.add(coreSphere);
 
     // Latitude / Longitude Tactical Rings
-    const ringGeo1 = new THREE.RingGeometry(3.7, 3.74, 72);
+    const ringGeo1 = new THREE.RingGeometry(3.8, 3.86, 90);
     const ringMat1 = new THREE.MeshBasicMaterial({
       color: 0x00f0ff,
       side: THREE.DoubleSide,
       transparent: true,
-      opacity: 0.4,
+      opacity: 0.6,
     });
     const ring1 = new THREE.Mesh(ringGeo1, ringMat1);
     ring1.rotation.x = Math.PI / 2;
     globeGroup.add(ring1);
 
-    const ringGeo2 = new THREE.RingGeometry(3.9, 3.93, 72);
+    const ringGeo2 = new THREE.RingGeometry(4.1, 4.15, 90);
     const ringMat2 = new THREE.MeshBasicMaterial({
       color: 0x14b8a6,
       side: THREE.DoubleSide,
       transparent: true,
-      opacity: 0.3,
+      opacity: 0.5,
     });
     const ring2 = new THREE.Mesh(ringGeo2, ringMat2);
-    ring2.rotation.x = Math.PI / 3.5;
-    ring2.rotation.y = 0.2;
+    ring2.rotation.x = Math.PI / 3.2;
+    ring2.rotation.y = 0.3;
     globeGroup.add(ring2);
 
-    const ringGeo3 = new THREE.RingGeometry(4.3, 4.33, 72);
+    const ringGeo3 = new THREE.RingGeometry(4.5, 4.55, 90);
     const ringMat3 = new THREE.MeshBasicMaterial({
       color: 0xa855f7,
       side: THREE.DoubleSide,
       transparent: true,
-      opacity: 0.25,
+      opacity: 0.45,
     });
     const ring3 = new THREE.Mesh(ringGeo3, ringMat3);
-    ring3.rotation.y = Math.PI / 2.8;
+    ring3.rotation.y = Math.PI / 2.6;
     globeGroup.add(ring3);
 
     // 6. Surveillance Radar Scan Beam
-    const radarBeamGeo = new THREE.ConeGeometry(3.9, 5, 36, 1, true, 0, Math.PI / 3);
+    const radarBeamGeo = new THREE.ConeGeometry(4.2, 5.5, 40, 1, true, 0, Math.PI / 2.5);
     const radarBeamMat = new THREE.MeshBasicMaterial({
       color: 0x00f0ff,
       transparent: true,
-      opacity: 0.12,
+      opacity: 0.22,
       wireframe: true,
       side: THREE.DoubleSide,
     });
@@ -166,7 +167,7 @@ export const Auth3DCanvas: React.FC<Auth3DCanvasProps> = ({
     const lineMat = new THREE.LineBasicMaterial({
       color: 0x00f0ff,
       transparent: true,
-      opacity: 0.22,
+      opacity: 0.45,
     });
     const lineGeo = new THREE.BufferGeometry();
     const lineCoords: number[] = [];
@@ -196,7 +197,7 @@ export const Auth3DCanvas: React.FC<Auth3DCanvasProps> = ({
     globeGroup.add(lines);
 
     // 8. Cyber Floating Particle Field
-    const particlesCount = 500;
+    const particlesCount = 600;
     const particlePositions = new Float32Array(particlesCount * 3);
     for (let i = 0; i < particlesCount * 3; i += 3) {
       particlePositions[i] = (Math.random() - 0.5) * 38;
@@ -206,10 +207,10 @@ export const Auth3DCanvas: React.FC<Auth3DCanvasProps> = ({
     const particlesGeo = new THREE.BufferGeometry();
     particlesGeo.setAttribute('position', new THREE.BufferAttribute(particlePositions, 3));
     const particlesMat = new THREE.PointsMaterial({
-      size: 0.05,
+      size: 0.06,
       color: 0x38bdf8,
       transparent: true,
-      opacity: 0.45,
+      opacity: 0.6,
     });
     const particles = new THREE.Points(particlesGeo, particlesMat);
     scene.add(particles);

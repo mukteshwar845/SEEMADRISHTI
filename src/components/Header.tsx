@@ -267,16 +267,17 @@ export const Header: React.FC<HeaderProps> = ({
         <button
           id="btn-refresh-data"
           onClick={onRefresh}
-          title="Refresh Feed Telemetry"
-          className={`p-2 rounded-lg border transition-all cursor-pointer active:scale-95 ${
+          disabled={isRefreshing}
+          title="Refresh All Surveillance Feeds, Alerts & Telemetry"
+          className={`p-2 rounded-lg border transition-all cursor-pointer active:scale-95 flex items-center gap-1 ${
             isDaylight
               ? 'bg-slate-100 hover:bg-slate-200 text-slate-800 border-slate-300'
               : 'bg-[#050b14] hover:bg-cyan-950/60 border-cyan-500/30 hover:border-cyan-400 text-cyan-400 hover:text-white shadow-[0_0_10px_rgba(0,0,0,0.8)]'
-          }`}
+          } ${isRefreshing ? 'border-cyan-400 ring-2 ring-cyan-400/50 shadow-[0_0_15px_rgba(0,240,255,0.4)]' : ''}`}
         >
           <RefreshCw
             size={14}
-            className={`${isRefreshing ? 'animate-spin' : ''}`}
+            className={`${isRefreshing ? 'animate-spin text-cyan-300' : ''}`}
           />
         </button>
 

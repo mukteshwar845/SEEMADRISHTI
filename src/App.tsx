@@ -93,6 +93,7 @@ function SeemadrishtiMainApp() {
 
   const [isMobileSidebarOpen, setIsMobileSidebarOpen] = useState(false);
   const [isRefreshing, setIsRefreshing] = useState(false);
+  const [refreshFeedback, setRefreshFeedback] = useState<string | null>(null);
   const [isAudioMuted, setIsAudioMuted] = useState(false);
   const [isAudioPingActive, setIsAudioPingActive] = useState(false);
   const [audioVolume, setAudioVolume] = useState(85);
@@ -354,27 +355,114 @@ function SeemadrishtiMainApp() {
     return unsubscribe;
   }, []);
 
-  // Refresh handler with real telemetry fetch
-  const handleRefresh = () => {
+  // Comprehensive Refresh handler across telemetry, alerts, cameras, and WebSocket gateway
+  const handleRefresh = async () => {
+    if (isRefreshing) return;
     setIsRefreshing(true);
-    fetchTelemetry()
-      .then((res) => {
-        if (res.success && res.data) {
-          const hw = res.data.hardware;
-          setTelemetry((prev) => ({
-            ...prev,
-            cpuUsage: hw.loadAverage?.[0] ? Math.round(hw.loadAverage[0] * 10) : prev.cpuUsage,
-            cpuLoad: `${hw.cpuCores}-Core (${hw.cpuModel})`,
-            memoryUsedGb: hw.memoryUsedGb,
-            memoryTotalGb: hw.memoryTotalGb,
-            database: res.data.database,
-          } as any));
-        }
-      })
-      .catch(() => {})
-      .finally(() => {
-        setIsRefreshing(false);
-      });
+    setRefreshFeedback(null);
+    const startTime = Date.now();
+
+    try {
+      await Promise.allSettled([
+        // 1. Hardware & System Telemetry
+        fetchTelemetry().then((res) => {
+          if (res.success && res.data) {
+            const hw = res.data.hardware;
+            setTelemetry((prev) => ({
+              ...prev,
+              cpuUsage: hw.loadAverage?.[0] ? Math.round(hw.loadAverage[0] * 10) : prev.cpuUsage,
+              cpuLoad: `${hw.cpuCores}-Core (${hw.cpuModel})`,
+              memoryUsedGb: hw.memoryUsedGb,
+              memoryTotalGb: hw.memoryTotalGb,
+              database: res.data.database,
+            } as any));
+          }
+        }),
+
+        // 2. Incident Alerts
+        fetchAlerts().then((res) => {
+          if (res.success && res.data && res.data.length > 0) {
+            const mappedAlerts: AlertItem[] = res.data.map((a: any) => {
+              const meta = typeof a.metadata === 'object' && a.metadata !== null ? a.metadata : {};
+              const d = new Date(a.created_at || Date.now());
+              const sev: AlertItem['severity'] =
+                a.severity === 'CRITICAL' || a.severity === 'HIGH' || a.severity === 'High'
+                  ? 'High'
+                  : a.severity === 'MEDIUM' || a.severity === 'Medium'
+                  ? 'Medium'
+                  : 'Low';
+              return {
+                id: a.id,
+                title: a.title || 'Security Anomaly',
+                camera: a.camera_id?.toUpperCase() || 'CAM-01',
+                severity: sev,
+                time: isNaN(d.getTime()) ? '00:00:00' : d.toLocaleTimeString(),
+                type: a.type || 'PERIMETER_ALERT',
+                timestamp: isNaN(d.getTime()) ? Date.now() : d.getTime(),
+                status: a.status || 'active',
+                description: a.description || '',
+                location: a.location || 'Border Sector Alpha',
+                riskScore: a.risk_score ?? meta.risk_score,
+                riskLevel: a.risk_level ?? meta.risk_level,
+                reasons: meta.reasons,
+                trackId: a.track_id ?? meta.track_id,
+                className: meta.class_name,
+                hasEvidence: Boolean(meta.evidence_path || a.has_evidence),
+                incidentId: meta.incident_id || a.incident_id,
+                cameraSequence: meta.camera_sequence,
+                anomalyType: meta.anomaly_type,
+                dwellSeconds: meta.dwell_seconds,
+                zoneName: a.zone_name || meta.zone_name,
+              };
+            });
+            setAlerts(mappedAlerts);
+          }
+        }),
+
+        // 3. Camera Node Matrix
+        fetchCameras().then((res) => {
+          if (res.success && res.data && res.data.length > 0) {
+            setMatrixCameras((prev) =>
+              prev.map((c) => {
+                const camCode = `cam-0${c.id}`;
+                const liveCam = res.data?.find(
+                  (dbCam) =>
+                    dbCam.id.toLowerCase() === camCode ||
+                    dbCam.id.toLowerCase() === `cam-${c.id}` ||
+                    dbCam.name.toLowerCase() === c.name.toLowerCase()
+                );
+                if (liveCam) {
+                  return {
+                    ...c,
+                    name: liveCam.name || c.name,
+                    location: liveCam.location || c.location,
+                    status: liveCam.status || c.status,
+                    src: liveCam.source_url ? `/api/cameras/${liveCam.id}/video` : c.src,
+                  };
+                }
+                return c;
+              })
+            );
+          }
+        }),
+      ]);
+
+      // Reconnect WebSocket if disconnected
+      if (webSocketService.getState().status === 'DISCONNECTED') {
+        webSocketService.connect();
+      }
+
+      setRefreshFeedback('SURVEILLANCE MATRIX, ALERTS & TELEMETRY SYNCHRONIZED');
+      setTimeout(() => setRefreshFeedback(null), 3000);
+    } catch (err) {
+      console.warn('[REFRESH] Error during refresh:', err);
+    } finally {
+      const remaining = 750 - (Date.now() - startTime);
+      if (remaining > 0) {
+        await new Promise((r) => setTimeout(r, remaining));
+      }
+      setIsRefreshing(false);
+    }
   };
 
   // Voice-to-Text Command Dispatcher Integration
@@ -579,6 +667,22 @@ function SeemadrishtiMainApp() {
           onOpenAlerts={() => setCurrentView('alerts')}
           onOpenSwarmHelp={() => setIsSwarmHelpOpen(true)}
         />
+
+        {/* Real-time Refresh Confirmation Banner */}
+        {refreshFeedback && (
+          <div className="shrink-0 flex-none bg-emerald-950/90 border-b border-emerald-500/50 px-4 py-1.5 flex items-center justify-between text-xs font-mono text-emerald-200 z-30 shadow-[0_4px_20px_rgba(16,185,129,0.3)] animate-fadeIn">
+            <div className="flex items-center gap-2">
+              <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
+              <span className="font-bold tracking-wider">{refreshFeedback}</span>
+            </div>
+            <button
+              onClick={() => setRefreshFeedback(null)}
+              className="text-emerald-400 hover:text-white text-[10px] uppercase font-bold cursor-pointer"
+            >
+              DISMISS
+            </button>
+          </div>
+        )}
 
         {/* Real-time Backend Offline Indicator Banner */}
         {isBackendOffline && (

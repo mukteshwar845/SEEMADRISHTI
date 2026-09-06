@@ -28,6 +28,7 @@ export const CrossCameraHandoverPanel: React.FC = () => {
   const fetchCorrelations = async () => {
     try {
       setIsLoading(true);
+      const start = Date.now();
       const res = await fetchWithAuth('/api/correlations?limit=10');
       if (res.ok) {
         const json = await res.json();
@@ -62,6 +63,10 @@ export const CrossCameraHandoverPanel: React.FC = () => {
           setHandovers(mapped);
         }
       }
+      const remaining = 700 - (Date.now() - start);
+      if (remaining > 0) {
+        await new Promise((r) => setTimeout(r, remaining));
+      }
     } catch {
       // Keep empty if unavailable
     } finally {
@@ -85,8 +90,8 @@ export const CrossCameraHandoverPanel: React.FC = () => {
   }, []);
 
   return (
-    <div id="cross-camera-handover-panel" className="bg-[#030816] border border-cyan-500/30 rounded-xl p-3.5 font-mono text-slate-200 shadow-xl space-y-3">
-      {/* Panel Header */}
+    <div className="bg-[#030816] border border-cyan-500/30 rounded-xl p-3 shadow-[0_0_25px_rgba(0,240,255,0.08)] space-y-3 font-mono">
+      {/* Header */}
       <div className="flex items-center justify-between pb-2 border-b border-cyan-500/20">
         <div className="flex items-center gap-2">
           <div className="p-1.5 rounded-lg bg-cyan-950/80 border border-cyan-500/40 text-cyan-400">
@@ -104,10 +109,16 @@ export const CrossCameraHandoverPanel: React.FC = () => {
 
         <button
           onClick={fetchCorrelations}
-          className="p-1.5 rounded-lg bg-slate-900 hover:bg-slate-800 text-slate-400 hover:text-white transition-colors cursor-pointer border border-slate-800"
-          title="Refresh correlations"
+          disabled={isLoading}
+          className={`px-2.5 py-1 rounded-lg bg-slate-900 hover:bg-slate-800 text-slate-300 hover:text-white transition-all cursor-pointer border border-slate-800 flex items-center gap-1.5 text-[10px] font-mono font-bold ${
+            isLoading ? 'border-cyan-500/50 shadow-[0_0_12px_rgba(0,240,255,0.3)] ring-1 ring-cyan-400/40' : ''
+          }`}
+          title="Refresh correlations & topological handovers"
         >
-          <RefreshCw size={13} className={isLoading ? 'animate-spin text-cyan-400' : ''} />
+          <RefreshCw size={12} className={isLoading ? 'animate-spin text-cyan-400' : 'text-slate-400'} />
+          <span className={isLoading ? 'text-cyan-300' : 'text-slate-400'}>
+            {isLoading ? 'REFRESHING...' : 'REFRESH'}
+          </span>
         </button>
       </div>
 

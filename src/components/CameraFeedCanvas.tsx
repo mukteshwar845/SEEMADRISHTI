@@ -8,6 +8,9 @@ interface CameraFeedCanvasProps {
   showAiBoxes?: boolean;
   showZones?: boolean;
   showMotionTrails?: boolean;
+  showLines?: boolean;
+  showLabels?: boolean;
+  cleanViewMode?: boolean;
   isNightVision?: boolean;
   onSimulateThreat?: () => void;
   className?: string;
@@ -15,6 +18,7 @@ interface CameraFeedCanvasProps {
   muted?: boolean;
   classFilter?: string | null;
   showOpticalGrid?: boolean;
+  isThreatHighlighted?: boolean;
 }
 
 export interface DetectionStyleConfig {
@@ -451,6 +455,9 @@ export const CameraFeedCanvas: React.FC<CameraFeedCanvasProps> = ({
   showAiBoxes = true,
   showZones = true,
   showMotionTrails = false,
+  showLines = true,
+  showLabels = true,
+  cleanViewMode = false,
   isNightVision = false,
   onSimulateThreat,
   className = '',
@@ -458,6 +465,7 @@ export const CameraFeedCanvas: React.FC<CameraFeedCanvasProps> = ({
   muted = true,
   classFilter = null,
   showOpticalGrid = false,
+  isThreatHighlighted = false,
 }) => {
   const containerRef = useRef<HTMLDivElement | null>(null);
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
@@ -715,7 +723,7 @@ export const CameraFeedCanvas: React.FC<CameraFeedCanvasProps> = ({
       }
 
       // 2. Draw Virtual Border Line / Zebra Crossing
-      if (showZones) {
+      if (showLines && (!cleanViewMode || tacticalLine.isZebraCrossing)) {
         // A. Suspicious Buffer Zone (Ribbon)
         ctx.save();
         ctx.fillStyle = tacticalLine.isZebraCrossing ? 'rgba(56, 189, 248, 0.08)' : 'rgba(245, 158, 11, 0.08)';
@@ -762,13 +770,15 @@ export const CameraFeedCanvas: React.FC<CameraFeedCanvasProps> = ({
         });
 
         // Line Identifier Badge
-        const badgeText = `[${tacticalLine.name}]`;
-        ctx.font = 'bold 8.5px monospace';
-        const bWidth = ctx.measureText(badgeText).width;
-        ctx.fillStyle = tacticalLine.isZebraCrossing ? 'rgba(2, 132, 199, 0.90)' : 'rgba(8, 145, 178, 0.90)';
-        ctx.fillRect(lx1 + (lx2 - lx1) * 0.35, ly1 - 14, bWidth + 8, 14);
-        ctx.fillStyle = '#ffffff';
-        ctx.fillText(badgeText, lx1 + (lx2 - lx1) * 0.35 + 4, ly1 - 3);
+        if (showLabels && !cleanViewMode) {
+          const badgeText = `[${tacticalLine.name}]`;
+          ctx.font = 'bold 8.5px monospace';
+          const bWidth = ctx.measureText(badgeText).width;
+          ctx.fillStyle = tacticalLine.isZebraCrossing ? 'rgba(2, 132, 199, 0.90)' : 'rgba(8, 145, 178, 0.90)';
+          ctx.fillRect(lx1 + (lx2 - lx1) * 0.35, ly1 - 14, bWidth + 8, 14);
+          ctx.fillStyle = '#ffffff';
+          ctx.fillText(badgeText, lx1 + (lx2 - lx1) * 0.35 + 4, ly1 - 3);
+        }
 
         ctx.restore();
       }

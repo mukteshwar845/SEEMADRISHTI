@@ -47,8 +47,6 @@ interface LandingPageProps {
 export const LandingPage: React.FC<LandingPageProps> = ({ onEnterAuth }) => {
   const { setPortal } = useAuth();
   const [activeTab, setActiveTab] = useState<'capabilities' | 'sectors' | 'architecture' | 'roles'>('capabilities');
-  const [liveUtcTime, setLiveUtcTime] = useState('');
-  const [liveIstTime, setLiveIstTime] = useState('');
 
   const pageRef = useRef<HTMLDivElement>(null);
   const [showScrollTop, setShowScrollTop] = useState(false);
@@ -74,25 +72,6 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onEnterAuth }) => {
   };
 
   const threatLevel = 'nominal' as const;
-
-  useEffect(() => {
-    const updateTime = () => {
-      const d = new Date();
-      setLiveUtcTime(d.toUTCString().replace('GMT', 'UTC'));
-      setLiveIstTime(
-        d.toLocaleTimeString('en-IN', {
-          timeZone: 'Asia/Kolkata',
-          hour12: false,
-          hour: '2-digit',
-          minute: '2-digit',
-          second: '2-digit',
-        }) + ' IST'
-      );
-    };
-    updateTime();
-    const interval = setInterval(updateTime, 1000);
-    return () => clearInterval(interval);
-  }, []);
 
   const defenseMetrics = [
     { label: 'CROSS-CAM RE-ID', value: '99.4%', sub: 'Homography Target Handover', icon: Target },
@@ -305,31 +284,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onEnterAuth }) => {
         className="fixed inset-0 pointer-events-none opacity-20 z-0 bg-[radial-gradient(#00f0ff_1px,transparent_1px)] [background-size:32px_32px]"
       />
 
-      {/* 1. Tactical Telemetry Ribbon */}
-      <div className="h-7 px-4 sm:px-8 bg-[#010309] border-b border-cyan-500/20 text-cyan-400 flex items-center justify-between text-[10px] select-none overflow-hidden z-50 relative">
-        <div className="flex items-center gap-3">
-          <span className="flex items-center gap-1.5 font-black text-emerald-400">
-            <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse shadow-[0_0_8px_#00ff66]" />
-            DEFENSE GRID: LVL-4 ACTIVE
-          </span>
-          <span className="text-slate-700">|</span>
-          <span className="hidden md:inline text-slate-400">
-            NavIC-1B / GPS L5 LOCKED (12 CHANNELS)
-          </span>
-          <span className="hidden lg:inline text-slate-700">|</span>
-          <span className="hidden lg:inline text-cyan-300 font-semibold">
-            AES-256 GCM ENCRYPTED
-          </span>
-        </div>
-
-        <div className="flex items-center gap-3 font-bold">
-          <span className="text-slate-400 hidden sm:inline">IST: {liveIstTime}</span>
-          <span className="text-slate-700 hidden sm:inline">|</span>
-          <span className="text-cyan-300">UTC: {liveUtcTime}</span>
-        </div>
-      </div>
-
-      {/* 2. Sleek Floating Tactical Navigation Header */}
+      {/* 1. Sleek Floating Tactical Navigation Header */}
       <header className="sticky top-0 z-40 backdrop-blur-2xl bg-[#020512]/90 border-b border-cyan-500/20 px-4 sm:px-8 py-3 flex items-center justify-between transition-all shadow-[0_4px_30px_rgba(0,0,0,0.6)]">
         <div className="flex items-center gap-3">
           <div className="relative flex items-center justify-center p-1.5 rounded-xl bg-cyan-500/10 border border-cyan-400/40 shadow-[0_0_15px_rgba(0,240,255,0.25)]">

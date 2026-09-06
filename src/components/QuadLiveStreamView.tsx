@@ -601,7 +601,7 @@ export const QuadLiveStreamView: React.FC<QuadLiveStreamViewProps> = ({
       className="space-y-3.5 max-w-7xl mx-auto select-none"
     >
       {/* 1. Command Center Navigation & Unified Control Bar */}
-      <div className="p-3 bg-[#0a0f1d]/95 backdrop-blur-md border border-white/[0.08] rounded-2xl flex flex-col lg:flex-row lg:items-center justify-between gap-3 shadow-xl">
+      <div className="p-3 bg-[#0a0f1d]/80 backdrop-blur-md border border-cyan-500/20 rounded-2xl flex flex-col lg:flex-row lg:items-center justify-between gap-3 shadow-xl">
         {/* Left: Brand / Mode Lockup */}
         <div className="flex items-center gap-3">
           <div className="flex items-center gap-2">
@@ -1055,7 +1055,7 @@ export const QuadLiveStreamView: React.FC<QuadLiveStreamViewProps> = ({
                   setFocusedCamId(cam.id);
                   onSelectCamera(cam.id);
                 }}
-                className={`flex flex-col bg-[#0a0f1d] rounded-2xl border transition-all duration-150 overflow-hidden shadow-2xl group relative ${
+                className={`flex flex-col bg-[#0a0f1d]/85 backdrop-blur-md rounded-2xl border transition-all duration-150 overflow-hidden shadow-2xl group relative ${
                   isTargetAlert
                     ? 'border-rose-500/80 ring-2 ring-rose-500/40 shadow-[0_0_20px_rgba(244,63,94,0.3)]'
                     : isFocused
@@ -1064,7 +1064,7 @@ export const QuadLiveStreamView: React.FC<QuadLiveStreamViewProps> = ({
                 }`}
               >
                 {/* Modernized Compact Header Bar */}
-                <div className="px-3 py-2 bg-[#0d1424]/95 border-b border-white/[0.06] flex items-center justify-between gap-2">
+                <div className="px-3 py-2 bg-[#0d1424]/80 border-b border-white/[0.06] flex items-center justify-between gap-2">
                   {/* Left: Camera ID, Name, Location */}
                   <div className="flex items-center gap-2 min-w-0">
                     <span className="font-mono font-bold text-xs text-cyan-300 bg-cyan-500/10 border border-cyan-500/30 px-2 py-0.5 rounded">

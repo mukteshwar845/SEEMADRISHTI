@@ -524,11 +524,13 @@ class WebSocketService {
       ...counts,
     };
     this.fleetCountsListeners.forEach((listener) => {
-      try {
-        listener(updated);
-      } catch (e) {
-        console.warn('[WS] Error in broadcastFleetCounts listener:', e);
-      }
+      queueMicrotask(() => {
+        try {
+          listener(updated);
+        } catch (e) {
+          console.warn('[WS] Error in broadcastFleetCounts listener:', e);
+        }
+      });
     });
   }
 

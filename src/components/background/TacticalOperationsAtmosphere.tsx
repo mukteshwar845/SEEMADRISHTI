@@ -10,6 +10,7 @@ interface TacticalOperationsAtmosphereProps {
 interface SentryNode {
   id: string;
   code: string;
+  name: string;
   x: number;
   y: number;
   fovAngle: number;
@@ -25,7 +26,6 @@ interface TelemetryParticle {
 
 export const TacticalOperationsAtmosphere: React.FC<TacticalOperationsAtmosphereProps> = ({
   className = '',
-  intensity = 'subtle',
 }) => {
   const { isDaylight } = useTheme();
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
@@ -33,15 +33,15 @@ export const TacticalOperationsAtmosphere: React.FC<TacticalOperationsAtmosphere
 
   // Sentry camera nodes plotted geospatially across the tactical border terrain
   const sentryNodes: SentryNode[] = useMemo(() => [
-    { id: 'cam-1', code: 'CAM-01', x: 0.14, y: 0.22, fovAngle: 135, range: 70 },
-    { id: 'cam-2', code: 'CAM-02', x: 0.32, y: 0.18, fovAngle: 160, range: 65 },
-    { id: 'cam-3', code: 'CAM-03', x: 0.52, y: 0.25, fovAngle: 180, range: 75 },
-    { id: 'cam-4', code: 'CAM-04', x: 0.72, y: 0.20, fovAngle: 210, range: 60 },
-    { id: 'cam-5', code: 'CAM-05', x: 0.88, y: 0.28, fovAngle: 225, range: 70 },
-    { id: 'cam-6', code: 'CAM-06', x: 0.20, y: 0.75, fovAngle: 45, range: 65 },
-    { id: 'cam-7', code: 'CAM-07', x: 0.42, y: 0.82, fovAngle: 20, range: 80 },
-    { id: 'cam-8', code: 'CAM-08', x: 0.65, y: 0.78, fovAngle: 345, range: 75 },
-    { id: 'cam-9', code: 'CAM-09', x: 0.85, y: 0.72, fovAngle: 315, range: 65 },
+    { id: 'cam-1', code: 'CAM-01', name: 'NORTH GATE', x: 0.12, y: 0.18, fovAngle: 135, range: 75 },
+    { id: 'cam-2', code: 'CAM-02', name: 'EAST PERIMETER', x: 0.32, y: 0.14, fovAngle: 160, range: 70 },
+    { id: 'cam-3', code: 'CAM-03', name: 'SOUTH SECTOR', x: 0.52, y: 0.20, fovAngle: 180, range: 80 },
+    { id: 'cam-4', code: 'CAM-04', name: 'WEST WATCHTOWER', x: 0.72, y: 0.16, fovAngle: 210, range: 65 },
+    { id: 'cam-5', code: 'CAM-05', name: 'CHECKPOINT BRAVO', x: 0.88, y: 0.24, fovAngle: 225, range: 75 },
+    { id: 'cam-6', code: 'CAM-06', name: 'RIVER BORDER', x: 0.18, y: 0.78, fovAngle: 45, range: 70 },
+    { id: 'cam-7', code: 'CAM-07', name: 'RADAR STATION', x: 0.42, y: 0.84, fovAngle: 20, range: 85 },
+    { id: 'cam-8', code: 'CAM-08', name: 'MAIN HIGHWAY', x: 0.65, y: 0.80, fovAngle: 345, range: 80 },
+    { id: 'cam-9', code: 'CAM-09', name: 'HELIPAD LZ', x: 0.86, y: 0.74, fovAngle: 315, range: 70 },
   ], []);
 
   // Listen to live tactical alerts for ambient command-center lighting shift
@@ -50,7 +50,7 @@ export const TacticalOperationsAtmosphere: React.FC<TacticalOperationsAtmosphere
       setActiveThreatState(true);
       const timer = setTimeout(() => {
         setActiveThreatState(false);
-      }, 4000);
+      }, 4500);
       return () => clearTimeout(timer);
     });
     return unsub;
@@ -76,111 +76,142 @@ export const TacticalOperationsAtmosphere: React.FC<TacticalOperationsAtmosphere
 
     // Dynamic data packets traveling between nodes
     const particles: TelemetryParticle[] = [
-      { fromNode: 0, toNode: 1, progress: 0.2, speed: 0.003 },
-      { fromNode: 1, toNode: 2, progress: 0.6, speed: 0.0025 },
-      { fromNode: 2, toNode: 3, progress: 0.8, speed: 0.0035 },
-      { fromNode: 3, toNode: 4, progress: 0.1, speed: 0.0028 },
-      { fromNode: 5, toNode: 6, progress: 0.4, speed: 0.0032 },
-      { fromNode: 6, toNode: 7, progress: 0.7, speed: 0.0027 },
-      { fromNode: 7, toNode: 8, progress: 0.3, speed: 0.0034 },
-      { fromNode: 1, toNode: 6, progress: 0.5, speed: 0.0022 },
-      { fromNode: 3, toNode: 7, progress: 0.9, speed: 0.0026 },
+      { fromNode: 0, toNode: 1, progress: 0.2, speed: 0.0028 },
+      { fromNode: 1, toNode: 2, progress: 0.6, speed: 0.0024 },
+      { fromNode: 2, toNode: 3, progress: 0.8, speed: 0.0032 },
+      { fromNode: 3, toNode: 4, progress: 0.1, speed: 0.0026 },
+      { fromNode: 5, toNode: 6, progress: 0.4, speed: 0.0030 },
+      { fromNode: 6, toNode: 7, progress: 0.7, speed: 0.0025 },
+      { fromNode: 7, toNode: 8, progress: 0.3, speed: 0.0031 },
+      { fromNode: 1, toNode: 6, progress: 0.5, speed: 0.0020 },
+      { fromNode: 3, toNode: 7, progress: 0.9, speed: 0.0023 },
     ];
 
     let tick = 0;
 
     const render = () => {
-      tick += 0.015;
+      tick += 0.012;
       ctx.clearRect(0, 0, width, height);
 
       // 1. Base Command-Center Atmospheric Gradient
       const bgGrad = ctx.createRadialGradient(
         width * 0.5,
-        height * 0.4,
-        width * 0.1,
+        height * 0.35,
+        width * 0.05,
         width * 0.5,
         height * 0.5,
         width * 0.85
       );
       if (activeThreatState) {
-        bgGrad.addColorStop(0, '#0f0a14');
-        bgGrad.addColorStop(0.5, '#0a0812');
-        bgGrad.addColorStop(1, '#050409');
+        bgGrad.addColorStop(0, '#150918');
+        bgGrad.addColorStop(0.4, '#0d0713');
+        bgGrad.addColorStop(1, '#050308');
       } else {
-        bgGrad.addColorStop(0, '#090e1c');
-        bgGrad.addColorStop(0.5, '#070b16');
-        bgGrad.addColorStop(1, '#04070f');
+        bgGrad.addColorStop(0, '#0c162d');
+        bgGrad.addColorStop(0.4, '#080e1e');
+        bgGrad.addColorStop(1, '#040711');
       }
       ctx.fillStyle = bgGrad;
       ctx.fillRect(0, 0, width, height);
 
-      // 2. 3D Topographic Terrain Elevation Contour Curves
-      const numContours = 9;
-      const baseAlpha = activeThreatState ? 0.05 : 0.04;
+      // 2. 3D Isometric Perspective Ground Grid
+      ctx.save();
+      ctx.strokeStyle = activeThreatState ? 'rgba(244, 63, 94, 0.06)' : 'rgba(6, 182, 212, 0.07)';
+      ctx.lineWidth = 1;
+      const hLines = 14;
+      for (let i = 0; i < hLines; i++) {
+        const y = height * (0.2 + Math.pow(i / hLines, 1.4) * 0.8);
+        ctx.beginPath();
+        ctx.moveTo(0, y);
+        ctx.lineTo(width, y);
+        ctx.stroke();
+      }
+      const vLines = 16;
+      for (let j = 0; j <= vLines; j++) {
+        const x = (j / vLines) * width;
+        ctx.beginPath();
+        ctx.moveTo(x, height * 0.2);
+        ctx.lineTo(x + (x - width * 0.5) * 0.4, height);
+        ctx.stroke();
+      }
+      ctx.restore();
+
+      // 3. 3D Topographic Terrain Elevation Contour Curves
+      const numContours = 10;
+      const contourLabels = ['2,240M', '1,980M', '1,840M', '1,650M', '1,420M', '1,280M', '1,100M', '950M', '780M', '620M'];
 
       for (let c = 0; c < numContours; c++) {
         ctx.save();
         ctx.beginPath();
-        const yOffset = height * (0.15 + (c / numContours) * 0.75);
-        const amp = 35 + c * 8;
-        const freq = 0.0018 + c * 0.0003;
-        const speed = tick * (0.08 + c * 0.01);
+        const yOffset = height * (0.12 + (c / numContours) * 0.82);
+        const amp = 42 + c * 7;
+        const freq = 0.0016 + c * 0.00025;
+        const speed = tick * (0.06 + c * 0.008);
 
+        const strokeAlpha = activeThreatState ? 0.12 + c * 0.015 : 0.14 + c * 0.015;
         ctx.strokeStyle = activeThreatState
-          ? `rgba(244, 63, 94, ${baseAlpha + c * 0.004})`
-          : `rgba(6, 182, 212, ${baseAlpha + c * 0.004})`;
-        ctx.lineWidth = 1;
-        ctx.setLineDash(c % 2 === 0 ? [] : [4, 6]);
+          ? `rgba(244, 63, 94, ${strokeAlpha})`
+          : `rgba(6, 182, 212, ${strokeAlpha})`;
+        ctx.lineWidth = c % 3 === 0 ? 1.5 : 1;
+        ctx.setLineDash(c % 2 === 0 ? [] : [6, 6]);
 
-        for (let x = 0; x <= width; x += 25) {
+        let labelDrawn = false;
+
+        for (let x = 0; x <= width; x += 20) {
           const elev =
             Math.sin(x * freq + speed) * amp +
-            Math.cos(x * freq * 1.8 - speed * 0.6) * (amp * 0.45) +
-            Math.sin((x + c * 100) * 0.0008) * 20;
+            Math.cos(x * freq * 1.7 - speed * 0.5) * (amp * 0.4) +
+            Math.sin((x + c * 150) * 0.0007) * 25;
 
           const y = yOffset + elev;
           if (x === 0) ctx.moveTo(x, y);
           else ctx.lineTo(x, y);
+
+          // Draw elevation height label on the contour line
+          if (!labelDrawn && x > width * 0.72 && x < width * 0.78) {
+            ctx.font = 'bold 7.5px monospace';
+            ctx.fillStyle = activeThreatState ? 'rgba(251, 113, 133, 0.4)' : 'rgba(56, 189, 248, 0.4)';
+            ctx.fillText(contourLabels[c] || `${1800 - c * 120}M`, x + 4, y - 3);
+            labelDrawn = true;
+          }
         }
         ctx.stroke();
         ctx.restore();
       }
 
-      // 3. Faint Geospatial Sector Grid & Coordinates
+      // 4. Subtle Sector Coordinates & Technical Watermarks
       ctx.save();
-      ctx.strokeStyle = 'rgba(255, 255, 255, 0.018)';
-      ctx.lineWidth = 1;
-      const gridSize = 120;
-      for (let gx = 0; gx < width; gx += gridSize) {
-        ctx.beginPath();
-        ctx.moveTo(gx, 0);
-        ctx.lineTo(gx, height);
-        ctx.stroke();
-      }
-      for (let gy = 0; gy < height; gy += gridSize) {
-        ctx.beginPath();
-        ctx.moveTo(0, gy);
-        ctx.lineTo(width, gy);
-        ctx.stroke();
-      }
+      ctx.font = 'bold 8.5px monospace';
+      ctx.fillStyle = activeThreatState ? 'rgba(244, 63, 94, 0.35)' : 'rgba(6, 182, 212, 0.35)';
+      ctx.fillText('SECTOR FOXTROT-04 // ELEV: 1,840M MSL', 32, height - 36);
+      ctx.fillText('GIS LAT: 34°08\'42.1"N · LNG: 74°48\'18.5"E', 32, height - 22);
+      ctx.fillText('DEFENSE GRID: 884-D // SENTRY LINK 9/9 SECURE', width - 280, height - 22);
 
-      // Subtle Coordinate Watermarks
-      ctx.font = '8px monospace';
-      ctx.fillStyle = 'rgba(6, 182, 212, 0.18)';
-      ctx.fillText('SECTOR FOXTROT-04 // ELEV: 1,840M MSL', 36, height - 32);
-      ctx.fillText('GIS LAT: 34°08\'42.1"N · LNG: 74°48\'18.5"E', 36, height - 20);
-      ctx.fillText('DEFENSE TELEMETRY // 256-BIT SEC_LINK', width - 260, height - 20);
+      // Technical crosshairs at sector junctions
+      const crosshairs = [
+        { x: width * 0.25, y: height * 0.3 },
+        { x: width * 0.75, y: height * 0.35 },
+        { x: width * 0.5, y: height * 0.7 },
+      ];
+      ctx.strokeStyle = activeThreatState ? 'rgba(244, 63, 94, 0.25)' : 'rgba(6, 182, 212, 0.25)';
+      ctx.lineWidth = 1;
+      crosshairs.forEach((pt) => {
+        ctx.beginPath();
+        ctx.moveTo(pt.x - 8, pt.y); ctx.lineTo(pt.x + 8, pt.y);
+        ctx.moveTo(pt.x, pt.y - 8); ctx.lineTo(pt.x, pt.y + 8);
+        ctx.stroke();
+      });
       ctx.restore();
 
-      // 4. Ambient Radar Scanning Geometry (Slow 360° sweep in top-right or center)
+      // 5. Ambient Radar Scanning Geometry (Slow 360° sweep in top right)
       const radarCenterX = width * 0.88;
       const radarCenterY = height * 0.22;
-      const radarRadius = 140;
-      const sweepAngle = (tick * 0.25) % (Math.PI * 2);
+      const radarRadius = 150;
+      const sweepAngle = (tick * 0.28) % (Math.PI * 2);
 
       ctx.save();
       // Concentric range rings
-      ctx.strokeStyle = activeThreatState ? 'rgba(244, 63, 94, 0.08)' : 'rgba(6, 182, 212, 0.06)';
+      ctx.strokeStyle = activeThreatState ? 'rgba(244, 63, 94, 0.18)' : 'rgba(6, 182, 212, 0.16)';
       ctx.lineWidth = 1;
       [0.33, 0.66, 1.0].forEach((rRatio) => {
         ctx.beginPath();
@@ -188,7 +219,7 @@ export const TacticalOperationsAtmosphere: React.FC<TacticalOperationsAtmosphere
         ctx.stroke();
       });
 
-      // Axis crosshairs
+      // Radar Axis Lines
       ctx.beginPath();
       ctx.moveTo(radarCenterX - radarRadius, radarCenterY);
       ctx.lineTo(radarCenterX + radarRadius, radarCenterY);
@@ -205,23 +236,23 @@ export const TacticalOperationsAtmosphere: React.FC<TacticalOperationsAtmosphere
         radarCenterY,
         radarRadius
       );
-      sweepGrad.addColorStop(0, activeThreatState ? 'rgba(244, 63, 94, 0.15)' : 'rgba(6, 182, 212, 0.12)');
+      sweepGrad.addColorStop(0, activeThreatState ? 'rgba(244, 63, 94, 0.28)' : 'rgba(6, 182, 212, 0.24)');
       sweepGrad.addColorStop(1, 'rgba(0, 0, 0, 0)');
 
       ctx.fillStyle = sweepGrad;
       ctx.beginPath();
       ctx.moveTo(radarCenterX, radarCenterY);
-      ctx.arc(radarCenterX, radarCenterY, radarRadius, sweepAngle - 0.4, sweepAngle);
+      ctx.arc(radarCenterX, radarCenterY, radarRadius, sweepAngle - 0.45, sweepAngle);
       ctx.closePath();
       ctx.fill();
       ctx.restore();
 
-      // 5. Holographic Sentry Nodes & Communication Lines
+      // 6. Holographic Sentry Nodes & Communication Lines
       ctx.save();
       // Connection Vectors
-      ctx.strokeStyle = 'rgba(6, 182, 212, 0.06)';
+      ctx.strokeStyle = activeThreatState ? 'rgba(244, 63, 94, 0.18)' : 'rgba(6, 182, 212, 0.18)';
       ctx.lineWidth = 1;
-      ctx.setLineDash([2, 4]);
+      ctx.setLineDash([3, 4]);
       particles.forEach((p) => {
         const from = sentryNodes[p.fromNode];
         const to = sentryNodes[p.toNode];
@@ -233,7 +264,7 @@ export const TacticalOperationsAtmosphere: React.FC<TacticalOperationsAtmosphere
         }
       });
 
-      // Telemetry Data Particles
+      // Telemetry Data Packets
       ctx.setLineDash([]);
       particles.forEach((p) => {
         p.progress = (p.progress + p.speed) % 1.0;
@@ -244,7 +275,7 @@ export const TacticalOperationsAtmosphere: React.FC<TacticalOperationsAtmosphere
           const py = from.y * height + (to.y * height - from.y * height) * p.progress;
           ctx.fillStyle = activeThreatState ? '#fb7185' : '#38bdf8';
           ctx.beginPath();
-          ctx.arc(px, py, 1.5, 0, Math.PI * 2);
+          ctx.arc(px, py, 2, 0, Math.PI * 2);
           ctx.fill();
         }
       });
@@ -257,12 +288,19 @@ export const TacticalOperationsAtmosphere: React.FC<TacticalOperationsAtmosphere
         // Coverage Sector Cone
         const radAngle = (node.fovAngle * Math.PI) / 180;
         const coneSpan = (45 * Math.PI) / 180;
-        ctx.fillStyle = activeThreatState ? 'rgba(244, 63, 94, 0.03)' : 'rgba(6, 182, 212, 0.03)';
+        ctx.fillStyle = activeThreatState ? 'rgba(244, 63, 94, 0.08)' : 'rgba(6, 182, 212, 0.08)';
         ctx.beginPath();
         ctx.moveTo(nx, ny);
         ctx.arc(nx, ny, node.range, radAngle - coneSpan / 2, radAngle + coneSpan / 2);
         ctx.closePath();
         ctx.fill();
+
+        // Node Outer Ring
+        ctx.strokeStyle = activeThreatState ? 'rgba(244, 63, 94, 0.6)' : 'rgba(6, 182, 212, 0.6)';
+        ctx.lineWidth = 1;
+        ctx.beginPath();
+        ctx.arc(nx, ny, 5, 0, Math.PI * 2);
+        ctx.stroke();
 
         // Node Central Dot
         ctx.fillStyle = activeThreatState ? '#f43f5e' : '#06b6d4';
@@ -271,23 +309,23 @@ export const TacticalOperationsAtmosphere: React.FC<TacticalOperationsAtmosphere
         ctx.fill();
 
         // Node Label
-        ctx.font = '7.5px monospace';
-        ctx.fillStyle = 'rgba(148, 163, 184, 0.45)';
-        ctx.fillText(node.code, nx + 6, ny - 4);
+        ctx.font = 'bold 8px monospace';
+        ctx.fillStyle = activeThreatState ? 'rgba(251, 113, 133, 0.8)' : 'rgba(148, 163, 184, 0.8)';
+        ctx.fillText(`${node.code} [${node.name}]`, nx + 8, ny - 4);
       });
       ctx.restore();
 
-      // 6. Perimeter Soft Vignette to maintain maximum CCTV focus
+      // 7. Perimeter Atmospheric Soft Vignette
       const vignette = ctx.createRadialGradient(
         width * 0.5,
         height * 0.5,
         width * 0.35,
         width * 0.5,
         height * 0.5,
-        width * 0.75
+        width * 0.78
       );
       vignette.addColorStop(0, 'rgba(0, 0, 0, 0)');
-      vignette.addColorStop(1, 'rgba(3, 6, 14, 0.75)');
+      vignette.addColorStop(1, 'rgba(4, 7, 15, 0.65)');
       ctx.fillStyle = vignette;
       ctx.fillRect(0, 0, width, height);
 

@@ -13,12 +13,6 @@ import {
   Clock,
   ArrowLeft,
   Fingerprint,
-  ShieldCheck,
-  Radio,
-  Sparkles,
-  KeyRound,
-  ShieldAlert,
-  Cpu,
 } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import { Auth3DCanvas } from './Auth3DCanvas';
@@ -160,33 +154,14 @@ export const Auth3DView: React.FC<Auth3DViewProps> = ({
 
       {/* Top Header Bar with Ultra-Transparent Frosted Glass */}
       <header className="relative z-10 w-full px-4 sm:px-8 py-3.5 flex items-center justify-between border-b border-white/[0.10] backdrop-blur-xl bg-slate-950/20 shadow-[0_4px_30px_rgba(0,0,0,0.4)]">
-        <div className="flex items-center gap-3.5">
-          <div
-            className="relative group cursor-pointer"
-            onClick={() => (onNavigateLanding ? onNavigateLanding() : setPortal('landing'))}
-          >
-            <SeemadrishtiLogo className="w-8 h-8 text-cyan-400 drop-shadow-[0_0_15px_rgba(0,240,255,0.7)] transition-transform group-hover:scale-105" />
-            <span className="absolute -bottom-0.5 -right-0.5 w-2.5 h-2.5 rounded-full bg-emerald-400 animate-ping" />
-            <span className="absolute -bottom-0.5 -right-0.5 w-2.5 h-2.5 rounded-full bg-emerald-400" />
-          </div>
-          <div>
-            <div className="flex items-center gap-2">
-              <span className="text-sm font-black tracking-widest text-transparent bg-clip-text bg-gradient-to-r from-cyan-300 via-cyan-400 to-teal-300 drop-shadow-[0_0_12px_rgba(0,240,255,0.5)]">
-                SEEMADRISHTI AI
-              </span>
-              <span className="px-1.5 py-0.5 rounded-md bg-cyan-500/10 border border-cyan-400/30 text-[9px] font-bold text-cyan-300 tracking-wider shadow-[0_0_10px_rgba(0,240,255,0.15)]">
-                AES-256 GCM
-              </span>
-              <span className="hidden sm:inline-flex items-center gap-1 px-1.5 py-0.5 rounded-md bg-emerald-500/10 border border-emerald-400/30 text-[9px] font-bold text-emerald-300">
-                <ShieldCheck size={10} className="text-emerald-400" />
-                SECURE NODE
-              </span>
-            </div>
-            <p className="text-[10px] text-slate-400 tracking-wider flex items-center gap-1.5 mt-0.5">
-              <Radio size={10} className="text-cyan-400 animate-pulse" />
-              Tactical Border Edge Terminal // Node IN-NORTH-01
-            </p>
-          </div>
+        <div
+          className="flex items-center gap-3 cursor-pointer group"
+          onClick={() => (onNavigateLanding ? onNavigateLanding() : setPortal('landing'))}
+        >
+          <SeemadrishtiLogo className="w-8 h-8 text-cyan-400 drop-shadow-[0_0_15px_rgba(0,240,255,0.7)] transition-transform group-hover:scale-105" />
+          <span className="text-sm font-black tracking-widest text-transparent bg-clip-text bg-gradient-to-r from-cyan-300 via-cyan-400 to-teal-300 drop-shadow-[0_0_12px_rgba(0,240,255,0.5)]">
+            SEEMADRISHTI AI
+          </span>
         </div>
 
         <div className="flex items-center gap-3.5">

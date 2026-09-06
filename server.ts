@@ -97,7 +97,10 @@ async function startServer() {
   // Vite middleware for development or static file serving for production
   if (process.env.NODE_ENV !== 'production') {
     const vite = await createViteServer({
-      server: { middlewareMode: true },
+      server: {
+        middlewareMode: true,
+        proxy: {}, // Express directly handles /api, /evidence, and /ws in unified server mode
+      },
       appType: 'spa',
     });
     app.use(vite.middlewares);

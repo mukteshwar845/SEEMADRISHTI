@@ -56,6 +56,7 @@ import { webSocketService } from './services/websocketService';
 import { voiceCommandService } from './services/voiceCommandService';
 import { fetchAlerts, fetchCameras, fetchTelemetry } from './services/api';
 import { tacticalAlertDispatcher } from './utils/tacticalAlertDispatcher';
+import { TacticalOperationsAtmosphere } from './components/background/TacticalOperationsAtmosphere';
 import { Siren, ShieldAlert, AlertTriangle } from 'lucide-react';
 
 function SeemadrishtiMainApp() {
@@ -615,12 +616,15 @@ function SeemadrishtiMainApp() {
             ? 'bg-[#000000]'
             : theme === 'emerald-ops'
             ? 'bg-[#021009]'
-            : 'bg-[#02040a]'
+            : 'bg-[#060913]'
         }`}
       >
+        {/* Subtle 3D Command-Center Background Atmosphere */}
+        <TacticalOperationsAtmosphere />
+
         {/* Tactical Defense Telemetry Ribbon */}
         <div
-          className={`h-6 shrink-0 flex-none px-4 flex items-center justify-between text-[9px] font-mono select-none overflow-hidden border-b ${
+          className={`h-6 shrink-0 flex-none px-4 flex items-center justify-between text-[9px] font-mono select-none overflow-hidden border-b relative z-10 ${
             isDaylight
               ? 'bg-slate-200 border-slate-300 text-slate-700'
               : 'bg-[#010307] border-cyan-500/20 text-cyan-400'
@@ -699,7 +703,7 @@ function SeemadrishtiMainApp() {
         )}
 
         {/* Dynamic Main Body by Current View */}
-        <main className="flex-1 min-h-0 p-3.5 sm:p-5 overflow-y-auto space-y-5">
+        <main className="flex-1 min-h-0 p-3.5 sm:p-5 overflow-y-auto space-y-5 relative z-10">
           {currentView === 'dashboard' && (
             <>
               {/* Surveillance Intelligence AI Search (Phase 20) */}

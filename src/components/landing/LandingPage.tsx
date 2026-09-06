@@ -295,23 +295,22 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onEnterAuth }) => {
 
       {/* 1. Sleek Floating Tactical Navigation Header */}
       <header className="sticky top-0 z-40 backdrop-blur-2xl bg-[#020512]/90 border-b border-cyan-500/20 px-4 sm:px-8 py-3.5 flex items-center justify-between transition-all shadow-[0_4px_30px_rgba(0,0,0,0.6)]">
-        <div className="flex items-center gap-3.5">
-          <div className="relative flex items-center justify-center p-2 rounded-xl bg-cyan-500/10 border border-cyan-400/40 shadow-[0_0_20px_rgba(0,240,255,0.3)] group cursor-pointer" onClick={scrollToTop}>
-            <SeemadrishtiLogo className="w-7 h-7 text-cyan-400 transition-transform group-hover:scale-105" />
-            <span className="absolute -top-1 -right-1 w-2.5 h-2.5 rounded-full bg-emerald-400 animate-ping" />
-            <span className="absolute -top-1 -right-1 w-2.5 h-2.5 rounded-full bg-emerald-400" />
+        <div className="flex items-center gap-3.5 cursor-pointer group" onClick={scrollToTop}>
+          <div className="relative shrink-0 flex items-center justify-center transition-transform duration-300 group-hover:scale-105">
+            <SeemadrishtiLogo size={38} animated={true} />
           </div>
           <div>
-            <div className="flex items-center gap-2">
-              <span className="text-base sm:text-lg font-black tracking-widest text-transparent bg-clip-text bg-gradient-to-r from-cyan-300 via-cyan-400 to-teal-300 drop-shadow-[0_0_12px_rgba(0,240,255,0.4)]">
+            <div className="flex items-center gap-2.5 flex-wrap">
+              <span className="text-base sm:text-xl font-black tracking-[0.2em] font-mono text-transparent bg-clip-text bg-gradient-to-r from-white via-cyan-200 to-teal-300 drop-shadow-[0_0_16px_rgba(6,182,212,0.5)]">
                 SEEMADRISHTI
               </span>
-              <span className="px-2 py-0.5 rounded-md bg-emerald-500/10 border border-emerald-400/30 text-[9px] font-bold text-emerald-400 hidden sm:inline-flex items-center gap-1">
+              <span className="px-2.5 py-0.5 rounded-full bg-emerald-500/10 border border-emerald-400/40 text-[9px] font-mono font-bold text-emerald-400 hidden sm:inline-flex items-center gap-1.5 shadow-[0_0_12px_rgba(16,185,129,0.25)]">
+                <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
                 <ShieldCheck size={10} className="text-emerald-400" />
                 BORDER DEFENSE PLATFORM
               </span>
             </div>
-            <p className="text-[9px] text-slate-400 tracking-wider uppercase">
+            <p className="text-[9px] sm:text-[10px] text-slate-400 font-mono tracking-[0.16em] uppercase mt-0.5">
               Autonomous Real-Time Perimeter Surveillance &amp; Threat Interception
             </p>
           </div>

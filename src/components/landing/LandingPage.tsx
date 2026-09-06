@@ -45,8 +45,6 @@ interface LandingPageProps {
   onEnterAuth: () => void;
 }
 
-type SimulationScenario = 'perimeter_scaling' | 'thermal_night' | 'uav_intercept' | 'sector_lockdown';
-
 export const LandingPage: React.FC<LandingPageProps> = ({ onEnterAuth }) => {
   const { setPortal } = useAuth();
   const [activeTab, setActiveTab] = useState<'capabilities' | 'sectors' | 'architecture' | 'roles'>('capabilities');
@@ -76,17 +74,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onEnterAuth }) => {
     }
   };
 
-  // Interactive Live Threat Simulator HUD State
-  const [activeScenario, setActiveScenario] = useState<SimulationScenario>('perimeter_scaling');
-  const [isSimulating, setIsSimulating] = useState(false);
-  const [simLog, setSimLog] = useState<string[]>([
-    '[INIT] SEEMADRISHTI EDGE AI DAEMON BOOTED // RTSP 4K FEED ENCRYPTED',
-    '[STANDBY] SENSOR TOWERS 1-7 NOMINAL // LASER TRIPWIRES CALIBRATED',
-    '[READY] SELECT TACTICAL INCIDENT SCENARIO TO SIMULATE REAL-TIME INTERCEPTION',
-  ]);
-  const [simThreatScore, setSimThreatScore] = useState<number>(35);
-  const [threatLevel, setThreatLevel] = useState<'nominal' | 'elevated' | 'critical'>('nominal');
-  const [copiedHash, setCopiedHash] = useState(false);
+  const threatLevel = 'nominal' as const;
 
   useEffect(() => {
     const updateTime = () => {
@@ -106,63 +94,6 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onEnterAuth }) => {
     const interval = setInterval(updateTime, 1000);
     return () => clearInterval(interval);
   }, []);
-
-  // Simulator Scenario runner
-  const handleTriggerScenario = (scenario: SimulationScenario) => {
-    setActiveScenario(scenario);
-    setIsSimulating(true);
-
-    if (scenario === 'perimeter_scaling') {
-      setSimThreatScore(94);
-      setThreatLevel('critical');
-      setSimLog([
-        '[02:14:03 UTC] ALERT // CAM-02 PERIMETER_NW_04 TRIPWIRE BREACH DETECTED',
-        '[02:14:04 UTC] TRACK ID #TRK-992 // VELOCITY: 3.8 m/s // Z-AXIS ELEVATION +2.4m',
-        '[02:14:05 UTC] YOLOv8 + BEHAVIOR CHAIN // CLASSIFICATION: [RESTRICTED FENCE SCALING]',
-        '[02:14:06 UTC] RE-ID HANDOVER // CAM-02 -> CAM-03 HOMOGRAPHY CORRELATION 98.6%',
-        '[02:14:07 UTC] EVIDENCE VAULT PACKAGED // SHA-256: 7f83b1657ff1fc53b92dc18148a1d65dfc2d4b1fa3d677284addd200126d9069',
-        '[02:14:08 UTC] DISPATCH SENT TO SECTOR 4 RAPID QUICK REACTION TEAM (QRT)',
-      ]);
-    } else if (scenario === 'thermal_night') {
-      setSimThreatScore(78);
-      setThreatLevel('elevated');
-      setSimLog([
-        '[03:22:11 UTC] THERMAL FLIR ENGAGED // CAM-05 RIVER_WEST_VALLEY // FOG DENSITY 82%',
-        '[03:22:12 UTC] ADAPTIVE HISTOGRAM EQUALIZATION // BOOSTED CONTRAST RATIO 4.2x',
-        '[03:22:13 UTC] INFRARED SIGNATURE IDENTIFIED // 2 HUMAN FIGURES LOW CRAWL IN VEGETATION',
-        '[03:22:14 UTC] DWELL TIME THRESHOLD EXCEEDED // PROBABILITY 92.1% HOSTILE PROBING',
-        '[03:22:15 UTC] NIGHT VISION FLOODLIGHTS TRIGGERED // PTZ AUTO-LOCKED ON TARGET',
-      ]);
-    } else if (scenario === 'uav_intercept') {
-      setSimThreatScore(86);
-      setThreatLevel('critical');
-      setSimLog([
-        '[04:05:40 UTC] DRONE TELEMETRY ENGAGED // UAV PATROL BIRD-03 LAUNCHED',
-        '[04:05:41 UTC] AIRBORNE GIMBAL RADAR CONTACT // UNREGISTERED VEHICLE IN BUFFER ZONE',
-        '[04:05:42 UTC] ANPR AI SCANNING // NUMBER PLATE RESOLVED // BLACKLIST HIT: RED TACTICAL',
-        '[04:05:43 UTC] REAL-TIME FLIGHT TRAJECTORY INTERCEPT CALCULATED // ETA 32 SECONDS',
-        '[04:05:44 UTC] LIVE VIDEO TELEMETRY STREAMED TO SECTOR COMMAND CHAIR',
-      ]);
-    } else {
-      setSimThreatScore(99);
-      setThreatLevel('critical');
-      setSimLog([
-        '[04:55:00 UTC] PROTOCOL DEFCON-1 ACTIVE // EMERGENCY SECTOR LOCKDOWN COMMAND ISSUED',
-        '[04:55:01 UTC] ALL HIGH-VOLTAGE LASER TRIPWIRES PULSING MAXIMUM SENSITIVITY',
-        '[04:55:02 UTC] 9-CHANNEL RTSP HIGH-BANDWIDTH EVIDENCE RECORDING SYNCHRONIZED',
-        '[04:55:03 UTC] MULTI-SECTOR SIRENS ARMED // PERIMETER GATES AUTOMATICALLY SECURED',
-        '[04:55:04 UTC] FULL ENCRYPTED MISSION REPORT PREPARED WITH AES-256 ENCRYPTION',
-      ]);
-    }
-
-    setTimeout(() => setIsSimulating(false), 800);
-  };
-
-  const copyDossierHash = () => {
-    navigator.clipboard.writeText('7f83b1657ff1fc53b92dc18148a1d65dfc2d4b1fa3d677284addd200126d9069');
-    setCopiedHash(true);
-    setTimeout(() => setCopiedHash(false), 2000);
-  };
 
   const defenseMetrics = [
     { label: 'CROSS-CAM RE-ID', value: '99.4%', sub: 'Homography & Color Invariant Matching' },
@@ -453,11 +384,11 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onEnterAuth }) => {
               </button>
 
               <button
-                onClick={() => scrollToSection('simulator')}
+                onClick={() => scrollToSection('matrix-section')}
                 className="px-5 py-3.5 rounded-xl border border-slate-700 bg-slate-900/80 hover:bg-slate-800 text-slate-200 font-bold text-xs tracking-wider flex items-center gap-2 transition-all cursor-pointer active:scale-95 backdrop-blur-md"
               >
-                <Terminal size={15} className="text-cyan-400" />
-                <span>EXPLORE THREAT SIMULATOR</span>
+                <Layers size={15} className="text-cyan-400" />
+                <span>EXPLORE DEFENSE MATRIX</span>
               </button>
             </div>
 
@@ -478,10 +409,10 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onEnterAuth }) => {
             {/* Scroll Explore Indicator */}
             <div className="pt-3">
               <button
-                onClick={() => scrollToSection('simulator')}
+                onClick={() => scrollToSection('matrix-section')}
                 className="inline-flex items-center gap-2 text-[11px] font-bold text-cyan-400 hover:text-cyan-200 bg-cyan-950/60 hover:bg-cyan-900/80 border border-cyan-500/40 px-4 py-2 rounded-full cursor-pointer transition-all group shadow-[0_0_15px_rgba(0,240,255,0.25)] active:scale-95"
               >
-                <span>EXPLORE THREAT SIMULATOR &amp; DEFENSE MATRIX</span>
+                <span>EXPLORE DEFENSE CAPABILITIES &amp; ARCHITECTURE</span>
                 <ArrowDown size={14} className="animate-bounce text-cyan-400 group-hover:translate-y-0.5 transition-transform" />
               </button>
             </div>
@@ -518,145 +449,6 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onEnterAuth }) => {
           </div>
         </div>
 
-      </section>
-
-      {/* 4. Interactive Live Threat Simulator HUD (Hands-on Command Deck) */}
-      <section id="simulator" className="relative z-10 max-w-7xl mx-auto px-4 sm:px-6 py-10 scroll-mt-20">
-        <div className="p-6 sm:p-8 rounded-3xl border border-cyan-500/30 bg-[#030714]/95 shadow-[0_0_40px_rgba(0,0,0,0.9)] backdrop-blur-xl">
-          <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-cyan-500/20 pb-5 mb-6">
-            <div>
-              <div className="flex items-center gap-2">
-                <span className="p-2 rounded-lg bg-cyan-950 text-cyan-400 border border-cyan-500/40">
-                  <Terminal size={18} />
-                </span>
-                <div>
-                  <h2 className="text-lg sm:text-xl font-black text-white tracking-widest uppercase">
-                    INTERACTIVE BORDER THREAT SIMULATOR HUD
-                  </h2>
-                  <p className="text-xs text-slate-400 mt-0.5 font-mono">
-                    Test live detection logic, trajectory chains, and cryptographic evidence hashing
-                  </p>
-                </div>
-              </div>
-            </div>
-
-            <div className="flex items-center gap-3">
-              <div className="text-right font-mono">
-                <p className="text-[10px] text-slate-400 font-bold">CALCULATED THREAT LEVEL</p>
-                <p
-                  className="text-xl font-black"
-                  style={{
-                    color: simThreatScore > 85 ? '#ff0055' : simThreatScore > 65 ? '#f59e0b' : '#00ff66',
-                  }}
-                >
-                  {simThreatScore}% // {threatLevel.toUpperCase()}
-                </p>
-              </div>
-            </div>
-          </div>
-
-          {/* Scenario Trigger Buttons */}
-          <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 mb-6">
-            {[
-              {
-                id: 'perimeter_scaling' as const,
-                label: 'PERIMETER SCALING',
-                desc: 'Fence climb & geofence tripwire breach',
-                icon: AlertTriangle,
-                color: '#ff0055',
-              },
-              {
-                id: 'thermal_night' as const,
-                label: 'THERMAL FLIR NIGHT SCAN',
-                desc: 'Low crawl target in dense 82% fog',
-                icon: Eye,
-                color: '#f59e0b',
-              },
-              {
-                id: 'uav_intercept' as const,
-                label: 'UAV PATROL INTERCEPT',
-                desc: 'Airborne radar lock & ANPR blacklist hit',
-                icon: Radar,
-                color: '#00f0ff',
-              },
-              {
-                id: 'sector_lockdown' as const,
-                label: 'DEFCON-1 LOCKDOWN',
-                desc: 'Full sector siren & gate emergency seal',
-                icon: Siren,
-                color: '#ec4899',
-              },
-            ].map((sc) => {
-              const Icon = sc.icon;
-              const isCurrent = activeScenario === sc.id;
-              return (
-                <button
-                  key={sc.id}
-                  onClick={() => handleTriggerScenario(sc.id)}
-                  className={`p-3.5 rounded-2xl border text-left transition-all cursor-pointer relative overflow-hidden active:scale-95 ${
-                    isCurrent
-                      ? 'bg-slate-900 border-cyan-400 shadow-[0_0_20px_rgba(0,240,255,0.25)]'
-                      : 'bg-black/40 border-slate-800 hover:border-slate-700'
-                  }`}
-                >
-                  <div className="flex items-center justify-between mb-2">
-                    <Icon size={18} style={{ color: sc.color }} />
-                    <span
-                      className="text-[9px] font-bold px-2 py-0.5 rounded border"
-                      style={{ borderColor: `${sc.color}40`, color: sc.color }}
-                    >
-                      {isCurrent ? 'ACTIVE TEST' : 'TRIGGER'}
-                    </span>
-                  </div>
-                  <p className="text-xs font-black text-white">{sc.label}</p>
-                  <p className="text-[10px] text-slate-400 mt-1 font-sans leading-tight">{sc.desc}</p>
-                </button>
-              );
-            })}
-          </div>
-
-          {/* Terminal Console Output */}
-          <div className="p-4 rounded-2xl bg-black/90 border border-slate-800 font-mono text-xs text-slate-300 relative overflow-hidden shadow-inner">
-            <div className="flex items-center justify-between border-b border-slate-800 pb-2 mb-3 text-[10px] text-slate-500">
-              <span className="flex items-center gap-2">
-                <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
-                SEEMADRISHTI LIVE TACTICAL LOG DISPATCH
-              </span>
-              <button
-                onClick={copyDossierHash}
-                className="text-cyan-400 hover:text-cyan-300 flex items-center gap-1 cursor-pointer transition-colors"
-              >
-                {copiedHash ? <Check size={12} className="text-emerald-400" /> : <Copy size={12} />}
-                <span>{copiedHash ? 'HASH COPIED!' : 'COPY SHA-256 DOSSIER'}</span>
-              </button>
-            </div>
-
-            <div className="space-y-1.5 min-h-[140px] max-h-[180px] overflow-y-auto">
-              {simLog.map((line, idx) => (
-                <p
-                  key={idx}
-                  className={`leading-relaxed ${
-                    line.includes('BREACH') || line.includes('DEFCON-1') || line.includes('ALERT')
-                      ? 'text-rose-400 font-bold'
-                      : line.includes('RE-ID') || line.includes('EVIDENCE') || line.includes('SHA-256')
-                      ? 'text-cyan-300'
-                      : line.includes('THERMAL') || line.includes('INFRARED')
-                      ? 'text-amber-300'
-                      : 'text-slate-300'
-                  }`}
-                >
-                  {line}
-                </p>
-              ))}
-              {isSimulating && (
-                <p className="text-cyan-400 animate-pulse flex items-center gap-2">
-                  <Activity size={12} className="animate-spin" />
-                  PROCESSING INCOMING HIGH-SPEED VIDEO FRAMES...
-                </p>
-              )}
-            </div>
-          </div>
-        </div>
       </section>
 
       {/* 5. Feature & Sector Matrix Tab Navigation */}

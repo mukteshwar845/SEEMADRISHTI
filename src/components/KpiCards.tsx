@@ -12,7 +12,6 @@ import {
   CheckCircle2,
 } from 'lucide-react';
 import { webSocketService, FleetCounts } from '../services/websocketService';
-import { CrossCameraHandoverPanel } from './CrossCameraHandoverPanel';
 import { fetchWithAuth } from '../utils/fetchWithAuth';
 
 interface KpiCardsProps {
@@ -256,9 +255,6 @@ export const KpiCards: React.FC<KpiCardsProps> = ({ alerts = [] }) => {
           ))}
         </div>
       </div>
-
-      {/* 2. Real Cross-Camera Handover Live Panel */}
-      <CrossCameraHandoverPanel />
     </div>
   );
 };

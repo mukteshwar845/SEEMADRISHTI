@@ -267,52 +267,13 @@ export const Sidebar: React.FC<SidebarProps> = ({
 
         {/* 3. Bottom Operator & Hardware Section (Fixed Bottom, Never Scrolls, Never Overlaps) */}
         <div
-          className={`sidebar-footer shrink-0 flex-none mt-auto p-3 border-t space-y-2 select-none ${
+          className={`sidebar-footer shrink-0 flex-none mt-auto p-3 border-t select-none ${
             isDaylight
               ? 'bg-slate-100 border-slate-300'
               : 'bg-[#03060c] border-cyan-500/20'
           }`}
         >
-          {user && (
-            <div
-              onClick={() => setIsProfileModalOpen(true)}
-              className={`p-2.5 rounded-xl border text-left font-mono transition-all cursor-pointer hover:border-cyan-400 group ${
-                isDaylight
-                  ? 'bg-white border-slate-300 hover:bg-slate-50'
-                  : 'bg-black/80 border-cyan-500/30 hover:bg-cyan-950/30 shadow-[0_0_10px_rgba(0,240,255,0.1)]'
-              }`}
-              title="Click to view and edit Operator Profile"
-            >
-              <div className="flex items-center justify-between">
-                <span className="text-[9px] font-bold text-cyan-400 group-hover:text-cyan-300">
-                  OPERATOR PROFILE &bull; EDIT
-                </span>
-                <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-ping" />
-              </div>
-              <p className="text-xs font-black text-white truncate mt-0.5">{user.name}</p>
-              <p className="text-[9px] text-slate-400 truncate">
-                [{user.role}] &bull; {user.shift}
-              </p>
-            </div>
-          )}
-
-          <div
-            className={`px-2.5 py-1.5 rounded-lg flex items-center justify-between text-[9px] font-mono ${
-              isDaylight
-                ? 'bg-white border border-slate-300'
-                : 'bg-black/80 border border-cyan-500/20'
-            }`}
-          >
-            <div className="flex items-center gap-1.5 text-slate-400">
-              <Cpu size={12} className="text-emerald-500" />
-              <span className={isDaylight ? 'text-slate-700' : 'text-slate-400'}>
-                JETSON ORIN AGX
-              </span>
-            </div>
-            <span className="text-emerald-600 dark:text-emerald-400 font-bold">41°C / OK</span>
-          </div>
-
-          <div className="grid grid-cols-2 gap-1.5 pt-0.5">
+          <div className="grid grid-cols-2 gap-1.5">
             <button
               onClick={lockNow}
               title="Lock Terminal Screen"

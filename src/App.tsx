@@ -136,6 +136,7 @@ function SeemadrishtiMainApp() {
   const [highlightedCameras, setHighlightedCameras] = useState<string[]>([]);
   const [selectedJourneyTrackId, setSelectedJourneyTrackId] = useState<number | null>(null);
   const [heatmapHighlightCameras, setHeatmapHighlightCameras] = useState<string[]>([]);
+  const [spotlightCameraOverride, setSpotlightCameraOverride] = useState<number | null>(null);
   const [isBackendOffline, setIsBackendOffline] = useState(false);
   const [defconLevel, setDefconLevel] = useState<DefconLevel>(() => {
     try {
@@ -748,7 +749,7 @@ function SeemadrishtiMainApp() {
               />
 
               {/* 4 & 5. Center Section: 9-Camera Tactical Matrix (Left) & Real-time Alert Feed (Right) */}
-              <div className="grid grid-cols-1 lg:grid-cols-12 gap-5 min-h-0">
+              <div className="grid grid-cols-1 lg:grid-cols-12 gap-4 min-h-0">
                 {/* 9-Camera Surveillance Matrix (9 cols on lg) */}
                 <div className="lg:col-span-9 flex flex-col">
                   <TacticalMatrixView
@@ -757,6 +758,7 @@ function SeemadrishtiMainApp() {
                     onUpdateCameraName={handleUpdateCameraName}
                     onTriggerAlert={handleSimulateIntrusion}
                     highlightedCameraIds={highlightedCameras}
+                    spotlightCameraOverride={spotlightCameraOverride}
                     onSelectCameraForDetails={(cam) => {
                       setSelectedCameraId(String(cam.id));
                       const match = cameras.find((c) => c.id === String(cam.id)) || {
@@ -779,6 +781,12 @@ function SeemadrishtiMainApp() {
                     alerts={alerts}
                     onSelectAlert={(a) => setSelectedAlertForModal(a)}
                     onViewAllAlerts={() => setCurrentView('alerts')}
+                    onJumpToCamera={(camCode) => {
+                      const match = camCode.match(/\d+/);
+                      const camNum = match ? parseInt(match[0], 10) : 1;
+                      setSpotlightCameraOverride(camNum);
+                      setSelectedCameraId(`cam-${camNum}`);
+                    }}
                   />
                 </div>
               </div>

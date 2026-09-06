@@ -7,12 +7,14 @@ interface AlertsLogProps {
   alerts: AlertItem[];
   onSelectAlert: (alert: AlertItem) => void;
   onViewAllAlerts?: () => void;
+  onJumpToCamera?: (camCode: string) => void;
 }
 
 export const AlertsLog: React.FC<AlertsLogProps> = ({
   alerts,
   onSelectAlert,
   onViewAllAlerts,
+  onJumpToCamera,
 }) => {
   const [severityFilter, setSeverityFilter] = useState<'ALL' | 'High' | 'Medium' | 'Low'>('ALL');
   const [searchQuery, setSearchQuery] = useState('');
@@ -48,6 +50,7 @@ export const AlertsLog: React.FC<AlertsLogProps> = ({
 
   const getSeverityStyle = (severity: string) => {
     switch (severity.toLowerCase()) {
+      case 'critical':
       case 'high':
         return {
           box: 'border-l-2 border-rose-500 bg-rose-950/20 hover:bg-rose-950/40 border-y border-r border-rose-500/30 shadow-[0_0_12px_rgba(244,63,94,0.1)]',
@@ -73,79 +76,58 @@ export const AlertsLog: React.FC<AlertsLogProps> = ({
   return (
     <div
       id="alerts-log-panel"
-      className="flex flex-col bg-slate-900 rounded-xl border border-slate-800 overflow-hidden h-full shadow-xl"
+      className="flex flex-col bg-slate-900/80 rounded-2xl border border-white/[0.10] overflow-hidden h-full shadow-2xl backdrop-blur-xl"
     >
       {/* Header */}
-      <div className="px-3.5 py-2.5 border-b border-slate-800 bg-slate-950/90 flex justify-between items-center">
+      <div className="px-3.5 py-3 border-b border-white/[0.08] bg-slate-950/80 flex justify-between items-center">
         <div className="flex items-center gap-2">
-          <ShieldAlert size={14} className="text-rose-400 animate-pulse" />
-          <span className="text-[11px] font-bold text-slate-200 uppercase tracking-widest font-mono">
-            REAL-TIME ALERT FEED
+          <ShieldAlert size={15} className="text-rose-400 animate-pulse" />
+          <span className="text-[11px] font-bold text-white uppercase tracking-widest font-mono">
+            LIVE ALERT FEED
           </span>
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-1.5">
           <button 
             onClick={handleExportCSV}
-            className="flex items-center gap-1 text-[9px] text-cyan-400 font-mono font-bold bg-cyan-950/40 px-2 py-0.5 rounded border border-cyan-500/30 hover:bg-cyan-900/60 transition-colors"
+            className="flex items-center gap-1 text-[9px] text-cyan-300 font-mono font-bold bg-white/[0.05] hover:bg-cyan-500/20 px-2 py-1 rounded-lg border border-white/10 transition-colors"
             title="Export to CSV"
           >
             <Download size={10} />
-            EXPORT
+            <span>EXPORT</span>
           </button>
-          <span className="text-[9px] text-rose-400 font-mono font-bold bg-rose-950/80 px-2 py-0.5 rounded border border-rose-500/40">
-            LIVE STREAM
+          <span className="text-[9px] text-rose-300 font-mono font-bold bg-rose-500/20 px-2 py-0.5 rounded-full border border-rose-500/40">
+            {alerts.length} ALERTS
           </span>
         </div>
       </div>
 
-      {/* Filter Tabs & Search Bar */}
-      <div className="p-2 border-b border-slate-800 bg-slate-950/50 space-y-1.5">
-        <div className="flex items-center gap-1">
-          <button
-            onClick={() => setSeverityFilter('ALL')}
-            className={`flex-1 py-0.5 rounded text-[9px] font-mono font-bold transition-colors cursor-pointer ${
-              severityFilter === 'ALL'
-                ? 'bg-cyan-950 text-cyan-300 border border-cyan-500/50'
-                : 'text-slate-400 hover:text-white'
-            }`}
-          >
-            ALL
-          </button>
-          <button
-            onClick={() => setSeverityFilter('High')}
-            className={`flex-1 py-0.5 rounded text-[9px] font-mono font-bold transition-colors cursor-pointer ${
-              severityFilter === 'High'
-                ? 'bg-rose-950 text-rose-300 border border-rose-500/50'
-                : 'text-slate-400 hover:text-rose-400'
-            }`}
-          >
-            HIGH
-          </button>
-          <button
-            onClick={() => setSeverityFilter('Medium')}
-            className={`flex-1 py-0.5 rounded text-[9px] font-mono font-bold transition-colors cursor-pointer ${
-              severityFilter === 'Medium'
-                ? 'bg-amber-950 text-amber-300 border border-amber-500/50'
-                : 'text-slate-400 hover:text-amber-400'
-            }`}
-          >
-            MED
-          </button>
-          <button
-            onClick={() => setSeverityFilter('Low')}
-            className={`flex-1 py-0.5 rounded text-[9px] font-mono font-bold transition-colors cursor-pointer ${
-              severityFilter === 'Low'
-                ? 'bg-emerald-950 text-emerald-300 border border-emerald-500/50'
-                : 'text-slate-400 hover:text-emerald-400'
-            }`}
-          >
-            LOW
-          </button>
+      {/* Filter Tabs */}
+      <div className="p-2 border-b border-white/[0.06] bg-slate-950/40">
+        <div className="flex items-center gap-1 bg-black/40 p-1 rounded-xl border border-white/10">
+          {(['ALL', 'High', 'Medium', 'Low'] as const).map((sev) => (
+            <button
+              key={sev}
+              onClick={() => setSeverityFilter(sev)}
+              className={`flex-1 py-1 rounded-lg text-[9px] font-mono font-bold transition-all cursor-pointer ${
+                severityFilter === sev
+                  ? sev === 'High'
+                    ? 'bg-rose-500/30 text-rose-300 border border-rose-400/50 shadow-sm'
+                    : sev === 'Medium'
+                    ? 'bg-amber-500/30 text-amber-300 border border-amber-400/50 shadow-sm'
+                    : sev === 'Low'
+                    ? 'bg-emerald-500/30 text-emerald-300 border border-emerald-400/50 shadow-sm'
+                    : 'bg-cyan-500/30 text-cyan-300 border border-cyan-400/50 shadow-sm'
+                  : 'text-slate-400 hover:text-white'
+              }`}
+            >
+              {sev.toUpperCase()}
+            </button>
+          ))}
         </div>
       </div>
 
       {/* Vertical Alert Cards */}
-      <div className="flex-1 overflow-y-auto p-2.5 space-y-2 max-h-[480px]" id="alerts-list-container">
+      <div className="flex-1 overflow-y-auto p-2.5 space-y-2 max-h-[520px]" id="alerts-list-container">
         <AnimatePresence initial={false} mode="popLayout">
           {filteredAlerts.length === 0 ? (
             <motion.div
@@ -153,17 +135,13 @@ export const AlertsLog: React.FC<AlertsLogProps> = ({
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
-              className="p-4 text-center text-xs font-mono text-slate-500"
+              className="p-6 text-center text-xs font-mono text-slate-500"
             >
-              No alerts match current filter.
+              No active alerts matching criteria.
             </motion.div>
           ) : (
             filteredAlerts.map((alert) => {
               const style = getSeverityStyle(alert.severity);
-              const shortSeverity =
-                alert.severity.toLowerCase() === 'medium'
-                  ? 'MED PRIORITY'
-                  : `${alert.severity.toUpperCase()} THREAT`;
 
               return (
                 <motion.div
@@ -171,78 +149,48 @@ export const AlertsLog: React.FC<AlertsLogProps> = ({
                   id={`alert-card-${alert.id}`}
                   onClick={() => onSelectAlert(alert)}
                   layout
-                  initial={{ opacity: 0, y: -16, scale: 0.95 }}
+                  initial={{ opacity: 0, y: -12, scale: 0.96 }}
                   animate={{ opacity: 1, y: 0, scale: 1 }}
                   exit={{ opacity: 0, x: 20, scale: 0.92 }}
-                  transition={{ duration: 0.25, ease: 'easeOut' }}
-                  className={`${style.box} p-2.5 rounded-lg transition-all duration-200 cursor-pointer group hover:translate-x-1`}
+                  transition={{ duration: 0.2, ease: 'easeOut' }}
+                  className={`${style.box} p-2.5 rounded-xl transition-all duration-200 cursor-pointer group hover:translate-x-0.5`}
                 >
                   <div className="flex items-start justify-between gap-2">
-                    <p className="text-[11px] font-bold text-slate-100 leading-snug group-hover:text-cyan-300 transition-colors font-mono">
+                    <p className="text-[11px] font-bold text-white leading-snug group-hover:text-cyan-300 transition-colors font-mono">
                       {alert.title}
                     </p>
                     <div className={`w-1.5 h-1.5 rounded-full ${style.dot} shrink-0 mt-1 animate-ping`} />
                   </div>
 
                   {alert.description && (
-                    <p className="text-[10px] text-slate-400 mt-1 font-mono line-clamp-2">
+                    <p className="text-[10px] text-slate-300 mt-1 font-mono line-clamp-2 leading-relaxed">
                       {alert.description}
                     </p>
                   )}
 
-                  {/* Rich Badges Line */}
-                  <div className="flex flex-wrap items-center gap-1 mt-1.5 font-mono text-[8px]">
-                    {alert.trackId && (
-                      <span className="px-1 py-0.2 rounded bg-cyan-950 text-cyan-300 border border-cyan-500/30 font-bold">
-                        #{alert.trackId} {alert.className || ''}
+                  {/* Metadata line & Quick Jump */}
+                  <div className="flex items-center justify-between mt-2 pt-1.5 border-t border-white/[0.08]">
+                    <div className="flex items-center gap-1.5">
+                      <span className={`text-[8px] font-mono font-bold px-1.5 py-0.5 rounded border ${style.badge}`}>
+                        {alert.camera}
                       </span>
-                    )}
-                    {alert.riskScore !== undefined && (
-                      <span className={`px-1 py-0.2 rounded font-bold border ${
-                        alert.riskScore >= 70
-                          ? 'bg-rose-950 text-rose-300 border-rose-500/40'
-                          : alert.riskScore >= 40
-                          ? 'bg-amber-950 text-amber-300 border-amber-500/40'
-                          : 'bg-yellow-950 text-yellow-300 border-yellow-500/40'
-                      }`}>
-                        RISK {alert.riskScore}
+                      <span className="text-[9px] text-slate-400 font-mono">
+                        {alert.time}
                       </span>
-                    )}
-                    {alert.hasEvidence && (
-                      <span className="px-1 py-0.2 rounded bg-emerald-950 text-emerald-300 border border-emerald-500/30 font-bold">
-                        EVIDENCE
-                      </span>
-                    )}
-                    {alert.zoneName && (
-                      <span className="px-1 py-0.2 rounded bg-indigo-950 text-indigo-300 border border-indigo-500/30 font-bold">
-                        {alert.zoneName}
-                      </span>
-                    )}
-                    {alert.type === 'TRIPWIRE_CROSSING' && (
-                      <span className="px-1 py-0.2 rounded bg-sky-950 text-sky-300 border border-sky-500/30 font-bold">
-                        TRIPWIRE
-                      </span>
-                    )}
-                    {alert.cameraSequence && alert.cameraSequence.length > 0 && (
-                      <span className="px-1 py-0.2 rounded bg-purple-950 text-purple-300 border border-purple-500/30 font-bold">
-                        CORRIDOR
-                      </span>
-                    )}
-                    {alert.dwellSeconds && (
-                      <span className="px-1 py-0.2 rounded bg-amber-950 text-amber-300 border border-amber-500/30 font-bold">
-                        {Math.round(alert.dwellSeconds)}s DWELL
-                      </span>
-                    )}
-                  </div>
+                    </div>
 
-                  {/* Subtitle / Meta Line */}
-                  <div className="flex justify-between items-center mt-2 pt-1.5 border-t border-slate-800/80">
-                    <span className={`text-[8px] font-mono font-bold px-1.5 py-0.5 rounded border ${style.badge} tracking-wider`}>
-                      {alert.camera} // {shortSeverity}
-                    </span>
-                    <span className="text-[9px] text-cyan-400 font-mono font-bold">
-                      {alert.time}
-                    </span>
+                    {onJumpToCamera && (
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          onJumpToCamera(alert.camera);
+                        }}
+                        className="px-2 py-0.5 rounded bg-cyan-500/20 hover:bg-cyan-500/40 text-cyan-300 border border-cyan-400/40 text-[9px] font-mono font-bold transition-all cursor-pointer"
+                        title="Jump directly to this camera feed"
+                      >
+                        VIEW FEED &rarr;
+                      </button>
+                    )}
                   </div>
                 </motion.div>
               );
@@ -253,10 +201,10 @@ export const AlertsLog: React.FC<AlertsLogProps> = ({
 
       {/* Footer link to full alerts log */}
       {onViewAllAlerts && (
-        <div className="p-2.5 border-t border-slate-800 bg-slate-950">
+        <div className="p-2.5 border-t border-white/[0.08] bg-slate-950/80">
           <button
             onClick={onViewAllAlerts}
-            className="w-full py-1.5 rounded-lg bg-slate-900 hover:bg-cyan-950/60 border border-slate-800 hover:border-cyan-500/40 text-[10px] font-mono font-bold text-cyan-300 hover:text-white transition-all text-center cursor-pointer flex items-center justify-center gap-1.5 active:scale-98 shadow-sm"
+            className="w-full py-2 rounded-xl bg-white/[0.04] hover:bg-cyan-500/20 border border-white/10 hover:border-cyan-400/40 text-[10px] font-mono font-bold text-cyan-300 hover:text-white transition-all text-center cursor-pointer flex items-center justify-center gap-1.5 active:scale-98 shadow-sm"
           >
             <span>VIEW ALL INCIDENTS ({alerts.length})</span>
             <ChevronRight size={12} />

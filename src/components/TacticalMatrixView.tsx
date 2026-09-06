@@ -1,6 +1,7 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { MatrixCameraFeed, AlertItem } from '../types';
 import { MatrixCameraCell } from './MatrixCameraCell';
+import { CinematicCameraFullscreenModal } from './matrix/CinematicCameraFullscreenModal';
 import {
   Grid,
   Layers,
@@ -22,11 +23,15 @@ import {
   Video,
   RefreshCcw,
   Flame,
+  Pin,
+  LayoutGrid,
+  Eye,
+  SlidersHorizontal,
 } from 'lucide-react';
 import { recordingEngine } from '../utils/recordingManager';
 import { voiceCommandService } from '../services/voiceCommandService';
 
-export type MatrixLayoutMode = 'matrix-3x3' | 'quad-2x2' | 'spotlight';
+export type MatrixLayoutMode = 'spotlight-1x1' | 'spotlight' | 'quad-2x2' | 'matrix-3x3' | 'wall-4x4' | 'adaptive';
 
 interface TacticalMatrixViewProps {
   cameras: MatrixCameraFeed[];
@@ -39,6 +44,7 @@ interface TacticalMatrixViewProps {
   confidenceThreshold?: number;
   onConfidenceThresholdChange?: (val: number) => void;
   highlightedCameraIds?: string[];
+  spotlightCameraOverride?: number | null;
 }
 
 export const TacticalMatrixView: React.FC<TacticalMatrixViewProps> = ({
@@ -50,16 +56,28 @@ export const TacticalMatrixView: React.FC<TacticalMatrixViewProps> = ({
   confidenceThreshold = 85,
   onConfidenceThresholdChange,
   highlightedCameraIds = [],
+  spotlightCameraOverride,
 }) => {
   const [layoutMode, setLayoutMode] = useState<MatrixLayoutMode>('matrix-3x3');
   const [spotlightCameraId, setSpotlightCameraId] = useState<number>(1);
   const [quadPageIndex, setQuadPageIndex] = useState<number>(0);
-  const [filterRisk, setFilterRisk] = useState<'ALL' | 'HIGH' | 'NORMAL'>('ALL');
+  const [activeFilter, setActiveFilter] = useState<'ALL' | 'LIVE' | 'RECORDING' | 'ALERTS' | 'AI' | 'PINNED'>('ALL');
+  const [selectedSectorFilter, setSelectedSectorFilter] = useState<string>('ALL');
+  const [pinnedCameraIds, setPinnedCameraIds] = useState<number[]>([1]);
+  const [fullscreenCamera, setFullscreenCamera] = useState<MatrixCameraFeed | null>(null);
   const [liveTimestamp, setLiveTimestamp] = useState('10:45:22 AM');
   const [globalRecording, setGlobalRecording] = useState(false);
   const [isPatrolMode, setIsPatrolMode] = useState(false);
   const [patrolInterval, setPatrolInterval] = useState(5);
   const [isHeatmapActive, setIsHeatmapActive] = useState(false);
+
+  // Sync external spotlight override (e.g. clicked alert "Jump to Cam")
+  useEffect(() => {
+    if (spotlightCameraOverride) {
+      setSpotlightCameraId(spotlightCameraOverride);
+      setLayoutMode('spotlight-1x1');
+    }
+  }, [spotlightCameraOverride]);
 
   // Calculate heatmap data
   const heatmapData = React.useMemo(() => {
@@ -161,302 +179,427 @@ export const TacticalMatrixView: React.FC<TacticalMatrixViewProps> = ({
     }
   };
 
+  // Toggle camera pin
+  const handleTogglePinCamera = (camId: number) => {
+    setPinnedCameraIds((prev) =>
+      prev.includes(camId) ? prev.filter((id) => id !== camId) : [...prev, camId]
+    );
+  };
+
   // Filter cameras
-  const filteredCameras = cameras.filter((cam) => {
-    if (filterRisk === 'HIGH') return cam.risk === 'High';
-    if (filterRisk === 'NORMAL') return cam.risk === 'Normal' || cam.risk === 'Low';
-    return true;
-  });
+  const filteredCameras = useMemo(() => {
+    let list = [...cameras];
+
+    // Sector Filter
+    if (selectedSectorFilter !== 'ALL') {
+      list = list.filter((c) => {
+        const loc = (c as any).location || c.name;
+        return loc.toLowerCase().includes(selectedSectorFilter.toLowerCase());
+      });
+    }
+
+    // Status / Risk / Pinned Filter
+    if (activeFilter === 'LIVE') {
+      list = list.filter((c) => c.status === 'Online');
+    } else if (activeFilter === 'RECORDING') {
+      list = list.filter((c) => recordingEngine.isRecording(String(c.id)) || c.src?.includes('.mp4'));
+    } else if (activeFilter === 'ALERTS') {
+      list = list.filter((c) => {
+        return (
+          c.risk === 'High' ||
+          alerts.some(
+            (a) =>
+              (a.severity === 'Critical' || a.severity === 'High') &&
+              (a.camera.toLowerCase() === c.tag.toLowerCase() || a.camera.toLowerCase() === `cam-0${c.id}`)
+          )
+        );
+      });
+    } else if (activeFilter === 'AI') {
+      list = list.filter((c) => (c.activeDetections && c.activeDetections > 0) || (c.aiModels && c.aiModels.length > 0));
+    } else if (activeFilter === 'PINNED') {
+      list = list.filter((c) => pinnedCameraIds.includes(c.id));
+    }
+
+    // Sort: If Adaptive Mode, pinned cameras first, then cameras with alerts, then rest
+    if (layoutMode === 'adaptive') {
+      list.sort((a, b) => {
+        const aPinned = pinnedCameraIds.includes(a.id) ? 1 : 0;
+        const bPinned = pinnedCameraIds.includes(b.id) ? 1 : 0;
+        if (aPinned !== bPinned) return bPinned - aPinned;
+
+        const aAlerts = alerts.filter(
+          (alt) => alt.camera.toLowerCase() === a.tag.toLowerCase() || alt.camera.toLowerCase() === `cam-0${a.id}`
+        ).length;
+        const bAlerts = alerts.filter(
+          (alt) => alt.camera.toLowerCase() === b.tag.toLowerCase() || alt.camera.toLowerCase() === `cam-0${b.id}`
+        ).length;
+        return bAlerts - aAlerts;
+      });
+    }
+
+    return list;
+  }, [cameras, activeFilter, selectedSectorFilter, pinnedCameraIds, alerts, layoutMode]);
 
   // Spotlight active camera & side thumbnails
   const spotlightCamera = cameras.find((c) => c.id === spotlightCameraId) || cameras[0];
   const sideThumbnails = cameras.filter((c) => c.id !== spotlightCamera.id);
 
   // 2x2 Quad View pagination (4 cameras per page)
-  const quadPages = [
-    cameras.slice(0, 4), // Feeds 1-4
-    cameras.slice(4, 8), // Feeds 5-8
-    cameras.slice(8, 9), // Feed 9
-  ];
-  const currentQuadFeeds = quadPages[quadPageIndex] || quadPages[0];
+  const quadPages = useMemo(() => {
+    const pages: MatrixCameraFeed[][] = [];
+    for (let i = 0; i < filteredCameras.length; i += 4) {
+      pages.push(filteredCameras.slice(i, i + 4));
+    }
+    return pages.length > 0 ? pages : [filteredCameras];
+  }, [filteredCameras]);
+  const currentQuadFeeds = quadPages[quadPageIndex] || quadPages[0] || [];
 
   return (
-    <div className="space-y-4" id="tactical-matrix-view-root">
-      {/* 1. Control Header Bar with Dynamic Layout View Buttons */}
-      <div className="p-3 sm:p-4 bg-slate-900 border border-slate-800 rounded-xl shadow-xl flex flex-col md:flex-row md:items-center justify-between gap-3">
-        <div>
-          <div className="flex items-center gap-2">
-            <div className="flex items-center justify-center p-1 bg-cyan-950/80 border border-cyan-500/40 rounded-lg text-cyan-400">
-              <Grid size={15} />
-            </div>
-            <h2 className="text-sm sm:text-base font-black text-slate-100 uppercase tracking-widest font-mono">
-              CAMERA LIVE CCTV & RECORDED TRACKING MATRIX
-            </h2>
-            <span className="px-2 py-0.5 rounded bg-emerald-950 text-emerald-400 border border-emerald-500/40 text-[9px] font-bold font-mono animate-pulse">
-              9/9 LIVE FEEDS
-            </span>
+    <div className="space-y-3.5 flex flex-col w-full" id="tactical-matrix-view-root">
+      {/* 1. Sleek Glass Command Toolbar */}
+      <div className="p-3 sm:p-3.5 bg-slate-900/80 border border-white/[0.10] rounded-2xl shadow-[0_8px_32px_rgba(0,0,0,0.6)] backdrop-blur-xl flex flex-col xl:flex-row xl:items-center justify-between gap-3">
+        {/* Left: Matrix Identity & Real-time Live Badge */}
+        <div className="flex items-center gap-3">
+          <div className="w-8 h-8 rounded-xl bg-cyan-500/15 border border-cyan-400/40 flex items-center justify-center text-cyan-400 shadow-[0_0_15px_rgba(0,240,255,0.25)]">
+            <Video size={16} />
           </div>
-          <p className="text-xs text-slate-400 font-mono mt-0.5">
-            Real-time multi-angle surveillance feeds with synchronized AI object detection, ANPR, & velocity tracking
-          </p>
+          <div>
+            <div className="flex items-center gap-2">
+              <h2 className="text-xs sm:text-sm font-black text-white uppercase tracking-widest font-mono">
+                CCTV SURVEILLANCE MATRIX
+              </h2>
+              <span className="px-2 py-0.5 rounded-full bg-emerald-500/15 text-emerald-400 border border-emerald-400/30 text-[9px] font-bold font-mono flex items-center gap-1">
+                <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-ping" />
+                9/9 ONLINE
+              </span>
+            </div>
+            <p className="text-[10px] text-slate-400 font-mono hidden sm:block">
+              Synchronized border telemetry feeds &bull; 1080p @ 60 FPS &bull; Edge Neural Tracking
+            </p>
+          </div>
         </div>
 
-        {/* Dynamic Layout Mode Selector Buttons */}
+        {/* Right: Modern Glass Layout Switchers & Tactical Modes */}
         <div className="flex flex-wrap items-center gap-2">
-          {/* Global Record All Toggle */}
+          {/* Global Record All Button */}
           <button
             id="btn-global-record-all"
             onClick={handleToggleRecordAll}
-            className={`px-3 py-1.5 rounded-lg text-xs font-mono font-bold tracking-wider flex items-center gap-1.5 transition-all cursor-pointer border ${
+            className={`px-3 py-1.5 rounded-xl text-xs font-mono font-bold tracking-wider flex items-center gap-1.5 transition-all cursor-pointer border ${
               globalRecording
-                ? 'bg-rose-600 text-white border-rose-400 animate-pulse shadow-[0_0_12px_rgba(244,63,94,0.4)]'
-                : 'bg-slate-950 text-rose-400 hover:text-white border-slate-800 hover:bg-rose-950/50'
+                ? 'bg-rose-600 text-white border-rose-400 animate-pulse shadow-[0_0_15px_rgba(244,63,94,0.6)]'
+                : 'bg-white/[0.04] text-rose-400 hover:text-white border-rose-500/30 hover:bg-rose-950/40'
             }`}
           >
             <Disc size={13} className={globalRecording ? 'animate-spin' : ''} />
-            <span>{globalRecording ? 'REC ACTIVE (ALL 9)' : 'REC ALL 9'}</span>
+            <span>{globalRecording ? 'REC ACTIVE' : 'REC ALL'}</span>
           </button>
 
-          {/* Button 1: 3x3 Tactical Matrix */}
-          <button
-            id="btn-layout-3x3"
-            onClick={() => { setLayoutMode('matrix-3x3'); setIsPatrolMode(false); }}
-            className={`px-3 py-1.5 rounded-lg text-xs font-mono font-bold tracking-wider flex items-center gap-1.5 transition-all cursor-pointer border ${
-              layoutMode === 'matrix-3x3'
-                ? 'bg-cyan-600 text-white border-cyan-400 shadow-[0_0_12px_rgba(0,240,255,0.4)] font-bold'
-                : 'bg-slate-950 text-slate-400 hover:text-white border-slate-800 hover:bg-slate-800'
-            }`}
-          >
-            <Grid size={13} />
-            <span>3x3 Matrix (All 9)</span>
-          </button>
+          {/* Layout Mode Button Group */}
+          <div className="flex items-center bg-black/40 border border-white/10 rounded-xl p-1 backdrop-blur-md">
+            {/* 1x1 Spotlight */}
+            <button
+              id="btn-layout-1x1"
+              onClick={() => { setLayoutMode('spotlight-1x1'); setIsPatrolMode(false); }}
+              title="1x1 Spotlight Hero Focus (1 Dominant Feed + Thumbnails)"
+              className={`px-2.5 py-1.5 rounded-lg text-xs font-mono font-bold flex items-center gap-1 transition-all cursor-pointer ${
+                layoutMode === 'spotlight-1x1' && !isPatrolMode
+                  ? 'bg-cyan-500/30 text-cyan-300 border border-cyan-400/50 shadow-[0_0_12px_rgba(0,240,255,0.3)]'
+                  : 'text-slate-400 hover:text-white'
+              }`}
+            >
+              <Maximize2 size={13} />
+              <span>1&times;1</span>
+            </button>
 
-          {/* Button 2: 2x2 Quad View */}
-          <button
-            id="btn-layout-2x2"
-            onClick={() => { setLayoutMode('quad-2x2'); setIsPatrolMode(false); }}
-            className={`px-3 py-1.5 rounded-lg text-xs font-mono font-bold tracking-wider flex items-center gap-1.5 transition-all cursor-pointer border ${
-              layoutMode === 'quad-2x2'
-                ? 'bg-cyan-600 text-white border-cyan-400 shadow-[0_0_12px_rgba(0,240,255,0.4)] font-bold'
-                : 'bg-slate-950 text-slate-400 hover:text-white border-slate-800 hover:bg-slate-800'
-            }`}
-          >
-            <Layers size={13} />
-            <span>2x2 Quad View</span>
-          </button>
+            {/* 2x2 Quad */}
+            <button
+              id="btn-layout-2x2"
+              onClick={() => { setLayoutMode('quad-2x2'); setIsPatrolMode(false); }}
+              title="2x2 Quad High-Resolution Grid"
+              className={`px-2.5 py-1.5 rounded-lg text-xs font-mono font-bold flex items-center gap-1 transition-all cursor-pointer ${
+                layoutMode === 'quad-2x2'
+                  ? 'bg-cyan-500/30 text-cyan-300 border border-cyan-400/50 shadow-[0_0_12px_rgba(0,240,255,0.3)]'
+                  : 'text-slate-400 hover:text-white'
+              }`}
+            >
+              <Layers size={13} />
+              <span>2&times;2</span>
+            </button>
 
-          {/* Button 3: Spotlight Mode */}
-          <button
-            id="btn-layout-spotlight"
-            onClick={() => { setLayoutMode('spotlight'); setIsPatrolMode(false); }}
-            className={`px-3 py-1.5 rounded-lg text-xs font-mono font-bold tracking-wider flex items-center gap-1.5 transition-all cursor-pointer border ${
-              layoutMode === 'spotlight' && !isPatrolMode
-                ? 'bg-cyan-600 text-white border-cyan-400 shadow-[0_0_12px_rgba(0,240,255,0.4)] font-bold'
-                : 'bg-slate-950 text-slate-400 hover:text-white border-slate-800 hover:bg-slate-800'
-            }`}
-          >
-            <Maximize2 size={13} />
-            <span>Spotlight (1+8)</span>
-          </button>
+            {/* 3x3 Standard Matrix */}
+            <button
+              id="btn-layout-3x3"
+              onClick={() => { setLayoutMode('matrix-3x3'); setIsPatrolMode(false); }}
+              title="3x3 Synchronized Tactical Matrix (All 9 Feeds)"
+              className={`px-2.5 py-1.5 rounded-lg text-xs font-mono font-bold flex items-center gap-1 transition-all cursor-pointer ${
+                layoutMode === 'matrix-3x3'
+                  ? 'bg-cyan-500/30 text-cyan-300 border border-cyan-400/50 shadow-[0_0_12px_rgba(0,240,255,0.3)]'
+                  : 'text-slate-400 hover:text-white'
+              }`}
+            >
+              <Grid size={13} />
+              <span>3&times;3</span>
+            </button>
 
-          {/* Button 4: Patrol Mode */}
-          <div className="flex items-center gap-1 bg-slate-950 border border-slate-800 rounded-lg p-0.5">
+            {/* 4x4 Wall 16 */}
+            <button
+              id="btn-layout-4x4"
+              onClick={() => { setLayoutMode('wall-4x4'); setIsPatrolMode(false); }}
+              title="4x4 Extended Surveillance Wall"
+              className={`px-2.5 py-1.5 rounded-lg text-xs font-mono font-bold flex items-center gap-1 transition-all cursor-pointer ${
+                layoutMode === 'wall-4x4'
+                  ? 'bg-cyan-500/30 text-cyan-300 border border-cyan-400/50 shadow-[0_0_12px_rgba(0,240,255,0.3)]'
+                  : 'text-slate-400 hover:text-white'
+              }`}
+            >
+              <LayoutGrid size={13} />
+              <span>4&times;4</span>
+            </button>
+
+            {/* Adaptive Smart Wall */}
+            <button
+              id="btn-layout-adaptive"
+              onClick={() => { setLayoutMode('adaptive'); setIsPatrolMode(false); }}
+              title="Smart Adaptive Wall (Auto-Prioritizes Pinned & Alert Feeds)"
+              className={`px-2.5 py-1.5 rounded-lg text-xs font-mono font-bold flex items-center gap-1 transition-all cursor-pointer ${
+                layoutMode === 'adaptive'
+                  ? 'bg-purple-500/30 text-purple-300 border border-purple-400/50 shadow-[0_0_12px_rgba(168,85,247,0.3)]'
+                  : 'text-slate-400 hover:text-white'
+              }`}
+            >
+              <Sparkles size={13} />
+              <span>SMART WALL</span>
+            </button>
+          </div>
+
+          {/* Patrol Mode Toggle */}
+          <div className="flex items-center gap-1 bg-black/40 border border-white/10 rounded-xl p-1">
             <button
               id="btn-layout-patrol"
               onClick={() => setIsPatrolMode(!isPatrolMode)}
-              className={`px-3 py-1 rounded-md text-xs font-mono font-bold tracking-wider flex items-center gap-1.5 transition-all cursor-pointer ${
+              className={`px-2.5 py-1 rounded-lg text-xs font-mono font-bold flex items-center gap-1.5 transition-all cursor-pointer ${
                 isPatrolMode
-                  ? 'bg-amber-600 text-white shadow-[0_0_12px_rgba(251,191,36,0.4)] font-bold'
-                  : 'text-amber-400 hover:text-amber-300 hover:bg-amber-950/30'
+                  ? 'bg-amber-500/30 text-amber-300 border border-amber-400/50 shadow-[0_0_12px_rgba(251,191,36,0.3)]'
+                  : 'text-amber-400 hover:text-amber-300'
               }`}
             >
               <RefreshCcw size={13} className={isPatrolMode ? 'animate-[spin_4s_linear_infinite]' : ''} />
-              <span>PATROL MODE</span>
+              <span>PATROL</span>
             </button>
-            
+
             {isPatrolMode && (
               <select
                 value={patrolInterval}
                 onChange={(e) => setPatrolInterval(Number(e.target.value))}
-                className="bg-transparent text-amber-400 border-l border-amber-500/30 text-xs font-mono px-2 py-1 outline-none cursor-pointer appearance-none text-center hover:bg-amber-950/50 transition-colors"
-                title="Patrol Interval"
+                className="bg-transparent text-amber-300 border-l border-white/10 text-xs font-mono px-1.5 py-0.5 outline-none cursor-pointer"
+                title="Patrol Cycle Interval"
               >
-                <option value={3}>3s</option>
-                <option value={5}>5s</option>
-                <option value={10}>10s</option>
-                <option value={15}>15s</option>
-                <option value={30}>30s</option>
+                <option value={3} className="bg-slate-950">3s</option>
+                <option value={5} className="bg-slate-950">5s</option>
+                <option value={10} className="bg-slate-950">10s</option>
+                <option value={30} className="bg-slate-950">30s</option>
               </select>
             )}
           </div>
-          
-          {/* Button 5: Threat Heatmap */}
+
+          {/* Threat Heatmap Toggle */}
           <button
             id="btn-layout-heatmap"
             onClick={() => setIsHeatmapActive(!isHeatmapActive)}
-            className={`px-3 py-1.5 rounded-lg text-xs font-mono font-bold tracking-wider flex items-center gap-1.5 transition-all cursor-pointer border ${
+            className={`px-2.5 py-1.5 rounded-xl text-xs font-mono font-bold flex items-center gap-1.5 transition-all cursor-pointer border ${
               isHeatmapActive
-                ? 'bg-rose-600 text-white border-rose-400 shadow-[0_0_12px_rgba(225,29,72,0.6)]'
-                : 'bg-slate-950 text-rose-400 hover:text-rose-300 border-slate-800 hover:bg-rose-950/30'
+                ? 'bg-rose-500/30 text-rose-300 border-rose-400/60 shadow-[0_0_15px_rgba(225,29,72,0.4)]'
+                : 'bg-white/[0.04] text-rose-400 hover:text-rose-300 border-white/10'
             }`}
           >
             <Flame size={13} className={isHeatmapActive ? 'animate-pulse' : ''} />
-            <span>THREAT HEATMAP</span>
+            <span>HEATMAP</span>
           </button>
         </div>
       </div>
 
-      {/* 2. Sub-Toolbar: Risk Filters & Quick Metadata Stats */}
-      <div className="flex flex-wrap items-center justify-between gap-3 px-3 py-2 bg-slate-900/60 border border-slate-800/80 rounded-lg text-xs font-mono">
-        <div className="flex items-center gap-4 flex-wrap">
-          <div className="flex items-center gap-2">
-            <span className="text-slate-400 flex items-center gap-1">
-              <Filter size={12} className="text-cyan-400" />
-              FILTER SECTOR:
-            </span>
+      {/* 2. Compact Multi-Filter & Sector Bar */}
+      <div className="flex flex-wrap items-center justify-between gap-2.5 px-3.5 py-2 bg-slate-950/60 border border-white/[0.08] rounded-xl text-xs font-mono backdrop-blur-md">
+        <div className="flex items-center gap-1.5 flex-wrap">
+          <span className="text-[10px] text-slate-400 font-bold uppercase tracking-wider flex items-center gap-1 mr-1">
+            <Filter size={11} className="text-cyan-400" />
+            FILTER:
+          </span>
+
+          {[
+            { id: 'ALL', label: `ALL (${cameras.length})` },
+            { id: 'LIVE', label: 'LIVE' },
+            { id: 'RECORDING', label: 'REC' },
+            { id: 'ALERTS', label: 'CRITICAL / ALERTS' },
+            { id: 'AI', label: 'AI DETECTIONS' },
+            { id: 'PINNED', label: `PINNED (${pinnedCameraIds.length})` },
+          ].map((f) => (
             <button
-              onClick={() => setFilterRisk('ALL')}
-              className={`px-2 py-0.5 rounded text-[10px] font-bold cursor-pointer transition-all ${
-                filterRisk === 'ALL'
-                  ? 'bg-cyan-950 text-cyan-300 border border-cyan-500/50'
-                  : 'text-slate-400 hover:text-slate-200'
+              key={f.id}
+              onClick={() => setActiveFilter(f.id as any)}
+              className={`px-2.5 py-1 rounded-lg text-[10px] font-bold transition-all cursor-pointer ${
+                activeFilter === f.id
+                  ? 'bg-cyan-500/25 text-cyan-300 border border-cyan-400/40 shadow-[0_0_10px_rgba(0,240,255,0.2)]'
+                  : 'text-slate-400 hover:text-white bg-white/[0.02] hover:bg-white/[0.06] border border-transparent'
               }`}
             >
-              ALL (9)
+              {f.label}
             </button>
-            <button
-              onClick={() => setFilterRisk('HIGH')}
-              className={`px-2 py-0.5 rounded text-[10px] font-bold cursor-pointer transition-all ${
-                filterRisk === 'HIGH'
-                  ? 'bg-rose-950 text-rose-300 border border-rose-600/50'
-                  : 'text-slate-400 hover:text-slate-200'
-              }`}
+          ))}
+        </div>
+
+        {/* Sector Dropdown & AI Confidence */}
+        <div className="flex items-center gap-3">
+          {/* Sector Selector */}
+          <div className="flex items-center gap-1.5">
+            <span className="text-[10px] text-slate-400">SECTOR:</span>
+            <select
+              value={selectedSectorFilter}
+              onChange={(e) => setSelectedSectorFilter(e.target.value)}
+              className="bg-slate-900 border border-white/10 text-slate-200 text-[10px] font-mono px-2 py-1 rounded-lg outline-none cursor-pointer"
             >
-              HIGH RISK ONLY
-            </button>
-            <button
-              onClick={() => setFilterRisk('NORMAL')}
-              className={`px-2 py-0.5 rounded text-[10px] font-bold cursor-pointer transition-all ${
-                filterRisk === 'NORMAL'
-                  ? 'bg-emerald-950 text-emerald-300 border border-emerald-500/50'
-                  : 'text-slate-400 hover:text-slate-200'
-              }`}
-            >
-              NORMAL
-            </button>
+              <option value="ALL">All Sectors (HQ)</option>
+              <option value="Alpha">Sector Alpha (Main Gate)</option>
+              <option value="Bravo">Sector Bravo (Perimeter)</option>
+              <option value="Charlie">Sector Charlie (Checkpoint)</option>
+              <option value="Delta">Sector Delta (High Altitude)</option>
+              <option value="Echo">Sector Echo (Riverine)</option>
+            </select>
           </div>
 
-          <div className="h-4 w-px bg-slate-700 hidden sm:block"></div>
-
-          {/* AI Confidence Threshold Filter */}
-          <div className="flex items-center gap-2">
-            <span className="text-slate-400 flex items-center gap-1 text-[10px] font-bold uppercase tracking-wider">
-              <Sparkles size={12} className="text-purple-400" />
-              AI CONFIDENCE FILTER:
-            </span>
+          {/* AI Confidence Filter */}
+          <div className="hidden sm:flex items-center gap-1.5">
+            <Sparkles size={11} className="text-purple-400" />
+            <span className="text-[10px] text-slate-400">CONF:</span>
             <input
               type="range"
               min="50"
               max="99"
               value={confidenceThreshold}
               onChange={(e) => onConfidenceThresholdChange?.(Number(e.target.value))}
-              className="w-24 h-1.5 bg-slate-800 rounded-lg appearance-none cursor-pointer accent-purple-500"
+              className="w-16 h-1 bg-slate-800 rounded-lg appearance-none cursor-pointer accent-purple-400"
             />
-            <span className="text-purple-300 font-bold text-[10px] w-8">
-              {confidenceThreshold}%+
-            </span>
+            <span className="text-purple-300 font-bold text-[10px]">{confidenceThreshold}%</span>
           </div>
-        </div>
 
-        {layoutMode === 'quad-2x2' && (
-          <div className="flex items-center gap-2">
-            <span className="text-slate-400 text-[10px]">
-              QUAD PAGE {quadPageIndex + 1} OF {quadPages.length}
-            </span>
-            <button
-              onClick={() => setQuadPageIndex((p) => Math.max(0, p - 1))}
-              disabled={quadPageIndex === 0}
-              className="p-1 bg-slate-800 text-slate-300 hover:text-white rounded disabled:opacity-30 cursor-pointer"
-            >
-              <ChevronLeft size={13} />
-            </button>
-            <button
-              onClick={() => setQuadPageIndex((p) => Math.min(quadPages.length - 1, p + 1))}
-              disabled={quadPageIndex === quadPages.length - 1}
-              className="p-1 bg-slate-800 text-slate-300 hover:text-white rounded disabled:opacity-30 cursor-pointer"
-            >
-              <ChevronRight size={13} />
-            </button>
-          </div>
-        )}
-
-        <div className="text-[10px] text-slate-400 hidden sm:block">
-          Click &ldquo;LIVE / RECORDED&rdquo; on any camera feed to scrub archived footage & telemetry bookmarks.
+          {/* 2x2 Quad Page Nav */}
+          {layoutMode === 'quad-2x2' && (
+            <div className="flex items-center gap-1 pl-2 border-l border-white/10">
+              <span className="text-[10px] text-slate-400">PAGE {quadPageIndex + 1}/{quadPages.length}</span>
+              <button
+                onClick={() => setQuadPageIndex((p) => Math.max(0, p - 1))}
+                disabled={quadPageIndex === 0}
+                className="p-1 rounded bg-white/[0.05] hover:bg-white/[0.12] text-slate-300 disabled:opacity-30 cursor-pointer"
+              >
+                <ChevronLeft size={12} />
+              </button>
+              <button
+                onClick={() => setQuadPageIndex((p) => Math.min(quadPages.length - 1, p + 1))}
+                disabled={quadPageIndex === quadPages.length - 1}
+                className="p-1 rounded bg-white/[0.05] hover:bg-white/[0.12] text-slate-300 disabled:opacity-30 cursor-pointer"
+              >
+                <ChevronRight size={12} />
+              </button>
+            </div>
+          )}
         </div>
       </div>
 
-      {/* 3. DYNAMIC LAYOUT CONTAINER */}
+      {/* 3. DYNAMIC CCTV GRID LAYOUTS */}
 
-      {/* MODE 1: 3x3 Tactical Matrix (All 9 Feeds Visible Simultaneously) */}
+      {/* LAYOUT 1: 3x3 Standard Matrix Grid */}
       {layoutMode === 'matrix-3x3' && (
         <div
           id="tactical-grid-3x3-container"
-          className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4"
+          className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3.5"
         >
           {filteredCameras.map((cam) => {
+            const isPinned = pinnedCameraIds.includes(cam.id);
             const isHighlighted = highlightedCameraIds?.some(
               (cid) => cid.toLowerCase() === cam.tag.toLowerCase() || cid.toLowerCase() === `cam-0${cam.id}` || cid.toLowerCase() === `cam-${cam.id}`
             );
+
             return (
-              <div key={cam.id} className={isHighlighted ? 'ring-2 ring-rose-500 rounded-xl shadow-[0_0_20px_rgba(244,63,94,0.6)] animate-pulse' : ''}>
+              <div
+                key={cam.id}
+                className={`relative group rounded-2xl transition-all duration-200 ${
+                  isHighlighted ? 'ring-2 ring-rose-500 shadow-[0_0_25px_rgba(244,63,94,0.6)] animate-pulse' : ''
+                }`}
+                onDoubleClick={() => setFullscreenCamera(cam)}
+              >
                 <MatrixCameraCell
                   camera={cam}
                   liveTimestamp={liveTimestamp}
                   onUpdateCameraName={onUpdateCameraName}
                   onSelectSpotlight={(c) => {
                     setSpotlightCameraId(c.id);
-                    setLayoutMode('spotlight');
+                    setLayoutMode('spotlight-1x1');
                   }}
                   onTriggerAlert={onTriggerAlert}
                   heatmapIntensity={isHeatmapActive ? heatmapData[cam.tag] || 0 : undefined}
                 />
+
+                {/* Pin Camera Quick Float Button */}
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    handleTogglePinCamera(cam.id);
+                  }}
+                  className={`absolute top-2 right-12 z-20 p-1 rounded-lg backdrop-blur-md transition-all cursor-pointer ${
+                    isPinned
+                      ? 'bg-amber-500 text-black shadow-[0_0_10px_rgba(251,191,36,0.6)]'
+                      : 'bg-black/60 text-slate-400 hover:text-amber-300 opacity-0 group-hover:opacity-100'
+                  }`}
+                  title={isPinned ? 'Unpin from Top' : 'Pin Camera to Top'}
+                >
+                  <Pin size={11} className={isPinned ? 'fill-black' : ''} />
+                </button>
               </div>
             );
           })}
         </div>
       )}
 
-      {/* MODE 2: 2x2 Quad View (High-Res 4-Feed Focus) */}
+      {/* LAYOUT 2: 2x2 Quad High-Resolution Focus */}
       {layoutMode === 'quad-2x2' && (
         <div
           id="tactical-quad-2x2-container"
-          className="grid grid-cols-1 md:grid-cols-2 gap-3 sm:gap-4"
+          className="grid grid-cols-1 md:grid-cols-2 gap-3.5"
         >
           {currentQuadFeeds.map((cam) => (
-            <MatrixCameraCell
+            <div
               key={cam.id}
-              camera={cam}
-              liveTimestamp={liveTimestamp}
-              onUpdateCameraName={onUpdateCameraName}
-              onSelectSpotlight={(c) => {
-                setSpotlightCameraId(c.id);
-                setLayoutMode('spotlight');
-              }}
-              onTriggerAlert={onTriggerAlert}
-              heatmapIntensity={isHeatmapActive ? heatmapData[cam.tag] || 0 : undefined}
-            />
+              className="relative group rounded-2xl"
+              onDoubleClick={() => setFullscreenCamera(cam)}
+            >
+              <MatrixCameraCell
+                camera={cam}
+                liveTimestamp={liveTimestamp}
+                onUpdateCameraName={onUpdateCameraName}
+                onSelectSpotlight={(c) => {
+                  setSpotlightCameraId(c.id);
+                  setLayoutMode('spotlight-1x1');
+                }}
+                onTriggerAlert={onTriggerAlert}
+                heatmapIntensity={isHeatmapActive ? heatmapData[cam.tag] || 0 : undefined}
+              />
+            </div>
           ))}
         </div>
       )}
 
-      {/* MODE 3: Spotlight View (1 Dominant Feed + 8 Side Thumbnails) */}
-      {layoutMode === 'spotlight' && (
+      {/* LAYOUT 3: 1x1 Spotlight Hero Focus + Side Thumbnail Strip */}
+      {(layoutMode === 'spotlight-1x1' || layoutMode === 'spotlight') && (
         <div
           id="tactical-spotlight-container"
-          className="grid grid-cols-1 lg:grid-cols-4 gap-4"
+          className="grid grid-cols-1 lg:grid-cols-4 gap-3.5"
         >
           {/* Main Large Spotlight Camera (3 columns wide) */}
-          <div className="lg:col-span-3 min-h-[480px]">
+          <div
+            className="lg:col-span-3 min-h-[520px] rounded-2xl overflow-hidden shadow-2xl"
+            onDoubleClick={() => setFullscreenCamera(spotlightCamera)}
+          >
             <MatrixCameraCell
               camera={spotlightCamera}
               isSpotlight={true}
@@ -467,16 +610,17 @@ export const TacticalMatrixView: React.FC<TacticalMatrixViewProps> = ({
             />
           </div>
 
-          {/* Side Thumbnail Feeds (1 column wide scrollable) */}
-          <div className="space-y-3 max-h-[640px] overflow-y-auto pr-1">
-            <div className="text-[11px] font-mono font-bold text-slate-400 uppercase tracking-wider px-1">
-              Select Sector Feed to Spotlight:
+          {/* Side Thumbnail Rail (1 column wide scrollable) */}
+          <div className="space-y-2.5 max-h-[640px] overflow-y-auto pr-1">
+            <div className="text-[10px] font-mono font-bold text-slate-400 uppercase tracking-wider px-1 flex items-center justify-between">
+              <span>SWITCH SPOTLIGHT FEED:</span>
+              <span className="text-cyan-400">1-CLICK</span>
             </div>
             {sideThumbnails.map((cam) => (
               <div
                 key={cam.id}
                 onClick={() => setSpotlightCameraId(cam.id)}
-                className="cursor-pointer transition-all hover:scale-[1.02] relative group rounded-xl overflow-hidden"
+                className="cursor-pointer transition-all hover:scale-[1.02] rounded-xl overflow-hidden relative group border border-white/[0.08] hover:border-cyan-400/50"
               >
                 <MatrixCameraCell
                   camera={cam}
@@ -492,6 +636,90 @@ export const TacticalMatrixView: React.FC<TacticalMatrixViewProps> = ({
           </div>
         </div>
       )}
+
+      {/* LAYOUT 4: 4x4 High-Density Surveillance Wall */}
+      {layoutMode === 'wall-4x4' && (
+        <div
+          id="tactical-wall-4x4-container"
+          className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-2.5"
+        >
+          {filteredCameras.map((cam) => (
+            <div
+              key={cam.id}
+              className="relative group rounded-xl"
+              onDoubleClick={() => setFullscreenCamera(cam)}
+            >
+              <MatrixCameraCell
+                camera={cam}
+                isCompact={true}
+                liveTimestamp={liveTimestamp}
+                onUpdateCameraName={onUpdateCameraName}
+                onSelectSpotlight={(c) => {
+                  setSpotlightCameraId(c.id);
+                  setLayoutMode('spotlight-1x1');
+                }}
+                onTriggerAlert={onTriggerAlert}
+                heatmapIntensity={isHeatmapActive ? heatmapData[cam.tag] || 0 : undefined}
+              />
+            </div>
+          ))}
+        </div>
+      )}
+
+      {/* LAYOUT 5: Smart Adaptive Wall */}
+      {layoutMode === 'adaptive' && (
+        <div
+          id="tactical-adaptive-container"
+          className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3.5"
+        >
+          {filteredCameras.map((cam, idx) => {
+            const isTopPriority = idx === 0;
+            const isPinned = pinnedCameraIds.includes(cam.id);
+
+            return (
+              <div
+                key={cam.id}
+                className={`relative group rounded-2xl ${
+                  isTopPriority ? 'md:col-span-2 md:row-span-2' : ''
+                }`}
+                onDoubleClick={() => setFullscreenCamera(cam)}
+              >
+                <MatrixCameraCell
+                  camera={cam}
+                  isSpotlight={isTopPriority}
+                  liveTimestamp={liveTimestamp}
+                  onUpdateCameraName={onUpdateCameraName}
+                  onSelectSpotlight={(c) => {
+                    setSpotlightCameraId(c.id);
+                    setLayoutMode('spotlight-1x1');
+                  }}
+                  onTriggerAlert={onTriggerAlert}
+                  heatmapIntensity={isHeatmapActive ? heatmapData[cam.tag] || 0 : undefined}
+                />
+
+                {isPinned && (
+                  <div className="absolute top-2 right-12 z-20 px-2 py-0.5 rounded bg-amber-500/90 text-black text-[9px] font-bold font-mono flex items-center gap-1 shadow-md">
+                    <Pin size={10} className="fill-black" />
+                    <span>PINNED</span>
+                  </div>
+                )}
+              </div>
+            );
+          })}
+        </div>
+      )}
+
+      {/* 4. Cinematic Fullscreen Modal */}
+      <CinematicCameraFullscreenModal
+        camera={fullscreenCamera}
+        allCameras={cameras}
+        alerts={alerts}
+        isOpen={Boolean(fullscreenCamera)}
+        onClose={() => setFullscreenCamera(null)}
+        onSelectCamera={(cam) => setFullscreenCamera(cam)}
+        onTriggerAlert={onTriggerAlert}
+      />
     </div>
   );
 };
+

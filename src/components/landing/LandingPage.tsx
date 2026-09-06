@@ -35,6 +35,10 @@ import {
   Sparkles,
   Target,
   Scan,
+  ShieldCheck,
+  RadioTower,
+  Network,
+  Video,
 } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import { SeemadrishtiLogo } from '../SeemadrishtiLogo';
@@ -74,10 +78,10 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onEnterAuth }) => {
   const threatLevel = 'nominal' as const;
 
   const defenseMetrics = [
-    { label: 'CROSS-CAM RE-ID', value: '99.4%', sub: 'Homography Target Handover', icon: Target },
-    { label: 'EDGE INFERENCE', value: '60 FPS', sub: 'YOLOv8 + ByteTrack Pipeline', icon: Cpu },
-    { label: 'DETECTION LATENCY', value: '< 15 ms', sub: 'Automated Tripwire Intercept', icon: Zap },
-    { label: 'EVIDENCE INTEGRITY', value: 'SHA-256', sub: 'Cryptographic Chain of Custody', icon: Shield },
+    { label: 'CROSS-CAM RE-ID', value: '99.4%', sub: 'Homography Handover', icon: Target, badge: 'ACTIVE' },
+    { label: 'EDGE INFERENCE', value: '60 FPS', sub: 'YOLOv8 + ByteTrack', icon: Cpu, badge: 'REAL-TIME' },
+    { label: 'BREACH LATENCY', value: '< 15 ms', sub: 'Automated Tripwires', icon: Zap, badge: 'ULTRA-LOW' },
+    { label: 'EVIDENCE INTEGRITY', value: 'SHA-256', sub: 'Forensic Video Custody', icon: Shield, badge: 'SEALED' },
   ];
 
   const borderSectors = [
@@ -194,30 +198,35 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onEnterAuth }) => {
       title: 'Edge Ingestion & 4K RTSP Video Streams',
       description: 'Zero-frame-drop hardware decoding from border cameras, FLIR thermals, and aerial patrol drones.',
       tech: 'FFmpeg H.264 / RTSP-TCP / Low Latency WebSockets',
+      icon: Video,
     },
     {
       step: '02',
       title: 'Neural Detection & Trajectory Tracking',
       description: 'YOLOv8 spatial inference synchronized with ByteTrack trajectory state Kalman filtering at 60 FPS.',
       tech: 'YOLOv8 Weights / ByteTrack / TensorRT Acceleration',
+      icon: Target,
     },
     {
       step: '03',
       title: 'Behavioral Signature & Anomaly Scoring',
       description: 'Kinematic analysis identifying loitering, scaling, crawling, and geofence perimeter violations.',
       tech: 'Spatial Trajectory Vectors / Dwell Heatmaps / Risk Engine',
+      icon: Activity,
     },
     {
       step: '04',
       title: 'Cross-Camera Re-ID & Spatial Handover',
       description: 'Homography matrices project target coordinates to neighboring cameras before visual contact is lost.',
       tech: 'Homography Transforms / Color Invariant Feature Embeddings',
+      icon: Network,
     },
     {
       step: '05',
       title: 'Forensic Video Packaging & Tactical Dispatch',
       description: 'Automated video vault creation with SHA-256 verification and instant Quick Reaction Team dispatch.',
       tech: 'MP4 Incident Packaging / SHA-256 Digests / Real-time Alerts',
+      icon: ShieldCheck,
     },
   ];
 
@@ -279,16 +288,18 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onEnterAuth }) => {
       id="landing-page-root"
       className="h-screen h-[100dvh] w-full overflow-y-auto overflow-x-hidden scroll-smooth bg-[#02050e] text-slate-100 font-mono relative selection:bg-cyan-500 selection:text-black"
     >
-      {/* Background Tactical Grid Pattern */}
-      <div 
-        className="fixed inset-0 pointer-events-none opacity-20 z-0 bg-[radial-gradient(#00f0ff_1px,transparent_1px)] [background-size:32px_32px]"
-      />
+      {/* Background Cyber Mesh & Radial Glows */}
+      <div className="fixed inset-0 pointer-events-none opacity-25 z-0 bg-[radial-gradient(#00f0ff_1px,transparent_1px)] [background-size:28px_28px]" />
+      <div className="fixed top-0 left-1/4 w-[600px] h-[400px] bg-cyan-600/10 rounded-full blur-[140px] pointer-events-none z-0" />
+      <div className="fixed bottom-10 right-1/4 w-[500px] h-[350px] bg-teal-500/10 rounded-full blur-[120px] pointer-events-none z-0" />
 
       {/* 1. Sleek Floating Tactical Navigation Header */}
-      <header className="sticky top-0 z-40 backdrop-blur-2xl bg-[#020512]/90 border-b border-cyan-500/20 px-4 sm:px-8 py-3 flex items-center justify-between transition-all shadow-[0_4px_30px_rgba(0,0,0,0.6)]">
-        <div className="flex items-center gap-3">
-          <div className="relative flex items-center justify-center p-1.5 rounded-xl bg-cyan-500/10 border border-cyan-400/40 shadow-[0_0_15px_rgba(0,240,255,0.25)]">
-            <SeemadrishtiLogo className="w-7 h-7 text-cyan-400" />
+      <header className="sticky top-0 z-40 backdrop-blur-2xl bg-[#020512]/90 border-b border-cyan-500/20 px-4 sm:px-8 py-3.5 flex items-center justify-between transition-all shadow-[0_4px_30px_rgba(0,0,0,0.6)]">
+        <div className="flex items-center gap-3.5">
+          <div className="relative flex items-center justify-center p-2 rounded-xl bg-cyan-500/10 border border-cyan-400/40 shadow-[0_0_20px_rgba(0,240,255,0.3)] group cursor-pointer" onClick={scrollToTop}>
+            <SeemadrishtiLogo className="w-7 h-7 text-cyan-400 transition-transform group-hover:scale-105" />
+            <span className="absolute -top-1 -right-1 w-2.5 h-2.5 rounded-full bg-emerald-400 animate-ping" />
+            <span className="absolute -top-1 -right-1 w-2.5 h-2.5 rounded-full bg-emerald-400" />
           </div>
           <div>
             <div className="flex items-center gap-2">
@@ -296,8 +307,8 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onEnterAuth }) => {
                 SEEMADRISHTI AI
               </span>
               <span className="px-2 py-0.5 rounded-md bg-emerald-500/10 border border-emerald-400/30 text-[9px] font-bold text-emerald-400 hidden sm:inline-flex items-center gap-1">
-                <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-ping" />
-                BORDER DEFENSE SYSTEM
+                <ShieldCheck size={10} className="text-emerald-400" />
+                BORDER DEFENSE PLATFORM
               </span>
             </div>
             <p className="text-[9px] text-slate-400 tracking-wider uppercase">
@@ -307,13 +318,13 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onEnterAuth }) => {
         </div>
 
         {/* Navigation Tabs */}
-        <nav className="hidden lg:flex items-center gap-1 text-[11px] font-bold text-slate-300">
+        <nav className="hidden lg:flex items-center gap-1.5 p-1 rounded-2xl bg-black/40 border border-white/[0.08] backdrop-blur-xl text-[11px] font-bold text-slate-300">
           <button
             onClick={() => scrollToSection('matrix-section', 'capabilities')}
             className={`px-3.5 py-1.5 rounded-xl transition-all cursor-pointer ${
               activeTab === 'capabilities'
-                ? 'text-cyan-300 bg-cyan-500/15 border border-cyan-400/40 shadow-[0_0_12px_rgba(0,240,255,0.2)]'
-                : 'hover:bg-white/[0.05] hover:text-white'
+                ? 'text-cyan-300 bg-cyan-500/20 border border-cyan-400/40 shadow-[0_0_12px_rgba(0,240,255,0.25)] font-black'
+                : 'hover:bg-white/[0.06] hover:text-white'
             }`}
           >
             CAPABILITIES
@@ -322,8 +333,8 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onEnterAuth }) => {
             onClick={() => scrollToSection('matrix-section', 'sectors')}
             className={`px-3.5 py-1.5 rounded-xl transition-all cursor-pointer ${
               activeTab === 'sectors'
-                ? 'text-cyan-300 bg-cyan-500/15 border border-cyan-400/40 shadow-[0_0_12px_rgba(0,240,255,0.2)]'
-                : 'hover:bg-white/[0.05] hover:text-white'
+                ? 'text-cyan-300 bg-cyan-500/20 border border-cyan-400/40 shadow-[0_0_12px_rgba(0,240,255,0.25)] font-black'
+                : 'hover:bg-white/[0.06] hover:text-white'
             }`}
           >
             BORDER SECTORS
@@ -332,18 +343,18 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onEnterAuth }) => {
             onClick={() => scrollToSection('matrix-section', 'architecture')}
             className={`px-3.5 py-1.5 rounded-xl transition-all cursor-pointer ${
               activeTab === 'architecture'
-                ? 'text-cyan-300 bg-cyan-500/15 border border-cyan-400/40 shadow-[0_0_12px_rgba(0,240,255,0.2)]'
-                : 'hover:bg-white/[0.05] hover:text-white'
+                ? 'text-cyan-300 bg-cyan-500/20 border border-cyan-400/40 shadow-[0_0_12px_rgba(0,240,255,0.25)] font-black'
+                : 'hover:bg-white/[0.06] hover:text-white'
             }`}
           >
-            PIPELINE ARCHITECTURE
+            ARCHITECTURE
           </button>
           <button
             onClick={() => scrollToSection('matrix-section', 'roles')}
             className={`px-3.5 py-1.5 rounded-xl transition-all cursor-pointer ${
               activeTab === 'roles'
-                ? 'text-cyan-300 bg-cyan-500/15 border border-cyan-400/40 shadow-[0_0_12px_rgba(0,240,255,0.2)]'
-                : 'hover:bg-white/[0.05] hover:text-white'
+                ? 'text-cyan-300 bg-cyan-500/20 border border-cyan-400/40 shadow-[0_0_12px_rgba(0,240,255,0.25)] font-black'
+                : 'hover:bg-white/[0.06] hover:text-white'
             }`}
           >
             CLEARANCE MATRIX
@@ -354,27 +365,27 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onEnterAuth }) => {
         <div className="flex items-center gap-3">
           <button
             onClick={onEnterAuth}
-            className="px-4 py-2 rounded-xl bg-gradient-to-r from-cyan-400 via-cyan-300 to-teal-300 hover:from-cyan-300 hover:to-teal-200 text-black text-xs font-black tracking-wider transition-all duration-200 cursor-pointer shadow-[0_0_20px_rgba(0,240,255,0.45)] hover:shadow-[0_0_30px_rgba(0,240,255,0.65)] active:scale-95 flex items-center gap-1.5"
+            className="px-4 sm:px-5 py-2 rounded-xl bg-gradient-to-r from-cyan-400 via-cyan-300 to-teal-300 hover:from-cyan-300 hover:to-teal-200 text-black text-xs font-black tracking-wider transition-all duration-200 cursor-pointer shadow-[0_0_20px_rgba(0,240,255,0.45)] hover:shadow-[0_0_30px_rgba(0,240,255,0.65)] active:scale-95 flex items-center gap-1.5 group"
           >
-            <Lock size={13} />
+            <Lock size={13} className="transition-transform group-hover:rotate-12" />
             <span>Access</span>
-            <ArrowRight size={13} />
+            <ArrowRight size={13} className="transition-transform group-hover:translate-x-0.5" />
           </button>
         </div>
       </header>
 
-      {/* 3. Hero Section with 3D Tactical Border Canvas */}
-      <section id="hero" className="relative z-10 max-w-7xl mx-auto px-4 sm:px-6 pt-8 sm:pt-12 pb-12">
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-center">
+      {/* 2. Hero Section with 3D Tactical Border Canvas */}
+      <section id="hero" className="relative z-10 max-w-7xl mx-auto px-4 sm:px-6 pt-8 sm:pt-14 pb-14">
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 lg:gap-10 items-center">
           
           {/* Left Hero Column */}
           <div className="lg:col-span-6 text-left space-y-6">
             <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full border border-cyan-400/40 bg-cyan-500/10 text-cyan-300 text-xs font-bold backdrop-blur-xl shadow-[0_0_15px_rgba(0,240,255,0.15)]">
               <Crosshair size={13} className="text-cyan-400 animate-spin-slow" />
-              <span>DEFENSE COMPUTER VISION PLATFORM</span>
+              <span>DEFENSE COMPUTER VISION PLATFORM // C4ISR</span>
             </div>
 
-            <h1 className="text-3xl sm:text-5xl md:text-6xl font-black tracking-tight text-white leading-tight">
+            <h1 className="text-3xl sm:text-5xl md:text-6xl font-black tracking-tight text-white leading-[1.1]">
               AUTONOMOUS BORDER <br />
               <span className="bg-gradient-to-r from-cyan-300 via-teal-300 to-emerald-400 bg-clip-text text-transparent drop-shadow-[0_0_30px_rgba(0,240,255,0.4)]">
                 PERIMETER DEFENSE
@@ -386,21 +397,21 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onEnterAuth }) => {
             </p>
 
             {/* Hero CTAs */}
-            <div className="flex flex-wrap items-center gap-3 pt-2">
+            <div className="flex flex-wrap items-center gap-3.5 pt-1">
               <button
                 onClick={onEnterAuth}
-                className="px-6 py-3.5 rounded-xl bg-gradient-to-r from-cyan-400 via-cyan-300 to-teal-300 hover:from-cyan-300 hover:to-teal-200 text-black font-black text-xs tracking-widest flex items-center gap-2 shadow-[0_0_25px_rgba(0,240,255,0.4)] hover:shadow-[0_0_35px_rgba(0,240,255,0.65)] transition-all cursor-pointer active:scale-95"
+                className="px-6 py-3.5 rounded-xl bg-gradient-to-r from-cyan-400 via-cyan-300 to-teal-300 hover:from-cyan-300 hover:to-teal-200 text-black font-black text-xs tracking-widest flex items-center gap-2 shadow-[0_0_25px_rgba(0,240,255,0.4)] hover:shadow-[0_0_35px_rgba(0,240,255,0.65)] transition-all cursor-pointer active:scale-95 group"
               >
-                <Lock size={15} />
+                <Lock size={15} className="transition-transform group-hover:rotate-12" />
                 <span>ACCESS</span>
-                <ArrowRight size={15} />
+                <ArrowRight size={15} className="transition-transform group-hover:translate-x-1" />
               </button>
 
               <button
                 onClick={() => scrollToSection('matrix-section')}
-                className="px-5 py-3.5 rounded-xl border border-cyan-500/30 bg-cyan-950/20 hover:bg-cyan-500/10 hover:border-cyan-400/50 text-slate-200 font-bold text-xs tracking-wider flex items-center gap-2 transition-all cursor-pointer active:scale-95 backdrop-blur-xl"
+                className="px-5 py-3.5 rounded-xl border border-cyan-500/30 bg-cyan-950/20 hover:bg-cyan-500/10 hover:border-cyan-400/50 text-slate-200 font-bold text-xs tracking-wider flex items-center gap-2 transition-all cursor-pointer active:scale-95 backdrop-blur-xl group"
               >
-                <Layers size={15} className="text-cyan-400" />
+                <Layers size={15} className="text-cyan-400 transition-transform group-hover:scale-110" />
                 <span>EXPLORE CAPABILITIES</span>
               </button>
             </div>
@@ -412,13 +423,15 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onEnterAuth }) => {
                 return (
                   <div
                     key={idx}
-                    className="p-3.5 rounded-2xl border border-cyan-500/20 bg-gradient-to-b from-cyan-950/20 to-black/60 backdrop-blur-xl shadow-lg relative overflow-hidden group hover:border-cyan-400/40 transition-all"
+                    className="p-3.5 rounded-2xl border border-cyan-500/20 bg-gradient-to-b from-cyan-950/20 to-black/70 backdrop-blur-xl shadow-lg relative overflow-hidden group hover:border-cyan-400/50 hover:shadow-[0_0_20px_rgba(0,240,255,0.15)] transition-all"
                   >
                     <div className="flex items-center justify-between mb-1">
                       <p className="text-[9px] text-slate-400 font-bold uppercase tracking-wider">{dm.label}</p>
-                      <Icon size={12} className="text-cyan-400/70 group-hover:text-cyan-300 transition-colors" />
+                      <span className="text-[8px] font-bold text-emerald-400 bg-emerald-500/10 px-1 py-0.2 rounded border border-emerald-400/30">
+                        {dm.badge}
+                      </span>
                     </div>
-                    <p className="text-lg sm:text-xl font-black text-cyan-400 mt-0.5">{dm.value}</p>
+                    <p className="text-lg sm:text-xl font-black text-cyan-400 mt-1">{dm.value}</p>
                     <p className="text-[9px] text-slate-400 leading-tight mt-0.5">{dm.sub}</p>
                   </div>
                 );
@@ -439,13 +452,13 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onEnterAuth }) => {
 
           {/* Right Hero Column: Interactive 3D Hologram Radar Canvas */}
           <div className="lg:col-span-6 relative">
-            <div className="w-full h-[420px] sm:h-[480px] rounded-3xl border border-cyan-500/30 bg-gradient-to-b from-cyan-950/20 to-[#020614]/90 shadow-[0_0_40px_rgba(0,240,255,0.15)] relative overflow-hidden backdrop-blur-2xl">
+            <div className="w-full h-[430px] sm:h-[490px] rounded-3xl border border-cyan-500/30 bg-gradient-to-b from-cyan-950/20 via-black/80 to-[#020614]/90 shadow-[0_0_50px_rgba(0,240,255,0.18)] relative overflow-hidden backdrop-blur-2xl">
               
               {/* Tactical Corner HUD Reticles */}
-              <div className="absolute top-2 left-2 w-3 h-3 border-t-2 border-l-2 border-cyan-400/60 pointer-events-none z-30" />
-              <div className="absolute top-2 right-2 w-3 h-3 border-t-2 border-r-2 border-cyan-400/60 pointer-events-none z-30" />
-              <div className="absolute bottom-2 left-2 w-3 h-3 border-b-2 border-l-2 border-cyan-400/60 pointer-events-none z-30" />
-              <div className="absolute bottom-2 right-2 w-3 h-3 border-b-2 border-r-2 border-cyan-400/60 pointer-events-none z-30" />
+              <div className="absolute top-2.5 left-2.5 w-3.5 h-3.5 border-t-2 border-l-2 border-cyan-400/70 pointer-events-none z-30" />
+              <div className="absolute top-2.5 right-2.5 w-3.5 h-3.5 border-t-2 border-r-2 border-cyan-400/70 pointer-events-none z-30" />
+              <div className="absolute bottom-2.5 left-2.5 w-3.5 h-3.5 border-b-2 border-l-2 border-cyan-400/70 pointer-events-none z-30" />
+              <div className="absolute bottom-2.5 right-2.5 w-3.5 h-3.5 border-b-2 border-r-2 border-cyan-400/70 pointer-events-none z-30" />
 
               {/* Top HUD Badges */}
               <div className="absolute top-3 left-4 z-20 flex items-center gap-2">
@@ -476,12 +489,12 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onEnterAuth }) => {
         </div>
       </section>
 
-      {/* 4. Tabbed Capabilities, Sectors, Architecture & Roles Matrix */}
-      <section id="matrix-section" className="relative z-10 max-w-7xl mx-auto px-4 sm:px-6 py-12 border-t border-cyan-500/20 scroll-mt-20">
+      {/* 3. Tabbed Capabilities, Sectors, Architecture & Roles Matrix */}
+      <section id="matrix-section" className="relative z-10 max-w-7xl mx-auto px-4 sm:px-6 py-14 border-t border-cyan-500/20 scroll-mt-20">
         
         {/* Section Heading */}
-        <div className="text-center max-w-2xl mx-auto mb-8">
-          <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full border border-cyan-400/30 bg-cyan-500/10 text-cyan-300 text-[10px] font-bold uppercase tracking-widest mb-2.5">
+        <div className="text-center max-w-2xl mx-auto mb-10">
+          <div className="inline-flex items-center gap-2 px-3.5 py-1 rounded-full border border-cyan-400/30 bg-cyan-500/10 text-cyan-300 text-[10px] font-bold uppercase tracking-widest mb-3">
             <Sparkles size={11} className="text-cyan-400" />
             <span>TACTICAL OVERVIEW &amp; SPECIFICATIONS</span>
           </div>
@@ -528,18 +541,18 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onEnterAuth }) => {
               return (
                 <div
                   key={idx}
-                  className="p-6 rounded-3xl border border-white/[0.1] bg-gradient-to-b from-white/[0.04] to-black/60 backdrop-blur-xl hover:border-cyan-400/50 hover:shadow-[0_0_25px_rgba(0,240,255,0.15)] transition-all duration-200 group flex flex-col justify-between"
+                  className="p-6 rounded-3xl border border-white/[0.1] bg-gradient-to-b from-white/[0.04] to-black/70 backdrop-blur-xl hover:border-cyan-400/50 hover:shadow-[0_0_25px_rgba(0,240,255,0.15)] transition-all duration-200 group flex flex-col justify-between"
                 >
                   <div>
                     <div className="flex items-center justify-between mb-4">
                       <div
-                        className="p-3 rounded-2xl"
+                        className="p-3 rounded-2xl shadow-inner"
                         style={{ backgroundColor: `${feat.color}15`, color: feat.color }}
                       >
                         <Icon size={22} />
                       </div>
                       <span
-                        className="text-[9px] font-bold tracking-wider px-2 py-0.5 rounded-md border"
+                        className="text-[9px] font-bold tracking-wider px-2.5 py-0.5 rounded-md border"
                         style={{ borderColor: `${feat.color}40`, color: feat.color }}
                       >
                         {feat.badge}
@@ -571,11 +584,11 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onEnterAuth }) => {
             {borderSectors.map((sec) => (
               <div
                 key={sec.id}
-                className="p-6 rounded-3xl border bg-gradient-to-b from-white/[0.04] to-black/70 backdrop-blur-xl space-y-4"
+                className="p-6 rounded-3xl border bg-gradient-to-b from-white/[0.04] to-black/80 backdrop-blur-xl space-y-4"
                 style={{ borderColor: `${sec.color}40` }}
               >
                 <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-2">
+                  <div className="flex items-center gap-2.5">
                     <span className="w-2.5 h-2.5 rounded-full shadow-[0_0_8px_currentColor]" style={{ backgroundColor: sec.color, color: sec.color }} />
                     <h3 className="text-base font-black text-white tracking-wider">{sec.name}</h3>
                   </div>
@@ -588,12 +601,12 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onEnterAuth }) => {
                 </div>
 
                 <div className="grid grid-cols-2 gap-3 text-xs">
-                  <div className="p-3 rounded-xl bg-black/50 border border-white/[0.08]">
+                  <div className="p-3 rounded-xl bg-black/60 border border-white/[0.08]">
                     <p className="text-[9px] text-slate-500 font-bold uppercase">TERRAIN &amp; CLIMATE</p>
                     <p className="text-slate-200 font-bold mt-0.5">{sec.terrain}</p>
                     <p className="text-[10px] text-slate-400 mt-0.5">{sec.temp}</p>
                   </div>
-                  <div className="p-3 rounded-xl bg-black/50 border border-white/[0.08]">
+                  <div className="p-3 rounded-xl bg-black/60 border border-white/[0.08]">
                     <p className="text-[9px] text-slate-500 font-bold uppercase">OPTICAL SENSORS</p>
                     <p className="text-cyan-400 font-bold mt-0.5">{sec.cameras}</p>
                     <p className="text-[10px] text-slate-400 mt-0.5">{sec.elevation}</p>
@@ -612,27 +625,35 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onEnterAuth }) => {
         {/* Tab 3: End-to-End Pipeline Architecture */}
         {activeTab === 'architecture' && (
           <div className="space-y-4 animate-in fade-in duration-300">
-            {architecturePipeline.map((pipe) => (
-              <div
-                key={pipe.step}
-                className="p-5 rounded-2xl border border-white/[0.1] bg-gradient-to-b from-white/[0.03] to-black/60 backdrop-blur-xl flex flex-col md:flex-row md:items-center justify-between gap-4 hover:border-cyan-400/40 transition-all"
-              >
-                <div className="flex items-start gap-4">
-                  <span className="text-xl font-black text-cyan-400 font-mono bg-cyan-500/10 px-3 py-1.5 rounded-xl border border-cyan-400/30">
-                    {pipe.step}
-                  </span>
-                  <div>
-                    <h4 className="text-base font-black text-white">{pipe.title}</h4>
-                    <p className="text-xs text-slate-400 mt-1 font-sans max-w-2xl">{pipe.description}</p>
+            {architecturePipeline.map((pipe) => {
+              const PipeIcon = pipe.icon;
+              return (
+                <div
+                  key={pipe.step}
+                  className="p-5 rounded-2xl border border-white/[0.1] bg-gradient-to-b from-white/[0.03] to-black/70 backdrop-blur-xl flex flex-col md:flex-row md:items-center justify-between gap-4 hover:border-cyan-400/40 transition-all"
+                >
+                  <div className="flex items-start gap-4">
+                    <div className="flex items-center gap-2">
+                      <span className="text-lg font-black text-cyan-400 font-mono bg-cyan-500/10 px-3 py-1.5 rounded-xl border border-cyan-400/30">
+                        {pipe.step}
+                      </span>
+                    </div>
+                    <div>
+                      <div className="flex items-center gap-2">
+                        <PipeIcon size={15} className="text-cyan-400" />
+                        <h4 className="text-base font-black text-white">{pipe.title}</h4>
+                      </div>
+                      <p className="text-xs text-slate-400 mt-1 font-sans max-w-2xl">{pipe.description}</p>
+                    </div>
+                  </div>
+                  <div className="shrink-0 text-left md:text-right">
+                    <span className="text-[10px] font-mono font-bold text-slate-300 bg-black/70 px-3 py-1.5 rounded-lg border border-white/10 inline-block">
+                      {pipe.tech}
+                    </span>
                   </div>
                 </div>
-                <div className="shrink-0 text-left md:text-right">
-                  <span className="text-[10px] font-mono font-bold text-slate-300 bg-black/70 px-3 py-1.5 rounded-lg border border-white/10 inline-block">
-                    {pipe.tech}
-                  </span>
-                </div>
-              </div>
-            ))}
+              );
+            })}
           </div>
         )}
 
@@ -642,7 +663,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onEnterAuth }) => {
             {operationalRoles.map((rc, idx) => (
               <div
                 key={idx}
-                className="p-5 rounded-3xl border bg-gradient-to-b from-white/[0.04] to-black/70 backdrop-blur-xl flex flex-col justify-between"
+                className="p-5 rounded-3xl border bg-gradient-to-b from-white/[0.04] to-black/80 backdrop-blur-xl flex flex-col justify-between"
                 style={{ borderColor: `${rc.color}40` }}
               >
                 <div>
@@ -685,8 +706,8 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onEnterAuth }) => {
         )}
       </section>
 
-      {/* 5. Bottom Access CTA Card */}
-      <section className="relative z-10 max-w-7xl mx-auto px-4 sm:px-6 pb-14">
+      {/* 4. Bottom Access CTA Card */}
+      <section className="relative z-10 max-w-7xl mx-auto px-4 sm:px-6 pb-16">
         <div className="relative p-8 sm:p-10 rounded-3xl border border-cyan-500/30 border-t-cyan-400/40 bg-gradient-to-r from-cyan-950/40 via-slate-900/80 to-[#020614]/90 backdrop-blur-3xl shadow-[0_8px_32px_rgba(0,0,0,0.7),0_0_80px_rgba(0,240,255,0.15)] overflow-hidden text-center sm:text-left flex flex-col sm:flex-row items-center justify-between gap-6">
           <div className="space-y-2 max-w-2xl">
             <div className="inline-flex items-center gap-2 px-2.5 py-0.5 rounded-md bg-cyan-500/10 border border-cyan-400/30 text-[10px] text-cyan-300 font-bold mb-1">
@@ -703,16 +724,16 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onEnterAuth }) => {
 
           <button
             onClick={onEnterAuth}
-            className="shrink-0 px-8 py-3.5 rounded-xl bg-gradient-to-r from-cyan-400 via-cyan-300 to-teal-300 hover:from-cyan-300 hover:to-teal-200 text-black font-black text-xs tracking-widest flex items-center gap-2 shadow-[0_0_25px_rgba(0,240,255,0.4)] hover:shadow-[0_0_35px_rgba(0,240,255,0.65)] transition-all cursor-pointer active:scale-95"
+            className="shrink-0 px-8 py-3.5 rounded-xl bg-gradient-to-r from-cyan-400 via-cyan-300 to-teal-300 hover:from-cyan-300 hover:to-teal-200 text-black font-black text-xs tracking-widest flex items-center gap-2 shadow-[0_0_25px_rgba(0,240,255,0.4)] hover:shadow-[0_0_35px_rgba(0,240,255,0.65)] transition-all cursor-pointer active:scale-95 group"
           >
-            <Lock size={15} />
+            <Lock size={15} className="transition-transform group-hover:rotate-12" />
             <span>ACCESS</span>
-            <ArrowRight size={15} />
+            <ArrowRight size={15} className="transition-transform group-hover:translate-x-1" />
           </button>
         </div>
       </section>
 
-      {/* 6. Clean Classified Defense Footer (Removed unnecessary telemetry bar) */}
+      {/* 5. Clean Classified Defense Footer */}
       <footer id="footer" className="relative z-10 border-t border-cyan-500/20 bg-black/95 py-6 px-4 sm:px-8 backdrop-blur-2xl">
         <div className="max-w-7xl mx-auto flex flex-col md:flex-row items-center justify-between gap-4 text-xs text-slate-500">
           <div className="flex items-center gap-3">
@@ -730,7 +751,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onEnterAuth }) => {
         </div>
       </footer>
 
-      {/* 7. Floating Back to Top Button */}
+      {/* 6. Floating Back to Top Button */}
       {showScrollTop && (
         <button
           onClick={scrollToTop}
@@ -743,4 +764,5 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onEnterAuth }) => {
     </div>
   );
 };
+
 

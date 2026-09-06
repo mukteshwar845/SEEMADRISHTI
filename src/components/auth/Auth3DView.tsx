@@ -15,6 +15,10 @@ import {
   Fingerprint,
   ShieldCheck,
   Radio,
+  Sparkles,
+  KeyRound,
+  ShieldAlert,
+  Cpu,
 } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import { Auth3DCanvas } from './Auth3DCanvas';
@@ -146,16 +150,16 @@ export const Auth3DView: React.FC<Auth3DViewProps> = ({
   };
 
   return (
-    <div className="relative min-h-screen h-[100dvh] w-full bg-[#02050e] text-slate-100 flex flex-col justify-between overflow-y-auto overflow-x-hidden font-mono select-none">
+    <div className="relative min-h-screen h-[100dvh] w-full bg-[#020510] text-slate-100 flex flex-col justify-between overflow-y-auto overflow-x-hidden font-mono select-none">
       {/* 3D Holographic Globe & Radar Canvas Background */}
       <Auth3DCanvas />
 
-      {/* Cyber Defense Scanline Pattern & Dynamic Gradient Mask */}
+      {/* Cyber Defense Scanline Pattern & Dynamic Gradient Masks */}
       <div className="absolute inset-0 bg-[radial-gradient(#00f0ff0c_1px,transparent_1px)] [background-size:28px_28px] pointer-events-none z-[1]" />
-      <div className="absolute inset-0 bg-gradient-to-b from-[#02050e]/40 via-transparent to-[#02050e]/80 pointer-events-none z-[1]" />
+      <div className="absolute inset-0 bg-gradient-to-b from-[#020510]/50 via-transparent to-[#020510]/85 pointer-events-none z-[1]" />
 
       {/* Top Header Bar with Ultra-Transparent Frosted Glass */}
-      <header className="relative z-10 w-full px-4 sm:px-8 py-3 flex items-center justify-between border-b border-white/[0.08] backdrop-blur-2xl bg-black/30 shadow-[0_4px_30px_rgba(0,0,0,0.5)]">
+      <header className="relative z-10 w-full px-4 sm:px-8 py-3.5 flex items-center justify-between border-b border-white/[0.08] backdrop-blur-2xl bg-black/40 shadow-[0_4px_30px_rgba(0,0,0,0.6)]">
         <div className="flex items-center gap-3.5">
           <div
             className="relative group cursor-pointer"
@@ -201,33 +205,38 @@ export const Auth3DView: React.FC<Auth3DViewProps> = ({
 
       {/* Main Center Auth Container */}
       <main className="relative z-10 flex-1 flex items-center justify-center p-3 sm:p-6 my-auto">
-        <div className={`w-full ${mode === 'signup' ? 'max-w-lg' : 'max-w-[440px]'} transition-all duration-300`}>
-          {/* Ambient Glowing Aura Behind Card */}
-          <div className="absolute -inset-1.5 bg-gradient-to-r from-cyan-500/20 via-blue-500/15 to-teal-500/20 rounded-3xl blur-2xl opacity-75 -z-10 animate-pulse pointer-events-none" />
+        <div className={`w-full ${mode === 'signup' ? 'max-w-lg' : 'max-w-[450px]'} transition-all duration-300 relative`}>
+          
+          {/* Volumetric Glowing Ambient Aura Behind Card */}
+          <div className="absolute -inset-2 bg-gradient-to-r from-cyan-500/25 via-teal-500/20 to-purple-500/20 rounded-[32px] blur-3xl opacity-80 -z-10 animate-pulse pointer-events-none" />
+          
+          {/* Faint Cybernetic Outer Energy Field Ring */}
+          <div className="absolute -inset-1 rounded-[26px] border border-cyan-400/20 pointer-events-none -z-10 shadow-[0_0_30px_rgba(0,240,255,0.15)]" />
 
-          {/* Main Ultra-Transparent Frosted Glass Terminal Card */}
-          <div className="relative rounded-2xl border border-white/[0.16] border-t-white/[0.32] bg-gradient-to-b from-white/[0.08] via-slate-950/[0.5] to-[#020512]/[0.7] backdrop-blur-3xl shadow-[0_8px_32px_0_rgba(0,0,0,0.55),0_0_80px_rgba(0,240,255,0.12),inset_0_1px_1px_rgba(255,255,255,0.25)] overflow-hidden transition-all duration-300">
+          {/* Main Ultra-Transparent Frosted Glass Terminal Card with 3D Depth */}
+          <div className="relative rounded-3xl border border-white/[0.22] border-t-cyan-400/50 border-b-cyan-500/20 bg-gradient-to-b from-white/[0.12] via-slate-950/[0.65] to-[#020514]/[0.85] backdrop-blur-3xl shadow-[0_25px_60px_-15px_rgba(0,0,0,0.9),0_0_80px_rgba(0,240,255,0.18),inset_0_1px_2px_rgba(255,255,255,0.35),inset_0_-1px_2px_rgba(0,240,255,0.2)] overflow-hidden transition-all duration-300">
+            
             {/* Tactical Corner HUD Reticles */}
-            <div className="absolute top-2.5 left-2.5 w-3 h-3 border-t-2 border-l-2 border-cyan-400/80 pointer-events-none" />
-            <div className="absolute top-2.5 right-2.5 w-3 h-3 border-t-2 border-r-2 border-cyan-400/80 pointer-events-none" />
-            <div className="absolute bottom-2.5 left-2.5 w-3 h-3 border-b-2 border-l-2 border-cyan-400/80 pointer-events-none" />
-            <div className="absolute bottom-2.5 right-2.5 w-3 h-3 border-b-2 border-r-2 border-cyan-400/80 pointer-events-none" />
+            <div className="absolute top-2.5 left-2.5 w-3.5 h-3.5 border-t-2 border-l-2 border-cyan-400/80 pointer-events-none drop-shadow-[0_0_6px_#00f0ff]" />
+            <div className="absolute top-2.5 right-2.5 w-3.5 h-3.5 border-t-2 border-r-2 border-cyan-400/80 pointer-events-none drop-shadow-[0_0_6px_#00f0ff]" />
+            <div className="absolute bottom-2.5 left-2.5 w-3.5 h-3.5 border-b-2 border-l-2 border-cyan-400/80 pointer-events-none drop-shadow-[0_0_6px_#00f0ff]" />
+            <div className="absolute bottom-2.5 right-2.5 w-3.5 h-3.5 border-b-2 border-r-2 border-cyan-400/80 pointer-events-none drop-shadow-[0_0_6px_#00f0ff]" />
 
-            {/* Glowing Laser Top Accent */}
-            <div className="h-[2px] w-full bg-gradient-to-r from-transparent via-cyan-400 to-transparent shadow-[0_0_12px_#00f0ff]" />
+            {/* Glowing Laser Top Specular Rim */}
+            <div className="h-[2px] w-full bg-gradient-to-r from-transparent via-cyan-400 to-transparent shadow-[0_0_16px_#00f0ff]" />
 
-            {/* Card Header */}
+            {/* Card Header Section */}
             <div className="p-6 sm:p-7 pb-2">
               <div className="flex items-center justify-between mb-2.5">
                 <div className="flex items-center gap-2">
-                  <div className="w-7 h-7 rounded-lg bg-cyan-500/10 border border-cyan-400/30 flex items-center justify-center shadow-[0_0_15px_rgba(0,240,255,0.25)] backdrop-blur-md">
+                  <div className="w-7 h-7 rounded-lg bg-cyan-500/15 border border-cyan-400/40 flex items-center justify-center shadow-[0_0_15px_rgba(0,240,255,0.3)] backdrop-blur-md">
                     <Fingerprint className="text-cyan-400 animate-pulse" size={16} />
                   </div>
-                  <span className="text-[10px] font-bold text-cyan-400 tracking-widest uppercase">
+                  <span className="text-[10px] font-bold text-cyan-300 tracking-widest uppercase">
                     [MANDATORY OPERATOR AUTHENTICATION]
                   </span>
                 </div>
-                <div className="flex items-center gap-1.5 text-[9px] text-emerald-400 font-bold bg-emerald-500/10 px-2 py-0.5 rounded-full border border-emerald-400/30 backdrop-blur-md shadow-[0_0_10px_rgba(16,185,129,0.2)]">
+                <div className="flex items-center gap-1.5 text-[9px] text-emerald-400 font-bold bg-emerald-500/15 px-2.5 py-0.5 rounded-full border border-emerald-400/35 backdrop-blur-md shadow-[0_0_12px_rgba(16,185,129,0.25)]">
                   <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-ping" />
                   GATEWAY ACTIVE
                 </div>
@@ -236,14 +245,14 @@ export const Auth3DView: React.FC<Auth3DViewProps> = ({
               <h1 className="text-xl sm:text-2xl font-black tracking-wide text-white drop-shadow-[0_2px_12px_rgba(0,0,0,0.9)]">
                 {mode === 'login' ? 'OPERATOR AUTHENTICATION' : 'PERSONNEL ENROLLMENT'}
               </h1>
-              <p className="text-xs text-slate-400 mt-1">
+              <p className="text-xs text-slate-400 mt-1 leading-relaxed">
                 {mode === 'login'
                   ? 'Operator authentication is mandatory to establish defense telemetry uplink.'
                   : 'Register a verified operator profile for border sector clearance.'}
               </p>
 
-              {/* Mode Switcher Tabs with Smooth Glass Pill Container */}
-              <div className="grid grid-cols-2 gap-1.5 mt-4 p-1 rounded-xl bg-black/40 border border-white/[0.1] backdrop-blur-xl">
+              {/* Floating Segmented Glass Control Toggle */}
+              <div className="grid grid-cols-2 gap-2 mt-5 p-1.5 rounded-2xl bg-black/40 border border-white/[0.12] backdrop-blur-2xl shadow-[inset_0_2px_6px_rgba(0,0,0,0.7)]">
                 <button
                   type="button"
                   onClick={() => {
@@ -251,10 +260,10 @@ export const Auth3DView: React.FC<Auth3DViewProps> = ({
                     setErrorMessage(null);
                     setSuccessMessage(null);
                   }}
-                  className={`py-2 text-xs font-black tracking-wider rounded-lg transition-all duration-200 cursor-pointer ${
+                  className={`py-2.5 text-xs font-black tracking-wider rounded-xl transition-all duration-200 cursor-pointer ${
                     mode === 'login'
-                      ? 'bg-gradient-to-r from-cyan-400 via-cyan-300 to-teal-300 text-black shadow-[0_0_20px_rgba(0,240,255,0.4)]'
-                      : 'text-slate-400 hover:text-white hover:bg-white/[0.04]'
+                      ? 'bg-gradient-to-r from-cyan-400 via-cyan-300 to-teal-300 text-black shadow-[0_0_25px_rgba(0,240,255,0.5),0_2px_10px_rgba(0,0,0,0.4),inset_0_1px_1px_rgba(255,255,255,0.6)]'
+                      : 'text-slate-400 hover:text-white hover:bg-white/[0.08]'
                   }`}
                 >
                   SIGN IN
@@ -266,10 +275,10 @@ export const Auth3DView: React.FC<Auth3DViewProps> = ({
                     setErrorMessage(null);
                     setSuccessMessage(null);
                   }}
-                  className={`py-2 text-xs font-black tracking-wider rounded-lg transition-all duration-200 cursor-pointer ${
+                  className={`py-2.5 text-xs font-black tracking-wider rounded-xl transition-all duration-200 cursor-pointer ${
                     mode === 'signup'
-                      ? 'bg-gradient-to-r from-cyan-400 via-cyan-300 to-teal-300 text-black shadow-[0_0_20px_rgba(0,240,255,0.4)]'
-                      : 'text-slate-400 hover:text-white hover:bg-white/[0.04]'
+                      ? 'bg-gradient-to-r from-cyan-400 via-cyan-300 to-teal-300 text-black shadow-[0_0_25px_rgba(0,240,255,0.5),0_2px_10px_rgba(0,0,0,0.4),inset_0_1px_1px_rgba(255,255,255,0.6)]'
+                      : 'text-slate-400 hover:text-white hover:bg-white/[0.08]'
                   }`}
                 >
                   ENROLL NEW
@@ -279,20 +288,20 @@ export const Auth3DView: React.FC<Auth3DViewProps> = ({
 
             {/* Error / Success Glass Banners */}
             {errorMessage && (
-              <div className="mx-6 sm:mx-7 mb-3 p-3 rounded-xl bg-rose-500/10 border border-rose-500/30 text-rose-300 text-xs flex items-center gap-2.5 backdrop-blur-xl shadow-lg animate-shake">
+              <div className="mx-6 sm:mx-7 mb-3 p-3 rounded-xl bg-rose-500/15 border border-rose-500/40 text-rose-300 text-xs flex items-center gap-2.5 backdrop-blur-xl shadow-lg animate-shake">
                 <AlertCircle size={15} className="shrink-0 text-rose-400" />
                 <span className="leading-snug">{errorMessage}</span>
               </div>
             )}
             {successMessage && (
-              <div className="mx-6 sm:mx-7 mb-3 p-3 rounded-xl bg-emerald-500/10 border border-emerald-500/30 text-emerald-300 text-xs flex items-center gap-2.5 backdrop-blur-xl shadow-lg">
+              <div className="mx-6 sm:mx-7 mb-3 p-3 rounded-xl bg-emerald-500/15 border border-emerald-500/40 text-emerald-300 text-xs flex items-center gap-2.5 backdrop-blur-xl shadow-lg">
                 <CheckCircle2 size={15} className="shrink-0 text-emerald-400" />
                 <span className="leading-snug">{successMessage}</span>
               </div>
             )}
 
-            {/* Main Lightweight Form with Sleek Glass Inputs */}
-            <form onSubmit={handleSubmit} className="px-6 sm:px-7 pb-6 space-y-3.5">
+            {/* Main Lightweight Form with Semi-Transparent Recessed Glass Inputs */}
+            <form onSubmit={handleSubmit} className="px-6 sm:px-7 pb-6 space-y-4">
               {mode === 'signup' && (
                 <>
                   {/* Full Name */}
@@ -300,8 +309,8 @@ export const Auth3DView: React.FC<Auth3DViewProps> = ({
                     <label className="block text-[10px] font-bold tracking-wider text-slate-300 uppercase mb-1">
                       Personnel Full Name
                     </label>
-                    <div className="relative flex items-center bg-white/[0.03] hover:bg-white/[0.06] focus-within:bg-cyan-500/[0.06] border border-white/[0.12] hover:border-cyan-400/40 focus-within:border-cyan-400 focus-within:ring-2 focus-within:ring-cyan-400/20 focus-within:shadow-[0_0_20px_rgba(0,240,255,0.2)] rounded-xl transition-all duration-200 backdrop-blur-md">
-                      <div className="pl-3 pr-2 py-2.5 text-cyan-400">
+                    <div className="relative flex items-center bg-black/35 hover:bg-black/45 focus-within:bg-black/55 border border-white/[0.14] hover:border-cyan-400/40 focus-within:border-cyan-400 focus-within:ring-2 focus-within:ring-cyan-400/25 focus-within:shadow-[0_0_25px_rgba(0,240,255,0.25),inset_0_2px_8px_rgba(0,0,0,0.7)] rounded-xl transition-all duration-200 backdrop-blur-xl shadow-[inset_0_1px_3px_rgba(0,0,0,0.5)]">
+                      <div className="pl-3.5 pr-2.5 py-3 text-cyan-400 drop-shadow-[0_0_8px_rgba(0,240,255,0.6)]">
                         <User size={14} />
                       </div>
                       <input
@@ -310,7 +319,7 @@ export const Auth3DView: React.FC<Auth3DViewProps> = ({
                         onChange={(e) => setName(e.target.value)}
                         placeholder="e.g. Major Vikram Sen"
                         required
-                        className="w-full pr-3 py-2.5 bg-transparent text-xs text-white placeholder:text-slate-500 outline-none font-mono"
+                        className="w-full pr-3.5 py-3 bg-transparent text-xs text-white placeholder:text-slate-500 outline-none font-mono tracking-wide selection:bg-cyan-500 selection:text-black"
                       />
                     </div>
                   </div>
@@ -320,8 +329,8 @@ export const Auth3DView: React.FC<Auth3DViewProps> = ({
                     <label className="block text-[10px] font-bold tracking-wider text-slate-300 uppercase mb-1">
                       Department Email
                     </label>
-                    <div className="relative flex items-center bg-white/[0.03] hover:bg-white/[0.06] focus-within:bg-cyan-500/[0.06] border border-white/[0.12] hover:border-cyan-400/40 focus-within:border-cyan-400 focus-within:ring-2 focus-within:ring-cyan-400/20 focus-within:shadow-[0_0_20px_rgba(0,240,255,0.2)] rounded-xl transition-all duration-200 backdrop-blur-md">
-                      <div className="pl-3 pr-2 py-2.5 text-cyan-400">
+                    <div className="relative flex items-center bg-black/35 hover:bg-black/45 focus-within:bg-black/55 border border-white/[0.14] hover:border-cyan-400/40 focus-within:border-cyan-400 focus-within:ring-2 focus-within:ring-cyan-400/25 focus-within:shadow-[0_0_25px_rgba(0,240,255,0.25),inset_0_2px_8px_rgba(0,0,0,0.7)] rounded-xl transition-all duration-200 backdrop-blur-xl shadow-[inset_0_1px_3px_rgba(0,0,0,0.5)]">
+                      <div className="pl-3.5 pr-2.5 py-3 text-cyan-400 drop-shadow-[0_0_8px_rgba(0,240,255,0.6)]">
                         <Mail size={14} />
                       </div>
                       <input
@@ -330,7 +339,7 @@ export const Auth3DView: React.FC<Auth3DViewProps> = ({
                         onChange={(e) => setEmail(e.target.value)}
                         placeholder="officer@seemadrishti.gov.in"
                         required
-                        className="w-full pr-3 py-2.5 bg-transparent text-xs text-white placeholder:text-slate-500 outline-none font-mono"
+                        className="w-full pr-3.5 py-3 bg-transparent text-xs text-white placeholder:text-slate-500 outline-none font-mono tracking-wide selection:bg-cyan-500 selection:text-black"
                       />
                     </div>
                   </div>
@@ -346,10 +355,10 @@ export const Auth3DView: React.FC<Auth3DViewProps> = ({
                           key={r.id}
                           type="button"
                           onClick={() => setRole(r.id)}
-                          className={`p-2.5 rounded-xl border text-left transition-all duration-200 cursor-pointer backdrop-blur-md ${
+                          className={`p-2.5 rounded-xl border text-left transition-all duration-200 cursor-pointer backdrop-blur-xl ${
                             role === r.id
-                              ? `${r.border} ${r.bg} shadow-[0_0_15px_rgba(0,240,255,0.2)]`
-                              : 'border-white/[0.08] bg-black/25 hover:border-white/20 hover:bg-white/[0.04]'
+                              ? `${r.border} ${r.bg} shadow-[0_0_20px_rgba(0,240,255,0.25),inset_0_1px_1px_rgba(255,255,255,0.2)]`
+                              : 'border-white/[0.08] bg-black/30 hover:border-white/20 hover:bg-white/[0.05]'
                           }`}
                         >
                           <div className="flex items-center justify-between">
@@ -368,17 +377,17 @@ export const Auth3DView: React.FC<Auth3DViewProps> = ({
                       <label className="block text-[10px] font-bold tracking-wider text-slate-300 uppercase mb-1">
                         Assigned Sector
                       </label>
-                      <div className="relative flex items-center bg-white/[0.03] hover:bg-white/[0.06] focus-within:bg-cyan-500/[0.06] border border-white/[0.12] hover:border-cyan-400/40 focus-within:border-cyan-400 rounded-xl transition-all duration-200 backdrop-blur-md">
+                      <div className="relative flex items-center bg-black/35 hover:bg-black/45 focus-within:bg-black/55 border border-white/[0.14] hover:border-cyan-400/40 focus-within:border-cyan-400 rounded-xl transition-all duration-200 backdrop-blur-xl shadow-[inset_0_1px_3px_rgba(0,0,0,0.5)]">
                         <div className="pl-3 pr-2 py-2 text-cyan-400">
                           <Building2 size={13} />
                         </div>
                         <select
                           value={assignedSector}
                           onChange={(e) => setAssignedSector(e.target.value)}
-                          className="w-full pr-3 py-2 bg-transparent text-[11px] text-slate-200 outline-none cursor-pointer"
+                          className="w-full pr-3 py-2 bg-transparent text-[11px] text-slate-200 outline-none cursor-pointer font-mono"
                         >
                           {borderSectors.map((s) => (
-                            <option key={s} value={s} className="bg-slate-900 text-white">
+                            <option key={s} value={s} className="bg-slate-950 text-white">
                               {s}
                             </option>
                           ))}
@@ -390,17 +399,17 @@ export const Auth3DView: React.FC<Auth3DViewProps> = ({
                       <label className="block text-[10px] font-bold tracking-wider text-slate-300 uppercase mb-1">
                         Operational Shift
                       </label>
-                      <div className="relative flex items-center bg-white/[0.03] hover:bg-white/[0.06] focus-within:bg-cyan-500/[0.06] border border-white/[0.12] hover:border-cyan-400/40 focus-within:border-cyan-400 rounded-xl transition-all duration-200 backdrop-blur-md">
+                      <div className="relative flex items-center bg-black/35 hover:bg-black/45 focus-within:bg-black/55 border border-white/[0.14] hover:border-cyan-400/40 focus-within:border-cyan-400 rounded-xl transition-all duration-200 backdrop-blur-xl shadow-[inset_0_1px_3px_rgba(0,0,0,0.5)]">
                         <div className="pl-3 pr-2 py-2 text-cyan-400">
                           <Clock size={13} />
                         </div>
                         <select
                           value={shift}
                           onChange={(e) => setShift(e.target.value)}
-                          className="w-full pr-3 py-2 bg-transparent text-[11px] text-slate-200 outline-none cursor-pointer"
+                          className="w-full pr-3 py-2 bg-transparent text-[11px] text-slate-200 outline-none cursor-pointer font-mono"
                         >
                           {shiftOptions.map((sh) => (
-                            <option key={sh} value={sh} className="bg-slate-900 text-white">
+                            <option key={sh} value={sh} className="bg-slate-950 text-white">
                               {sh}
                             </option>
                           ))}
@@ -416,8 +425,8 @@ export const Auth3DView: React.FC<Auth3DViewProps> = ({
                 <label className="block text-[10px] font-bold tracking-wider text-slate-300 uppercase mb-1">
                   Operator Callsign / ID
                 </label>
-                <div className="relative flex items-center bg-white/[0.03] hover:bg-white/[0.06] focus-within:bg-cyan-500/[0.06] border border-white/[0.12] hover:border-cyan-400/40 focus-within:border-cyan-400 focus-within:ring-2 focus-within:ring-cyan-400/20 focus-within:shadow-[0_0_20px_rgba(0,240,255,0.2)] rounded-xl transition-all duration-200 backdrop-blur-md">
-                  <div className="pl-3 pr-2 py-2.5 text-cyan-400">
+                <div className="relative flex items-center bg-black/35 hover:bg-black/45 focus-within:bg-black/55 border border-white/[0.14] hover:border-cyan-400/40 focus-within:border-cyan-400 focus-within:ring-2 focus-within:ring-cyan-400/25 focus-within:shadow-[0_0_25px_rgba(0,240,255,0.25),inset_0_2px_8px_rgba(0,0,0,0.7)] rounded-xl transition-all duration-200 backdrop-blur-xl shadow-[inset_0_1px_3px_rgba(0,0,0,0.5)]">
+                  <div className="pl-3.5 pr-2.5 py-3 text-cyan-400 drop-shadow-[0_0_8px_rgba(0,240,255,0.6)]">
                     <User size={14} />
                   </div>
                   <input
@@ -428,7 +437,7 @@ export const Auth3DView: React.FC<Auth3DViewProps> = ({
                     required
                     autoCapitalize="none"
                     autoComplete="username"
-                    className="w-full pr-3 py-2.5 bg-transparent text-xs text-white placeholder:text-slate-500 outline-none font-mono"
+                    className="w-full pr-3.5 py-3 bg-transparent text-xs text-white placeholder:text-slate-500 outline-none font-mono tracking-wide selection:bg-cyan-500 selection:text-black"
                   />
                 </div>
               </div>
@@ -445,8 +454,8 @@ export const Auth3DView: React.FC<Auth3DViewProps> = ({
                     </span>
                   )}
                 </div>
-                <div className="relative flex items-center bg-white/[0.03] hover:bg-white/[0.06] focus-within:bg-cyan-500/[0.06] border border-white/[0.12] hover:border-cyan-400/40 focus-within:border-cyan-400 focus-within:ring-2 focus-within:ring-cyan-400/20 focus-within:shadow-[0_0_20px_rgba(0,240,255,0.2)] rounded-xl transition-all duration-200 backdrop-blur-md">
-                  <div className="pl-3 pr-2 py-2.5 text-cyan-400">
+                <div className="relative flex items-center bg-black/35 hover:bg-black/45 focus-within:bg-black/55 border border-white/[0.14] hover:border-cyan-400/40 focus-within:border-cyan-400 focus-within:ring-2 focus-within:ring-cyan-400/25 focus-within:shadow-[0_0_25px_rgba(0,240,255,0.25),inset_0_2px_8px_rgba(0,0,0,0.7)] rounded-xl transition-all duration-200 backdrop-blur-xl shadow-[inset_0_1px_3px_rgba(0,0,0,0.5)]">
+                  <div className="pl-3.5 pr-2.5 py-3 text-cyan-400 drop-shadow-[0_0_8px_rgba(0,240,255,0.6)]">
                     <Lock size={14} />
                   </div>
                   <input
@@ -458,12 +467,12 @@ export const Auth3DView: React.FC<Auth3DViewProps> = ({
                     placeholder="••••••••••••"
                     required
                     autoComplete="current-password"
-                    className="w-full pr-10 py-2.5 bg-transparent text-xs text-white placeholder:text-slate-500 outline-none font-mono tracking-wider"
+                    className="w-full pr-10 py-3 bg-transparent text-xs text-white placeholder:text-slate-500 outline-none font-mono tracking-wider selection:bg-cyan-500 selection:text-black"
                   />
                   <button
                     type="button"
                     onClick={() => setShowPassword(!showPassword)}
-                    className="absolute right-2.5 p-1 rounded-lg text-slate-400 hover:text-cyan-300 hover:bg-white/[0.06] transition-all cursor-pointer"
+                    className="absolute right-3 p-1 rounded-lg text-slate-400 hover:text-cyan-300 hover:bg-white/[0.08] transition-all cursor-pointer"
                     title={showPassword ? 'Hide passphrase' : 'Show passphrase'}
                   >
                     {showPassword ? <EyeOff size={14} /> : <Eye size={14} />}
@@ -471,11 +480,11 @@ export const Auth3DView: React.FC<Auth3DViewProps> = ({
                 </div>
               </div>
 
-              {/* Submit CTA Button */}
+              {/* Tactile 3D Action Button */}
               <button
                 type="submit"
                 disabled={isSubmitting}
-                className="w-full mt-2 py-3 rounded-xl bg-gradient-to-r from-cyan-400 via-cyan-300 to-teal-300 hover:from-cyan-300 hover:to-teal-200 text-black font-black text-xs tracking-widest flex items-center justify-center gap-2 shadow-[0_0_25px_rgba(0,240,255,0.4)] hover:shadow-[0_0_35px_rgba(0,240,255,0.65)] transition-all duration-200 cursor-pointer active:scale-[0.98] disabled:opacity-50 disabled:cursor-not-allowed"
+                className="w-full mt-3 py-3.5 rounded-xl bg-gradient-to-r from-cyan-400 via-cyan-300 to-teal-300 hover:from-cyan-300 hover:to-teal-200 text-black font-black text-xs tracking-widest flex items-center justify-center gap-2 shadow-[0_0_30px_rgba(0,240,255,0.5),0_4px_15px_rgba(0,0,0,0.5),inset_0_1px_2px_rgba(255,255,255,0.7)] hover:shadow-[0_0_40px_rgba(0,240,255,0.7),0_6px_20px_rgba(0,0,0,0.6)] transition-all duration-200 cursor-pointer active:scale-[0.98] disabled:opacity-50 disabled:cursor-not-allowed group"
               >
                 {isSubmitting ? (
                   <>
@@ -489,7 +498,7 @@ export const Auth3DView: React.FC<Auth3DViewProps> = ({
                         ? 'AUTHENTICATE & ENTER DASHBOARD'
                         : 'REGISTER PERSONNEL & ACCESS'}
                     </span>
-                    <ArrowRight size={15} />
+                    <ArrowRight size={15} className="transition-transform group-hover:translate-x-1" />
                   </>
                 )}
               </button>
@@ -513,3 +522,4 @@ export const Auth3DView: React.FC<Auth3DViewProps> = ({
     </div>
   );
 };
+

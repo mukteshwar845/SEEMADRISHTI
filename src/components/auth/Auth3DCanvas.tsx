@@ -17,88 +17,112 @@ export const Auth3DCanvas: React.FC<Auth3DCanvasProps> = ({
     const container = containerRef.current;
     if (!container) return;
 
-    // 1. Scene setup
+    // 1. Scene setup with volumetric atmospheric fog
     const scene = new THREE.Scene();
-    scene.fog = new THREE.FogExp2(0x02040a, 0.025);
+    scene.fog = new THREE.FogExp2(0x020512, 0.022);
 
     // 2. Camera setup
     const camera = new THREE.PerspectiveCamera(
-      55,
+      52,
       container.clientWidth / container.clientHeight,
       0.1,
       1000
     );
-    camera.position.set(0, 2, 9);
+    camera.position.set(0, 1.8, 9.5);
 
-    // 3. Renderer setup
-    const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true, powerPreference: 'high-performance' });
+    // 3. WebGL Renderer with High Performance & Alpha
+    const renderer = new THREE.WebGLRenderer({
+      antialias: true,
+      alpha: true,
+      powerPreference: 'high-performance',
+    });
     renderer.setSize(container.clientWidth, container.clientHeight);
     renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
-    renderer.setClearColor(0x02040a, 1);
+    renderer.setClearColor(0x020510, 1);
     container.appendChild(renderer.domElement);
 
-    // 4. Lighting
-    const ambientLight = new THREE.AmbientLight(0x002233, 1.5);
+    // 4. Cinematic Lighting
+    const ambientLight = new THREE.AmbientLight(0x051829, 1.8);
     scene.add(ambientLight);
 
-    const pointLightCyan = new THREE.PointLight(0x00f0ff, 4, 30);
-    pointLightCyan.position.set(5, 6, 5);
+    const pointLightCyan = new THREE.PointLight(0x00f0ff, 5, 35);
+    pointLightCyan.position.set(6, 7, 6);
     scene.add(pointLightCyan);
 
-    const pointLightPurple = new THREE.PointLight(0xec4899, 3, 30);
-    pointLightPurple.position.set(-6, -4, 4);
-    scene.add(pointLightPurple);
+    const pointLightTeal = new THREE.PointLight(0x14b8a6, 4, 30);
+    pointLightTeal.position.set(-6, -5, 5);
+    scene.add(pointLightTeal);
 
-    // 5. Holographic Globe / Radar Sphere Group
+    const pointLightViolet = new THREE.PointLight(0xa855f7, 2.5, 25);
+    pointLightViolet.position.set(0, 8, -6);
+    scene.add(pointLightViolet);
+
+    // 5. Holographic Globe / Tactical Sphere Group
     const globeGroup = new THREE.Group();
     scene.add(globeGroup);
 
     // Inner wireframe sphere
-    const sphereGeo = new THREE.SphereGeometry(3.2, 32, 24);
+    const sphereGeo = new THREE.SphereGeometry(3.3, 36, 28);
     const sphereMat = new THREE.MeshBasicMaterial({
       color: 0x00f0ff,
       wireframe: true,
       transparent: true,
-      opacity: 0.15,
+      opacity: 0.16,
     });
     const innerSphere = new THREE.Mesh(sphereGeo, sphereMat);
     globeGroup.add(innerSphere);
 
+    // Solid core with subtle transparency
+    const coreGeo = new THREE.SphereGeometry(3.1, 24, 24);
+    const coreMat = new THREE.MeshBasicMaterial({
+      color: 0x011326,
+      transparent: true,
+      opacity: 0.65,
+    });
+    const coreSphere = new THREE.Mesh(coreGeo, coreMat);
+    globeGroup.add(coreSphere);
+
     // Latitude / Longitude Tactical Rings
-    const ringGeo = new THREE.RingGeometry(3.6, 3.65, 64);
-    const ringMat = new THREE.MeshBasicMaterial({
+    const ringGeo1 = new THREE.RingGeometry(3.7, 3.74, 72);
+    const ringMat1 = new THREE.MeshBasicMaterial({
       color: 0x00f0ff,
       side: THREE.DoubleSide,
       transparent: true,
-      opacity: 0.35,
+      opacity: 0.4,
     });
-
-    const ring1 = new THREE.Mesh(ringGeo, ringMat);
+    const ring1 = new THREE.Mesh(ringGeo1, ringMat1);
     ring1.rotation.x = Math.PI / 2;
     globeGroup.add(ring1);
 
-    const ring2 = new THREE.Mesh(ringGeo, ringMat.clone());
-    ring2.rotation.x = Math.PI / 4;
+    const ringGeo2 = new THREE.RingGeometry(3.9, 3.93, 72);
+    const ringMat2 = new THREE.MeshBasicMaterial({
+      color: 0x14b8a6,
+      side: THREE.DoubleSide,
+      transparent: true,
+      opacity: 0.3,
+    });
+    const ring2 = new THREE.Mesh(ringGeo2, ringMat2);
+    ring2.rotation.x = Math.PI / 3.5;
+    ring2.rotation.y = 0.2;
     globeGroup.add(ring2);
 
-    const ring3 = new THREE.Mesh(
-      new THREE.RingGeometry(4.2, 4.24, 64),
-      new THREE.MeshBasicMaterial({
-        color: 0xec4899,
-        side: THREE.DoubleSide,
-        transparent: true,
-        opacity: 0.25,
-      })
-    );
-    ring3.rotation.y = Math.PI / 3;
+    const ringGeo3 = new THREE.RingGeometry(4.3, 4.33, 72);
+    const ringMat3 = new THREE.MeshBasicMaterial({
+      color: 0xa855f7,
+      side: THREE.DoubleSide,
+      transparent: true,
+      opacity: 0.25,
+    });
+    const ring3 = new THREE.Mesh(ringGeo3, ringMat3);
+    ring3.rotation.y = Math.PI / 2.8;
     globeGroup.add(ring3);
 
     // 6. Surveillance Radar Scan Beam
-    const radarBeamGeo = new THREE.ConeGeometry(3.8, 4.5, 32, 1, true);
+    const radarBeamGeo = new THREE.ConeGeometry(3.9, 5, 36, 1, true, 0, Math.PI / 3);
     const radarBeamMat = new THREE.MeshBasicMaterial({
       color: 0x00f0ff,
       transparent: true,
-      opacity: 0.08,
+      opacity: 0.12,
       wireframe: true,
       side: THREE.DoubleSide,
     });
@@ -107,20 +131,22 @@ export const Auth3DCanvas: React.FC<Auth3DCanvasProps> = ({
     radarBeam.rotation.x = Math.PI / 2;
     globeGroup.add(radarBeam);
 
-    // 7. Tactical Nodes / Surveillance Camera Points on Sphere
-    const nodeCount = 36;
+    // 7. Tactical Nodes / Surveillance Points on Sphere
+    const nodeCount = 42;
     const nodePositions: THREE.Vector3[] = [];
     const nodeGroup = new THREE.Group();
     globeGroup.add(nodeGroup);
 
-    const nodeGeo = new THREE.SphereGeometry(0.06, 8, 8);
+    const nodeGeo = new THREE.SphereGeometry(0.065, 8, 8);
     const nodeMatCyan = new THREE.MeshBasicMaterial({ color: 0x00f0ff });
-    const nodeMatRed = new THREE.MeshBasicMaterial({ color: 0xff0055 });
+    const nodeMatTeal = new THREE.MeshBasicMaterial({ color: 0x10b981 });
+    const nodeMatAmber = new THREE.MeshBasicMaterial({ color: 0xf59e0b });
+    const nodeMatPink = new THREE.MeshBasicMaterial({ color: 0xec4899 });
 
     for (let i = 0; i < nodeCount; i++) {
       const phi = Math.acos(-1 + (2 * i) / nodeCount);
       const theta = Math.sqrt(nodeCount * Math.PI) * phi;
-      const radius = 3.2;
+      const radius = 3.3;
 
       const pos = new THREE.Vector3(
         radius * Math.cos(theta) * Math.sin(phi),
@@ -129,7 +155,9 @@ export const Auth3DCanvas: React.FC<Auth3DCanvasProps> = ({
       );
       nodePositions.push(pos);
 
-      const nodeMesh = new THREE.Mesh(nodeGeo, i % 7 === 0 ? nodeMatRed : nodeMatCyan);
+      const mat =
+        i % 9 === 0 ? nodeMatPink : i % 5 === 0 ? nodeMatAmber : i % 3 === 0 ? nodeMatTeal : nodeMatCyan;
+      const nodeMesh = new THREE.Mesh(nodeGeo, mat);
       nodeMesh.position.copy(pos);
       nodeGroup.add(nodeMesh);
     }
@@ -138,38 +166,47 @@ export const Auth3DCanvas: React.FC<Auth3DCanvasProps> = ({
     const lineMat = new THREE.LineBasicMaterial({
       color: 0x00f0ff,
       transparent: true,
-      opacity: 0.2,
+      opacity: 0.22,
     });
     const lineGeo = new THREE.BufferGeometry();
     const lineCoords: number[] = [];
 
     for (let i = 0; i < nodePositions.length; i++) {
-      const nextIdx = (i + 3) % nodePositions.length;
+      const nextIdx1 = (i + 2) % nodePositions.length;
+      const nextIdx2 = (i + 5) % nodePositions.length;
       lineCoords.push(
         nodePositions[i].x,
         nodePositions[i].y,
         nodePositions[i].z,
-        nodePositions[nextIdx].x,
-        nodePositions[nextIdx].y,
-        nodePositions[nextIdx].z
+        nodePositions[nextIdx1].x,
+        nodePositions[nextIdx1].y,
+        nodePositions[nextIdx1].z
+      );
+      lineCoords.push(
+        nodePositions[i].x,
+        nodePositions[i].y,
+        nodePositions[i].z,
+        nodePositions[nextIdx2].x,
+        nodePositions[nextIdx2].y,
+        nodePositions[nextIdx2].z
       );
     }
     lineGeo.setAttribute('position', new THREE.Float32BufferAttribute(lineCoords, 3));
     const lines = new THREE.LineSegments(lineGeo, lineMat);
     globeGroup.add(lines);
 
-    // 8. Cyber Floating Particle Grid / Starfield
-    const particlesCount = 450;
+    // 8. Cyber Floating Particle Field
+    const particlesCount = 500;
     const particlePositions = new Float32Array(particlesCount * 3);
     for (let i = 0; i < particlesCount * 3; i += 3) {
-      particlePositions[i] = (Math.random() - 0.5) * 35;
-      particlePositions[i + 1] = (Math.random() - 0.5) * 35;
-      particlePositions[i + 2] = (Math.random() - 0.5) * 35;
+      particlePositions[i] = (Math.random() - 0.5) * 38;
+      particlePositions[i + 1] = (Math.random() - 0.5) * 38;
+      particlePositions[i + 2] = (Math.random() - 0.5) * 38;
     }
     const particlesGeo = new THREE.BufferGeometry();
     particlesGeo.setAttribute('position', new THREE.BufferAttribute(particlePositions, 3));
     const particlesMat = new THREE.PointsMaterial({
-      size: 0.045,
+      size: 0.05,
       color: 0x38bdf8,
       transparent: true,
       opacity: 0.45,
@@ -178,13 +215,13 @@ export const Auth3DCanvas: React.FC<Auth3DCanvasProps> = ({
     scene.add(particles);
 
     // 9. Floating Cyber Ground Grid
-    const gridHelper = new THREE.GridHelper(30, 30, 0x00f0ff, 0x072635);
+    const gridHelper = new THREE.GridHelper(32, 32, 0x00f0ff, 0x092d42);
     gridHelper.position.y = -3.8;
-    gridHelper.material.transparent = true;
-    gridHelper.material.opacity = 0.35;
+    (gridHelper.material as THREE.Material).transparent = true;
+    (gridHelper.material as THREE.Material).opacity = 0.3;
     scene.add(gridHelper);
 
-    // 10. Mouse interaction tracking
+    // 10. Mouse interaction tracking for smooth parallax
     let targetRotationX = 0;
     let targetRotationY = 0;
     let mouseX = 0;
@@ -194,7 +231,7 @@ export const Auth3DCanvas: React.FC<Auth3DCanvasProps> = ({
       const { innerWidth, innerHeight } = window;
       mouseX = (event.clientX / innerWidth) * 2 - 1;
       mouseY = -(event.clientY / innerHeight) * 2 + 1;
-      targetRotationY = mouseX * 0.4;
+      targetRotationY = mouseX * 0.35;
       targetRotationX = mouseY * 0.2;
     };
 
@@ -219,19 +256,19 @@ export const Auth3DCanvas: React.FC<Auth3DCanvasProps> = ({
       const elapsedTime = clock.getElapsedTime();
 
       // Continuous rotation
-      globeGroup.rotation.y += 0.0035;
-      globeGroup.rotation.x = THREE.MathUtils.lerp(globeGroup.rotation.x, targetRotationX, 0.05);
-      globeGroup.rotation.z = THREE.MathUtils.lerp(globeGroup.rotation.z, -targetRotationY * 0.5, 0.05);
+      globeGroup.rotation.y += 0.003;
+      globeGroup.rotation.x = THREE.MathUtils.lerp(globeGroup.rotation.x, targetRotationX, 0.04);
+      globeGroup.rotation.z = THREE.MathUtils.lerp(globeGroup.rotation.z, -targetRotationY * 0.4, 0.04);
 
       // Radar scan rotation
-      radarBeam.rotation.z = elapsedTime * 1.5;
+      radarBeam.rotation.z = elapsedTime * 1.4;
 
       // Particle subtle drifting
-      particles.rotation.y = elapsedTime * 0.02;
-      gridHelper.rotation.y = Math.sin(elapsedTime * 0.1) * 0.02;
+      particles.rotation.y = elapsedTime * 0.015;
+      gridHelper.rotation.y = Math.sin(elapsedTime * 0.1) * 0.015;
 
-      // Pulsing lights
-      pointLightCyan.intensity = 3.5 + Math.sin(elapsedTime * 2) * 1.2;
+      // Pulsing cyan rim light
+      pointLightCyan.intensity = 4.0 + Math.sin(elapsedTime * 2.5) * 1.5;
 
       renderer.render(scene, camera);
     };
@@ -258,3 +295,4 @@ export const Auth3DCanvas: React.FC<Auth3DCanvasProps> = ({
     />
   );
 };
+

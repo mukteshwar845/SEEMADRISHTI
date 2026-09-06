@@ -958,4 +958,40 @@ html.theme-emerald .sidebar-nav:hover::-webkit-scrollbar-thumb {
   background: rgba(16, 185, 129, 0.6);
 }
 
+/* Modern Defense Transparent Autofill Override */
+input:-webkit-autofill,
+input:-webkit-autofill:hover, 
+input:-webkit-autofill:focus,
+input:-webkit-autofill:active {
+  -webkit-text-fill-color: #f8fafc !important;
+  -webkit-box-shadow: 0 0 0px 1000px rgba(4, 9, 20, 0.85) inset !important;
+  box-shadow: 0 0 0px 1000px rgba(4, 9, 20, 0.85) inset !important;
+  transition: background-color 5000s ease-in-out 0s;
+  caret-color: #00f0ff !important;
+}
+
+/* Modern Defense Glass Utilities */
+.defense-glass-panel {
+  background: rgba(2, 6, 17, 0.55);
+  backdrop-filter: blur(24px);
+  -webkit-backdrop-filter: blur(24px);
+  border: 1px solid rgba(0, 240, 255, 0.25);
+  box-shadow: 0 0 50px rgba(0, 240, 255, 0.08), inset 0 1px 1px rgba(255, 255, 255, 0.08);
+}
+
+.defense-glass-input {
+  background: rgba(0, 0, 0, 0.35);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border: 1px solid rgba(51, 65, 85, 0.6);
+  color: #f8fafc;
+}
+
+.defense-glass-input:focus {
+  background: rgba(0, 240, 255, 0.04);
+  border-color: #00f0ff;
+  box-shadow: 0 0 15px rgba(0, 240, 255, 0.25);
+}
+
+
 

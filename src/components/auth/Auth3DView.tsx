@@ -160,7 +160,7 @@ export const Auth3DView: React.FC<Auth3DViewProps> = ({
         >
           <SeemadrishtiLogo className="w-8 h-8 text-cyan-400 drop-shadow-[0_0_15px_rgba(0,240,255,0.7)] transition-transform group-hover:scale-105" />
           <span className="text-sm font-black tracking-widest text-transparent bg-clip-text bg-gradient-to-r from-cyan-300 via-cyan-400 to-teal-300 drop-shadow-[0_0_12px_rgba(0,240,255,0.5)]">
-            SEEMADRISHTI AI
+            SEEMADRISHTI
           </span>
         </div>
 
@@ -489,7 +489,7 @@ export const Auth3DView: React.FC<Auth3DViewProps> = ({
       <footer className="relative z-10 py-2.5 px-6 flex flex-col sm:flex-row items-center justify-between gap-2 text-[10px] text-slate-400 border-t border-white/[0.10] backdrop-blur-xl bg-slate-950/20">
         <div className="flex items-center gap-2">
           <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 shadow-[0_0_8px_#10b981]" />
-          <span>&copy; 2026 SEEMADRISHTI AI DEFENSE TECHNOLOGIES</span>
+          <span>&copy; 2026 SEEMADRISHTI DEFENSE TECHNOLOGIES</span>
         </div>
         <div className="flex items-center gap-3 text-slate-400 tracking-wider">
           <span>RESTRICTED // MIL-STD-810H COMPLIANT</span>

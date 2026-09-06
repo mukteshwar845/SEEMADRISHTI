@@ -13,6 +13,8 @@ interface CameraFeedCanvasProps {
   className?: string;
   onCountsUpdate?: (counts: { persons: number; vehicles: number; animals: number; total: number }) => void;
   muted?: boolean;
+  classFilter?: string | null;
+  showOpticalGrid?: boolean;
 }
 
 export interface DetectionStyleConfig {
@@ -411,6 +413,39 @@ function getDistanceToSegment(px: number, py: number, x1: number, y1: number, x2
   return { dist: Math.hypot(px - projX, py - projY), projX, projY };
 }
 
+function matchesClassFilter(
+  categoryLabel: string,
+  rawClass: string,
+  isThreat: boolean,
+  isCrossing: boolean,
+  isSuspicious: boolean,
+  filter: string | null | undefined
+): boolean {
+  if (!filter || filter === 'ALL') return true;
+  const f = filter.toUpperCase();
+  const cat = (categoryLabel || '').toUpperCase();
+  const raw = (rawClass || '').toUpperCase();
+  if (f === 'UNAUTHORIZED') {
+    return isThreat || isCrossing || cat.includes('INTRUDER') || cat.includes('UNAUTHORIZED') || cat.includes('BREACH');
+  }
+  if (f === 'LOITER') {
+    return isSuspicious || cat.includes('SUSPICIOUS') || cat.includes('LOITER');
+  }
+  if (f === 'PATROL') {
+    return cat.includes('PATROL') || raw.includes('PATROL') || cat.includes('GUARD') || cat.includes('SECURITY');
+  }
+  if (f === 'CIVILIAN') {
+    return (cat.includes('CIVILIAN') || cat.includes('PEDESTRIAN') || raw.includes('PERSON')) && !isThreat && !isCrossing && !isSuspicious;
+  }
+  if (f === 'VEHICLE') {
+    return cat.includes('VEHICLE') || cat.includes('CAR') || cat.includes('TRUCK') || cat.includes('BUS') || cat.includes('VAN');
+  }
+  if (f === 'ANIMAL') {
+    return cat.includes('ANIMAL') || cat.includes('CANINE') || cat.includes('K9');
+  }
+  return true;
+}
+
 export const CameraFeedCanvas: React.FC<CameraFeedCanvasProps> = ({
   camera,
   showAiBoxes = true,
@@ -421,6 +456,8 @@ export const CameraFeedCanvas: React.FC<CameraFeedCanvasProps> = ({
   className = '',
   onCountsUpdate,
   muted = true,
+  classFilter = null,
+  showOpticalGrid = false,
 }) => {
   const containerRef = useRef<HTMLDivElement | null>(null);
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
@@ -787,12 +824,21 @@ export const CameraFeedCanvas: React.FC<CameraFeedCanvasProps> = ({
               isCrossingLine: isCrossing,
             });
 
+            const isMatch = matchesClassFilter(style.categoryLabel, track.class_name, Boolean((track as any).risk_level === 'CRITICAL' || (track as any).risk_score >= 70), isCrossing, isNear, classFilter);
+
             ctx.save();
+            if (!isMatch) {
+              ctx.globalAlpha = 0.20;
+            } else if (classFilter && classFilter !== 'ALL') {
+              ctx.shadowColor = style.strokeColor;
+              ctx.shadowBlur = 12;
+            }
+
             ctx.fillStyle = style.fillColor;
             ctx.fillRect(bx1, by1, bw, bh);
 
             ctx.strokeStyle = style.strokeColor;
-            ctx.lineWidth = style.isHighPriority ? 2.0 : 1.5;
+            ctx.lineWidth = style.isHighPriority || (isMatch && classFilter && classFilter !== 'ALL') ? 2.5 : 1.5;
             ctx.strokeRect(bx1, by1, bw, bh);
 
             // Laser connector to line when suspicious or crossing
@@ -908,8 +954,10 @@ export const CameraFeedCanvas: React.FC<CameraFeedCanvasProps> = ({
               isCrossingLine: st.state === 'LINE_CROSSING',
             });
 
+            const isMatch = matchesClassFilter(style.categoryLabel, st.rawClass || st.label, Boolean(st.isThreat), isCrossing, isNear, classFilter);
+
             // Motion trail
-            if (showMotionTrails) {
+            if (showMotionTrails && isMatch) {
               st.trail.push({ x: tCenterX, y: tCenterY });
               if (st.trail.length > 14) st.trail.shift();
 
@@ -928,15 +976,22 @@ export const CameraFeedCanvas: React.FC<CameraFeedCanvasProps> = ({
 
             // Translucent box background & border
             ctx.save();
+            if (!isMatch) {
+              ctx.globalAlpha = 0.20;
+            } else if (classFilter && classFilter !== 'ALL') {
+              ctx.shadowColor = style.strokeColor;
+              ctx.shadowBlur = 12;
+            }
+
             ctx.fillStyle = style.fillColor;
             ctx.fillRect(bx, by, bw, bh);
 
             ctx.strokeStyle = style.strokeColor;
-            ctx.lineWidth = style.isHighPriority ? 2.0 : 1.5;
+            ctx.lineWidth = style.isHighPriority || (isMatch && classFilter && classFilter !== 'ALL') ? 2.5 : 1.5;
             ctx.strokeRect(bx, by, bw, bh);
 
             // Laser connector to line when suspicious or crossing
-            if (st.state === 'SUSPICIOUS_AREA' || st.state === 'LINE_CROSSING') {
+            if (isNear || isCrossing) {
               ctx.strokeStyle = st.state === 'LINE_CROSSING' ? '#dc2626' : '#f97316';
               ctx.lineWidth = 1.5;
               ctx.setLineDash([3, 3]);
@@ -983,6 +1038,41 @@ export const CameraFeedCanvas: React.FC<CameraFeedCanvasProps> = ({
         }
       }
 
+      // Optical Tactical Crosshair HUD Grid
+      if (showOpticalGrid) {
+        ctx.save();
+        ctx.strokeStyle = 'rgba(6, 182, 212, 0.16)';
+        ctx.lineWidth = 1;
+        const cx = w / 2;
+        const cy = h / 2;
+        // Center crosshair
+        ctx.beginPath();
+        ctx.moveTo(cx - 24, cy); ctx.lineTo(cx + 24, cy);
+        ctx.moveTo(cx, cy - 24); ctx.lineTo(cx, cy + 24);
+        ctx.stroke();
+
+        // Center reticle ring
+        ctx.beginPath();
+        ctx.arc(cx, cy, 16, 0, Math.PI * 2);
+        ctx.stroke();
+
+        // Subdivisions
+        ctx.setLineDash([2, 4]);
+        ctx.beginPath();
+        ctx.moveTo(w * 0.25, 0); ctx.lineTo(w * 0.25, h);
+        ctx.moveTo(w * 0.75, 0); ctx.lineTo(w * 0.75, h);
+        ctx.moveTo(0, h * 0.33); ctx.lineTo(w, h * 0.33);
+        ctx.moveTo(0, h * 0.66); ctx.lineTo(w, h * 0.66);
+        ctx.stroke();
+
+        // HUD overlay markers
+        ctx.font = 'bold 7.5px monospace';
+        ctx.fillStyle = 'rgba(6, 182, 212, 0.45)';
+        ctx.fillText('HUD MATRIX // MIL-STD-810H', 10, h - 8);
+        ctx.fillText('GIS LAT-LNG SYNC', w - 110, h - 8);
+        ctx.restore();
+      }
+
       // 4. Tactical Scanline
       s.scanline = (s.scanline + 1.2) % h;
       ctx.strokeStyle = 'rgba(56, 189, 248, 0.10)';
@@ -997,7 +1087,7 @@ export const CameraFeedCanvas: React.FC<CameraFeedCanvasProps> = ({
 
     animId = requestAnimationFrame(render);
     return () => cancelAnimationFrame(animId);
-  }, [camera.id, showAiBoxes, showZones, showMotionTrails, isNightVision, camera.dangerZones]);
+  }, [camera.id, showAiBoxes, showZones, showMotionTrails, isNightVision, camera.dangerZones, classFilter, showOpticalGrid]);
 
   return (
     <div

@@ -33,6 +33,17 @@ import {
   Play,
   Pause,
   Disc,
+  Crosshair,
+  Activity,
+  Cpu,
+  Lock,
+  Unlock,
+  Zap,
+  CheckCircle2,
+  Info,
+  Wifi,
+  Compass,
+  Check,
 } from 'lucide-react';
 import { recordingEngine, ActiveRecording } from '../utils/recordingManager';
 import { fetchEnvironmentStates } from '../services/api';
@@ -46,6 +57,8 @@ interface QuadLiveStreamViewProps {
   onOpenStitchingView?: () => void;
 }
 
+export type ClassificationFilter = 'ALL' | 'CIVILIAN' | 'PATROL' | 'LOITER' | 'UNAUTHORIZED';
+
 export const QuadLiveStreamView: React.FC<QuadLiveStreamViewProps> = ({
   cameras,
   selectedCameraId,
@@ -57,6 +70,10 @@ export const QuadLiveStreamView: React.FC<QuadLiveStreamViewProps> = ({
   const [focusedCamId, setFocusedCamId] = useState<string>(selectedCameraId || 'cam-1');
   const [globalAiBoxes, setGlobalAiBoxes] = useState(true);
   const [globalZones, setGlobalZones] = useState(true);
+  const [showOpticalGrid, setShowOpticalGrid] = useState(false);
+  const [activeClassFilter, setActiveClassFilter] = useState<ClassificationFilter>('ALL');
+  const [showModelTelemetryModal, setShowModelTelemetryModal] = useState(false);
+
   const [nightVisionMap, setNightVisionMap] = useState<Record<string, boolean>>({
     'cam-1': false,
     'cam-2': false,
@@ -66,6 +83,9 @@ export const QuadLiveStreamView: React.FC<QuadLiveStreamViewProps> = ({
   const [activeAudioCam, setActiveAudioCam] = useState<string | null>(null);
   const [isPatrolActive, setIsPatrolActive] = useState(false);
   const [snapshotFlash, setSnapshotFlash] = useState<string | null>(null);
+  const [snapshotToast, setSnapshotToast] = useState<string | null>(null);
+  const [rapidResponseToast, setRapidResponseToast] = useState<string | null>(null);
+  const [isSectorLocked, setIsSectorLocked] = useState(false);
   const [liveTimestamp, setLiveTimestamp] = useState('10:45:22 AM');
   const [activeRecordings, setActiveRecordings] = useState<Map<string, ActiveRecording>>(new Map());
   const [freshnessMap, setFreshnessMap] = useState<Record<string, { status: string; measuredFps: number }>>({});
@@ -76,6 +96,46 @@ export const QuadLiveStreamView: React.FC<QuadLiveStreamViewProps> = ({
   const [recentTacticalAlert, setRecentTacticalAlert] = useState<AlertItem | null>(null);
   const [isVoiceMuted, setIsVoiceMuted] = useState(() => audioAlertEngine.getIsMuted());
   const [isVideoMuted, setIsVideoMuted] = useState(() => audioAlertEngine.getIsMuted());
+
+  // PTZ Azimuth & Elevation degrees
+  const [ptzAngles, setPtzAngles] = useState<Record<string, { azimuth: number; elevation: number }>>({
+    'cam-1': { azimuth: 142.4, elevation: 12.0 },
+    'cam-2': { azimuth: 178.6, elevation: 14.5 },
+    'cam-3': { azimuth: 215.1, elevation: 9.8 },
+    'cam-4': { azimuth: 88.3, elevation: 16.2 },
+    'cam-5': { azimuth: 112.7, elevation: 11.0 },
+    'cam-6': { azimuth: 195.4, elevation: 13.5 },
+    'cam-7': { azimuth: 230.8, elevation: 8.5 },
+    'cam-8': { azimuth: 275.2, elevation: 15.0 },
+    'cam-9': { azimuth: 310.5, elevation: 10.2 },
+  });
+
+  const [zoomLevels, setZoomLevels] = useState<Record<string, number>>({
+    'cam-1': 1,
+    'cam-2': 1,
+    'cam-3': 1,
+    'cam-4': 1,
+    'cam-5': 1,
+    'cam-6': 1,
+    'cam-7': 1,
+    'cam-8': 1,
+    'cam-9': 1,
+  });
+
+  const [panOffsets, setPanOffsets] = useState<Record<string, { x: number; y: number }>>({
+    'cam-1': { x: 0, y: 0 },
+    'cam-2': { x: 0, y: 0 },
+    'cam-3': { x: 0, y: 0 },
+    'cam-4': { x: 0, y: 0 },
+    'cam-5': { x: 0, y: 0 },
+    'cam-6': { x: 0, y: 0 },
+    'cam-7': { x: 0, y: 0 },
+    'cam-8': { x: 0, y: 0 },
+    'cam-9': { x: 0, y: 0 },
+  });
+
+  const rootRef = useRef<HTMLDivElement | null>(null);
+  const [isFullscreen, setIsFullscreen] = useState(false);
 
   // Quad Sections Pagination (4 cameras per Quad page)
   const quadSections = useMemo(() => {
@@ -101,6 +161,7 @@ export const QuadLiveStreamView: React.FC<QuadLiveStreamViewProps> = ({
       }
       return nextIdx;
     });
+    audioAlertEngine.playSonarPing();
   }, [quadSections, onSelectCamera]);
 
   const handlePrevSection = useCallback(() => {
@@ -113,6 +174,7 @@ export const QuadLiveStreamView: React.FC<QuadLiveStreamViewProps> = ({
       }
       return prevIdx;
     });
+    audioAlertEngine.playSonarPing();
   }, [quadSections, onSelectCamera]);
 
   const handleSelectSection = useCallback((sIdx: number) => {
@@ -123,6 +185,7 @@ export const QuadLiveStreamView: React.FC<QuadLiveStreamViewProps> = ({
       setFocusedCamId(targetCam.id);
       onSelectCamera(targetCam.id);
     }
+    audioAlertEngine.playSonarPing();
   }, [quadSections, onSelectCamera]);
 
   // Synchronize focused camera and section index when selectedCameraId prop changes
@@ -160,7 +223,7 @@ export const QuadLiveStreamView: React.FC<QuadLiveStreamViewProps> = ({
     }
   }, [activeAudioCam, isVideoMuted]);
 
-  // Keyboard shortcuts for Section navigation: [ or Left Arrow, ] or Right Arrow, M for Mute
+  // Keyboard shortcuts for navigation
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       const target = e.target as HTMLElement;
@@ -182,7 +245,7 @@ export const QuadLiveStreamView: React.FC<QuadLiveStreamViewProps> = ({
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [handleNextSection, handlePrevSection, handleToggleGlobalAudio]);
 
-  // Live real-time discovery of unique target tracks across the 9-camera perimeter fleet
+  // Live real-time discovery of unique target tracks across perimeter fleet
   useEffect(() => {
     const liveTargetTimer = setInterval(() => {
       setCumulativeUniqueTargets((prev) => {
@@ -205,7 +268,7 @@ export const QuadLiveStreamView: React.FC<QuadLiveStreamViewProps> = ({
       setTimeout(() => setCountPulseActive(false), 900);
       const timer = setTimeout(() => {
         setRecentTacticalAlert((prev) => (prev?.id === alert.id ? null : prev));
-      }, 7000);
+      }, 9000);
       return () => clearTimeout(timer);
     });
     return unsubAlert;
@@ -252,7 +315,6 @@ export const QuadLiveStreamView: React.FC<QuadLiveStreamViewProps> = ({
       }
     });
 
-    // Dynamic background fleet nodes (cameras 5 through 9) with subtle natural fluctuations
     const backgroundPersons = 23 + (targetIncrementTick % 3 === 0 ? 1 : 0);
     const backgroundVehicles = (targetIncrementTick % 5 === 0 ? 1 : 0);
 
@@ -311,9 +373,7 @@ export const QuadLiveStreamView: React.FC<QuadLiveStreamViewProps> = ({
       }));
     });
 
-    return () => {
-      unsubEnv();
-    };
+    return () => unsubEnv();
   }, []);
 
   // Subscribe to recording engine
@@ -323,21 +383,6 @@ export const QuadLiveStreamView: React.FC<QuadLiveStreamViewProps> = ({
     });
     return unsub;
   }, []);
-  const [zoomLevels, setZoomLevels] = useState<Record<string, number>>({
-    'cam-1': 1,
-    'cam-2': 1,
-    'cam-3': 1,
-    'cam-4': 1,
-  });
-  const [panOffsets, setPanOffsets] = useState<Record<string, { x: number; y: number }>>({
-    'cam-1': { x: 0, y: 0 },
-    'cam-2': { x: 0, y: 0 },
-    'cam-3': { x: 0, y: 0 },
-    'cam-4': { x: 0, y: 0 },
-  });
-
-  const rootRef = useRef<HTMLDivElement | null>(null);
-  const [isFullscreen, setIsFullscreen] = useState(false);
 
   // Time update
   useEffect(() => {
@@ -352,7 +397,7 @@ export const QuadLiveStreamView: React.FC<QuadLiveStreamViewProps> = ({
     return () => clearInterval(timer);
   }, []);
 
-  // Patrol mode auto-cycling
+  // Patrol mode auto-cycling with audio cues
   useEffect(() => {
     if (!isPatrolActive) return;
     const patrolTimer = setInterval(() => {
@@ -361,6 +406,7 @@ export const QuadLiveStreamView: React.FC<QuadLiveStreamViewProps> = ({
         const idx = ids.indexOf(prev);
         const nextId = ids[(idx + 1) % ids.length];
         onSelectCamera(nextId);
+        audioAlertEngine.playSonarPing();
         return nextId;
       });
     }, 5000);
@@ -370,13 +416,19 @@ export const QuadLiveStreamView: React.FC<QuadLiveStreamViewProps> = ({
   // Capture Snapshot for specific camera
   const handleCaptureCameraSnapshot = (cam: CameraFeed) => {
     setSnapshotFlash(cam.id);
+    audioAlertEngine.playSonarPing();
+    setSnapshotToast(`Snapshot saved: ${cam.code}_${Date.now()}.png (4K UHD)`);
     setTimeout(() => setSnapshotFlash(null), 250);
+    setTimeout(() => setSnapshotToast(null), 4000);
   };
 
   // Capture all 4 camera feeds snapshot
   const handleCaptureAllSnapshots = () => {
     setSnapshotFlash('all');
+    audioAlertEngine.playSonarPing();
+    setSnapshotToast(`Multi-Stream Synchronized 4K Snapshot Matrix Captured (${currentQuadCameras.length} Feeds)`);
     setTimeout(() => setSnapshotFlash(null), 300);
+    setTimeout(() => setSnapshotToast(null), 4000);
   };
 
   const toggleNightVision = (camId: string) => {
@@ -384,12 +436,13 @@ export const QuadLiveStreamView: React.FC<QuadLiveStreamViewProps> = ({
       ...prev,
       [camId]: !prev[camId],
     }));
+    audioAlertEngine.playSonarPing();
   };
 
   const handleZoom = (camId: string, delta: number) => {
     setZoomLevels((prev) => ({
       ...prev,
-      [camId]: Math.max(1, Math.min(3, (prev[camId] || 1) + delta)),
+      [camId]: Math.max(1, Math.min(4, (prev[camId] || 1) + delta)),
     }));
   };
 
@@ -397,15 +450,48 @@ export const QuadLiveStreamView: React.FC<QuadLiveStreamViewProps> = ({
     setPanOffsets((prev) => ({
       ...prev,
       [camId]: {
-        x: Math.max(-50, Math.min(50, (prev[camId]?.x || 0) + dx)),
-        y: Math.max(-50, Math.min(50, (prev[camId]?.y || 0) + dy)),
+        x: Math.max(-60, Math.min(60, (prev[camId]?.x || 0) + dx)),
+        y: Math.max(-60, Math.min(60, (prev[camId]?.y || 0) + dy)),
       },
     }));
+    setPtzAngles((prev) => {
+      const cur = prev[camId] || { azimuth: 180.0, elevation: 10.0 };
+      return {
+        ...prev,
+        [camId]: {
+          azimuth: Math.round(((cur.azimuth + dx * 0.4 + 360) % 360) * 10) / 10,
+          elevation: Math.round(Math.max(-20, Math.min(60, cur.elevation + dy * 0.3)) * 10) / 10,
+        },
+      };
+    });
   };
 
   const resetPanZoom = (camId: string) => {
     setZoomLevels((prev) => ({ ...prev, [camId]: 1 }));
     setPanOffsets((prev) => ({ ...prev, [camId]: { x: 0, y: 0 } }));
+    audioAlertEngine.playSonarPing();
+  };
+
+  const handlePresetTour = (camId: string, presetName: string, az: number, el: number, zoom: number) => {
+    setPtzAngles((prev) => ({ ...prev, [camId]: { azimuth: az, elevation: el } }));
+    setZoomLevels((prev) => ({ ...prev, [camId]: zoom }));
+    audioAlertEngine.playSonarPing();
+    setRapidResponseToast(`PTZ Tour Preset Loaded: [${presetName}] -> AZ: ${az}°, EL: ${el}°, ZOOM: ${zoom}x`);
+    setTimeout(() => setRapidResponseToast(null), 3500);
+  };
+
+  const handleDispatchRapidResponse = () => {
+    audioAlertEngine.playSonarPing();
+    setRapidResponseToast(`⚡ RAPID SWARM DISPATCHED: Quick reaction team en route to ${recentTacticalAlert?.cameraName || 'Sector Alpha'}`);
+    setTimeout(() => setRapidResponseToast(null), 5000);
+  };
+
+  const handleToggleLockdown = () => {
+    const next = !isSectorLocked;
+    setIsSectorLocked(next);
+    audioAlertEngine.playSonarPing();
+    setRapidResponseToast(next ? '🔒 SECTOR PERIMETER HARD LOCKDOWN ACTIVATED' : '🔓 SECTOR PERIMETER LOCKDOWN CLEARED');
+    setTimeout(() => setRapidResponseToast(null), 4000);
   };
 
   const toggleFullscreen = () => {
@@ -432,6 +518,13 @@ export const QuadLiveStreamView: React.FC<QuadLiveStreamViewProps> = ({
     return [...inSection, ...others].slice(0, 3);
   }, [currentQuadCameras, activeFocusCam?.id, cameras]);
 
+  // Check which sections have active threats
+  const sectionHasThreat = useCallback((sIdx: number) => {
+    if (!recentTacticalAlert) return false;
+    const secCams = quadSections[sIdx] || [];
+    return secCams.some((c) => c.id === recentTacticalAlert.cameraId || c.name === recentTacticalAlert.cameraName);
+  }, [recentTacticalAlert, quadSections]);
+
   return (
     <div
       ref={rootRef}
@@ -439,31 +532,48 @@ export const QuadLiveStreamView: React.FC<QuadLiveStreamViewProps> = ({
       className="space-y-4 max-w-7xl mx-auto"
     >
       {/* 1. Matrix Header & Global Viewport Controls */}
-      <div className="p-4 bg-[#0a0f1d] border border-white/[0.08] rounded-2xl flex flex-col md:flex-row md:items-center justify-between gap-4 shadow-[0_4px_30px_rgba(0,0,0,0.8)]">
-        <div>
+      <div className="p-4 bg-[#0a0f1d]/95 backdrop-blur-md border border-cyan-500/20 rounded-2xl flex flex-col md:flex-row md:items-center justify-between gap-4 shadow-[0_4px_35px_rgba(0,0,0,0.85)] relative overflow-hidden">
+        {/* Subtle background cyber grid accent */}
+        <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top,_var(--tw-gradient-stops))] from-cyan-900/10 via-transparent to-transparent pointer-events-none" />
+
+        <div className="relative z-10">
           <div className="flex items-center gap-2.5">
-            <span className="p-1.5 rounded-xl bg-blue-500/20 text-blue-400 border border-blue-500/30 shadow-[0_0_12px_rgba(59,130,246,0.3)]">
+            <span className="p-2 rounded-xl bg-cyan-500/15 text-cyan-400 border border-cyan-500/30 shadow-[0_0_15px_rgba(6,182,212,0.3)]">
               <Grid2X2 size={18} />
             </span>
-            <h2 className="text-sm sm:text-base font-black text-white uppercase tracking-[0.2em] font-mono">
-              TACTICAL MULTI-CHANNEL RTSP MATRIX
-            </h2>
+            <div>
+              <div className="flex items-center gap-2">
+                <h2 className="text-sm sm:text-base font-black text-white uppercase tracking-[0.2em] font-mono">
+                  TACTICAL MULTI-CHANNEL RTSP MATRIX
+                </h2>
+                <span className="hidden sm:inline-block px-2 py-0.5 rounded text-[10px] font-mono font-bold bg-cyan-950/80 border border-cyan-500/40 text-cyan-300">
+                  H.265 LOW-LATENCY
+                </span>
+              </div>
+              <p className="text-xs text-slate-400 mt-0.5 font-mono flex items-center gap-2">
+                <span>4-channel edge neural surveillance matrix</span>
+                <span className="text-slate-600">•</span>
+                <span className="text-emerald-400 font-bold">30 FPS Synchronous Inference</span>
+                <span className="text-slate-600">•</span>
+                <span className="text-cyan-400">ByteTrack v2 Enabled</span>
+              </p>
+            </div>
           </div>
-          <p className="text-xs text-slate-400 mt-1 font-mono">
-            4-channel edge neural surveillance matrix • 30 FPS synchronous inference
-          </p>
         </div>
 
         {/* Global Toolbar */}
-        <div className="flex flex-wrap items-center gap-2">
+        <div className="relative z-10 flex flex-wrap items-center gap-2">
           {/* Layout Mode Switcher */}
-          <div className="flex items-center bg-[#060911] border border-white/[0.08] rounded-xl p-0.5">
+          <div className="flex items-center bg-[#060911] border border-cyan-500/30 rounded-xl p-0.5 shadow-inner">
             <button
-              onClick={() => setLayoutMode('2x2')}
-              title="2x2 Quad Grid"
+              onClick={() => {
+                setLayoutMode('2x2');
+                audioAlertEngine.playSonarPing();
+              }}
+              title="2x2 Quad Grid (4 Cameras)"
               className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-mono font-bold uppercase tracking-wider transition-all cursor-pointer ${
                 layoutMode === '2x2'
-                  ? 'bg-blue-600 text-white shadow-[0_0_10px_rgba(59,130,246,0.5)]'
+                  ? 'bg-cyan-500 text-slate-950 font-black shadow-[0_0_15px_rgba(6,182,212,0.6)]'
                   : 'text-slate-400 hover:text-white hover:bg-white/[0.04]'
               }`}
             >
@@ -472,11 +582,14 @@ export const QuadLiveStreamView: React.FC<QuadLiveStreamViewProps> = ({
             </button>
 
             <button
-              onClick={() => setLayoutMode('1+3')}
+              onClick={() => {
+                setLayoutMode('1+3');
+                audioAlertEngine.playSonarPing();
+              }}
               title="1+3 Master Focus Split"
               className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-mono font-bold uppercase tracking-wider transition-all cursor-pointer ${
                 layoutMode === '1+3'
-                  ? 'bg-blue-600 text-white shadow-[0_0_10px_rgba(59,130,246,0.5)]'
+                  ? 'bg-cyan-500 text-slate-950 font-black shadow-[0_0_15px_rgba(6,182,212,0.6)]'
                   : 'text-slate-400 hover:text-white hover:bg-white/[0.04]'
               }`}
             >
@@ -485,11 +598,14 @@ export const QuadLiveStreamView: React.FC<QuadLiveStreamViewProps> = ({
             </button>
 
             <button
-              onClick={() => setLayoutMode('single')}
-              title="1x1 Solo Focus"
+              onClick={() => {
+                setLayoutMode('single');
+                audioAlertEngine.playSonarPing();
+              }}
+              title="1x1 Solo Focus Spotlight"
               className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-mono font-bold uppercase tracking-wider transition-all cursor-pointer ${
                 layoutMode === 'single'
-                  ? 'bg-blue-600 text-white shadow-[0_0_10px_rgba(59,130,246,0.5)]'
+                  ? 'bg-cyan-500 text-slate-950 font-black shadow-[0_0_15px_rgba(6,182,212,0.6)]'
                   : 'text-slate-400 hover:text-white hover:bg-white/[0.04]'
               }`}
             >
@@ -500,45 +616,31 @@ export const QuadLiveStreamView: React.FC<QuadLiveStreamViewProps> = ({
 
           {/* AI Overlays Toggle */}
           <button
-            onClick={() => setGlobalAiBoxes(!globalAiBoxes)}
+            onClick={() => {
+              setGlobalAiBoxes(!globalAiBoxes);
+              audioAlertEngine.playSonarPing();
+            }}
             title="Toggle All AI Bounding Boxes"
             className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-mono font-bold tracking-wide border transition-all cursor-pointer ${
               globalAiBoxes
-                ? 'bg-emerald-500/20 text-emerald-300 border-emerald-500/40 shadow-[0_0_10px_rgba(16,185,129,0.2)]'
+                ? 'bg-emerald-500/20 text-emerald-300 border-emerald-500/40 shadow-[0_0_12px_rgba(16,185,129,0.3)]'
                 : 'bg-white/[0.04] text-slate-400 border-white/[0.08]'
             }`}
           >
-            <Scan size={14} />
+            <Scan size={14} className={globalAiBoxes ? 'animate-pulse text-emerald-400' : ''} />
             <span className="hidden sm:inline">AI BOXES</span>
           </button>
 
-          {/* Dynamic Class Color Classification Legend */}
-          <div className="hidden xl:flex items-center gap-2 px-2.5 py-1 bg-[#060911] border border-white/[0.08] rounded-xl text-[10px] font-mono">
-            <span className="text-slate-400 font-bold uppercase mr-1">CLASSES:</span>
-            <div className="flex items-center gap-1.5" title="Civilian / Authorized Vehicle (Green)">
-              <span className="w-2 h-2 rounded-full bg-emerald-500 shadow-[0_0_6px_#10b981]"></span>
-              <span className="text-emerald-400">CIVILIAN</span>
-            </div>
-            <div className="flex items-center gap-1.5" title="Security Patrol (Cyan / Blue)">
-              <span className="w-2 h-2 rounded-full bg-sky-400 shadow-[0_0_6px_#38bdf8]"></span>
-              <span className="text-sky-300">PATROL</span>
-            </div>
-            <div className="flex items-center gap-1.5" title="Suspicious / Loitering (Amber)">
-              <span className="w-2 h-2 rounded-full bg-amber-400 shadow-[0_0_6px_#f59e0b]"></span>
-              <span className="text-amber-300">LOITER</span>
-            </div>
-            <div className="flex items-center gap-1.5" title="Unauthorized Vehicle / Intruder / Breach (Red)">
-              <span className="w-2 h-2 rounded-full bg-rose-500 shadow-[0_0_6px_#ef4444] animate-pulse"></span>
-              <span className="text-rose-400 font-bold">UNAUTHORIZED</span>
-            </div>
-          </div>
-
+          {/* Security Danger Zones Toggle */}
           <button
-            onClick={() => setGlobalZones(!globalZones)}
-            title="Toggle Security Danger Zones"
+            onClick={() => {
+              setGlobalZones(!globalZones);
+              audioAlertEngine.playSonarPing();
+            }}
+            title="Toggle Security Danger Zones & Tripwires"
             className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-mono font-bold tracking-wide border transition-all cursor-pointer ${
               globalZones
-                ? 'bg-rose-500/20 text-rose-300 border-rose-500/40 shadow-[0_0_10px_rgba(244,63,94,0.2)]'
+                ? 'bg-rose-500/20 text-rose-300 border-rose-500/40 shadow-[0_0_12px_rgba(244,63,94,0.3)]'
                 : 'bg-white/[0.04] text-slate-400 border-white/[0.08]'
             }`}
           >
@@ -546,25 +648,45 @@ export const QuadLiveStreamView: React.FC<QuadLiveStreamViewProps> = ({
             <span className="hidden sm:inline">ZONES</span>
           </button>
 
+          {/* Optical Tactical HUD Grid Toggle */}
+          <button
+            onClick={() => {
+              setShowOpticalGrid(!showOpticalGrid);
+              audioAlertEngine.playSonarPing();
+            }}
+            title="Toggle Military Optical Reticle & Coordinate Grid"
+            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-mono font-bold tracking-wide border transition-all cursor-pointer ${
+              showOpticalGrid
+                ? 'bg-cyan-500/20 text-cyan-300 border-cyan-400/50 shadow-[0_0_12px_rgba(6,182,212,0.4)]'
+                : 'bg-white/[0.04] text-slate-400 border-white/[0.08]'
+            }`}
+          >
+            <Crosshair size={14} />
+            <span className="hidden md:inline">OPTICAL HUD</span>
+          </button>
+
           {/* Patrol Mode Toggle */}
           <button
-            onClick={() => setIsPatrolActive(!isPatrolActive)}
-            title="Auto-cycle camera focus (5s patrol)"
+            onClick={() => {
+              setIsPatrolActive(!isPatrolActive);
+              audioAlertEngine.playSonarPing();
+            }}
+            title="Auto-cycle camera focus every 5 seconds"
             className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-mono font-bold tracking-wide border transition-all cursor-pointer ${
               isPatrolActive
-                ? 'bg-amber-500/20 text-amber-300 border-amber-500/40 animate-pulse shadow-[0_0_10px_rgba(245,158,11,0.2)]'
+                ? 'bg-amber-500/20 text-amber-300 border-amber-500/40 animate-pulse shadow-[0_0_12px_rgba(245,158,11,0.3)]'
                 : 'bg-white/[0.04] text-slate-400 border-white/[0.08]'
             }`}
           >
             {isPatrolActive ? <Pause size={14} /> : <Play size={14} />}
-            <span className="hidden sm:inline">PATROL</span>
+            <span className="hidden sm:inline">{isPatrolActive ? 'PATROLLING' : 'PATROL'}</span>
           </button>
 
           {/* Capture All */}
           <button
             onClick={handleCaptureAllSnapshots}
-            title="Take 4-Camera Synchronous Snapshot"
-            className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-white/[0.04] hover:bg-white/[0.08] text-slate-200 border border-white/[0.08] text-xs font-mono font-bold transition-all cursor-pointer"
+            title="Take 4-Camera Synchronous 4K Snapshot"
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-white/[0.04] hover:bg-white/[0.08] text-slate-200 border border-white/[0.08] text-xs font-mono font-bold transition-all cursor-pointer active:scale-95"
           >
             <Camera size={14} />
             <span className="hidden md:inline">SNAPSHOT ALL</span>
@@ -583,18 +705,12 @@ export const QuadLiveStreamView: React.FC<QuadLiveStreamViewProps> = ({
 
           {/* Global Video Audio Mute/Unmute */}
           <button
-            onClick={() => {
-              const next = !isVideoMuted;
-              setIsVideoMuted(next);
-              setIsVoiceMuted(next);
-              tacticalAlertDispatcher.setVoiceMuted(next);
-              audioAlertEngine.setMuted(next);
-            }}
+            onClick={() => handleToggleGlobalAudio()}
             title={isVideoMuted ? 'Unmute all audio (Video + Voice + Alerts)' : 'Mute all audio'}
             className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-mono font-bold tracking-wide border transition-all cursor-pointer ${
               isVideoMuted
                 ? 'bg-white/[0.04] text-slate-400 border-white/[0.08] hover:bg-white/[0.08]'
-                : 'bg-blue-500/20 text-blue-300 border-blue-500/40 shadow-[0_0_10px_rgba(59,130,246,0.2)]'
+                : 'bg-cyan-500/20 text-cyan-300 border-cyan-500/40 shadow-[0_0_12px_rgba(6,182,212,0.3)]'
             }`}
           >
             {isVideoMuted ? <VolumeX size={14} /> : <Volume2 size={14} />}
@@ -612,26 +728,125 @@ export const QuadLiveStreamView: React.FC<QuadLiveStreamViewProps> = ({
         </div>
       </div>
 
-      {/* Phase 17: Real-Time Fleet Object & Target Count Strip */}
-      <div className="p-3 bg-[#060913] border border-cyan-500/20 rounded-xl flex flex-wrap items-center justify-between gap-3 shadow-[0_2px_15px_rgba(0,0,0,0.6)] font-mono text-xs select-none">
+      {/* 2. Interactive Target Classification Filter Strip & Legend */}
+      <div className="p-2.5 bg-[#070b16] border border-white/[0.08] rounded-xl flex flex-wrap items-center justify-between gap-2.5 font-mono text-xs shadow-md">
+        <div className="flex items-center gap-2">
+          <span className="text-slate-400 font-bold uppercase text-[11px] flex items-center gap-1.5">
+            <Scan size={13} className="text-cyan-400" />
+            <span>ISOLATE TARGET CLASS:</span>
+          </span>
+          <div className="flex flex-wrap items-center gap-1.5">
+            <button
+              onClick={() => {
+                setActiveClassFilter('ALL');
+                audioAlertEngine.playSonarPing();
+              }}
+              className={`px-2.5 py-1 rounded-lg text-[10px] font-bold border transition-all cursor-pointer ${
+                activeClassFilter === 'ALL'
+                  ? 'bg-cyan-500 text-slate-950 border-cyan-400 shadow-[0_0_10px_rgba(6,182,212,0.5)] font-black'
+                  : 'bg-white/[0.03] text-slate-400 border-white/[0.06] hover:text-white'
+              }`}
+            >
+              ALL TARGETS
+            </button>
+
+            <button
+              onClick={() => {
+                setActiveClassFilter(activeClassFilter === 'CIVILIAN' ? 'ALL' : 'CIVILIAN');
+                audioAlertEngine.playSonarPing();
+              }}
+              className={`flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-[10px] font-bold border transition-all cursor-pointer ${
+                activeClassFilter === 'CIVILIAN'
+                  ? 'bg-emerald-500 text-slate-950 border-emerald-400 shadow-[0_0_10px_rgba(16,185,129,0.6)] font-black'
+                  : 'bg-emerald-950/40 text-emerald-300 border-emerald-500/30 hover:bg-emerald-900/40'
+              }`}
+              title="Filter Authorized Civilian Pedestrians"
+            >
+              <span className="w-2 h-2 rounded-full bg-emerald-400 shadow-[0_0_6px_#10b981]"></span>
+              <span>CIVILIAN</span>
+            </button>
+
+            <button
+              onClick={() => {
+                setActiveClassFilter(activeClassFilter === 'PATROL' ? 'ALL' : 'PATROL');
+                audioAlertEngine.playSonarPing();
+              }}
+              className={`flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-[10px] font-bold border transition-all cursor-pointer ${
+                activeClassFilter === 'PATROL'
+                  ? 'bg-sky-400 text-slate-950 border-sky-300 shadow-[0_0_10px_rgba(56,189,248,0.6)] font-black'
+                  : 'bg-sky-950/40 text-sky-300 border-sky-500/30 hover:bg-sky-900/40'
+              }`}
+              title="Filter Security Guard Patrols"
+            >
+              <span className="w-2 h-2 rounded-full bg-sky-400 shadow-[0_0_6px_#38bdf8]"></span>
+              <span>PATROL</span>
+            </button>
+
+            <button
+              onClick={() => {
+                setActiveClassFilter(activeClassFilter === 'LOITER' ? 'ALL' : 'LOITER');
+                audioAlertEngine.playSonarPing();
+              }}
+              className={`flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-[10px] font-bold border transition-all cursor-pointer ${
+                activeClassFilter === 'LOITER'
+                  ? 'bg-amber-400 text-slate-950 border-amber-300 shadow-[0_0_10px_rgba(245,158,11,0.6)] font-black'
+                  : 'bg-amber-950/40 text-amber-300 border-amber-500/30 hover:bg-amber-900/40'
+              }`}
+              title="Filter Suspicious / Loitering Targets"
+            >
+              <span className="w-2 h-2 rounded-full bg-amber-400 shadow-[0_0_6px_#f59e0b]"></span>
+              <span>LOITER</span>
+            </button>
+
+            <button
+              onClick={() => {
+                setActiveClassFilter(activeClassFilter === 'UNAUTHORIZED' ? 'ALL' : 'UNAUTHORIZED');
+                audioAlertEngine.playSonarPing();
+              }}
+              className={`flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-[10px] font-bold border transition-all cursor-pointer ${
+                activeClassFilter === 'UNAUTHORIZED'
+                  ? 'bg-rose-600 text-white border-rose-400 shadow-[0_0_12px_rgba(244,63,94,0.8)] font-black animate-pulse'
+                  : 'bg-rose-950/50 text-rose-300 border-rose-500/40 hover:bg-rose-900/50'
+              }`}
+              title="Filter Unauthorized Breaches, Intruders & Line Crossings"
+            >
+              <span className="w-2 h-2 rounded-full bg-rose-500 shadow-[0_0_6px_#ef4444] animate-ping"></span>
+              <span>UNAUTHORIZED</span>
+            </button>
+          </div>
+        </div>
+
+        {/* Quick Help Legend Hint */}
+        <div className="hidden lg:flex items-center gap-2 text-[10px] text-slate-400">
+          <span className="px-1.5 py-0.5 rounded bg-cyan-950/80 border border-cyan-500/30 text-cyan-300 font-bold">TIP</span>
+          <span>Click any classification chip to isolate & highlight threat targets in all feeds</span>
+        </div>
+      </div>
+
+      {/* 3. Real-Time Fleet Object & Target Count Strip */}
+      <div className="p-3 bg-[#060913] border border-cyan-500/20 rounded-2xl flex flex-wrap items-center justify-between gap-3 shadow-[0_2px_18px_rgba(0,0,0,0.6)] font-mono text-xs select-none">
         <div className="flex flex-wrap items-center gap-3">
           <div className="flex items-center gap-2">
-            <span className="w-2 h-2 rounded-full bg-cyan-400 animate-ping"></span>
+            <span className="w-2.5 h-2.5 rounded-full bg-cyan-400 animate-ping shadow-[0_0_8px_#06b6d4]"></span>
             <span className="text-cyan-300 font-black tracking-widest uppercase">FLEET INTELLIGENCE</span>
           </div>
-          <div className="flex items-center gap-1.5 px-2.5 py-1 rounded bg-slate-900/80 border border-slate-800">
+
+          <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-xl bg-slate-900/80 border border-slate-800 shadow-sm">
             <span className="text-slate-400 text-[11px]">ACTIVE PERSONS:</span>
             <span className="text-emerald-400 font-bold text-sm">{dynamicFleetCounts.personTotal}</span>
           </div>
-          <div className="flex items-center gap-1.5 px-2.5 py-1 rounded bg-slate-900/80 border border-slate-800">
+
+          <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-xl bg-slate-900/80 border border-slate-800 shadow-sm">
             <span className="text-slate-400 text-[11px]">ACTIVE VEHICLES:</span>
             <span className="text-sky-400 font-bold text-sm">{dynamicFleetCounts.vehicleTotal}</span>
           </div>
-          <div className="flex items-center gap-1.5 px-2.5 py-1 rounded bg-slate-900/80 border border-slate-800">
+
+          <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-xl bg-slate-900/80 border border-slate-800 shadow-sm">
             <span className="text-slate-400 text-[11px]">ACTIVE ANIMALS:</span>
             <span className="text-purple-400 font-bold text-sm">{dynamicFleetCounts.animalTotal}</span>
           </div>
-          <div className="flex items-center gap-1.5 px-2.5 py-1 rounded bg-slate-900/80 border border-slate-800">
+
+          <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-xl bg-slate-900/80 border border-slate-800 shadow-sm">
             <span className="text-slate-400 text-[11px]">VISIBLE TRACKS:</span>
             <span className="text-cyan-400 font-bold text-sm">{dynamicFleetCounts.visibleTotal}</span>
           </div>
@@ -641,7 +856,7 @@ export const QuadLiveStreamView: React.FC<QuadLiveStreamViewProps> = ({
           <span className="text-slate-400 flex items-center">
             CUMULATIVE UNIQUE TARGETS:
             <strong className={`font-mono font-black text-sm ml-1.5 transition-all duration-300 ${
-              countPulseActive ? 'text-purple-200 scale-110 drop-shadow-[0_0_8px_rgba(192,132,252,0.8)]' : 'text-purple-300'
+              countPulseActive ? 'text-purple-200 scale-110 drop-shadow-[0_0_10px_rgba(192,132,252,0.9)]' : 'text-purple-300'
             }`}>
               {dynamicFleetCounts.uniqueSessionTotal}
             </strong>
@@ -649,6 +864,8 @@ export const QuadLiveStreamView: React.FC<QuadLiveStreamViewProps> = ({
               +LIVE
             </span>
           </span>
+
+          {/* Voice Alert Toggle */}
           <button
             onClick={() => {
               const next = !isVoiceMuted;
@@ -656,8 +873,9 @@ export const QuadLiveStreamView: React.FC<QuadLiveStreamViewProps> = ({
               setIsVideoMuted(next);
               tacticalAlertDispatcher.setVoiceMuted(next);
               audioAlertEngine.setMuted(next);
+              audioAlertEngine.playSonarPing();
             }}
-            className={`px-2.5 py-1 rounded border text-[10px] font-bold flex items-center gap-1.5 cursor-pointer transition-colors ${
+            className={`px-2.5 py-1 rounded-xl border text-[10px] font-bold flex items-center gap-1.5 cursor-pointer transition-colors ${
               isVoiceMuted
                 ? 'bg-slate-800 text-slate-400 border-slate-700'
                 : 'bg-emerald-500/20 text-emerald-300 border-emerald-500/40 shadow-sm'
@@ -667,44 +885,105 @@ export const QuadLiveStreamView: React.FC<QuadLiveStreamViewProps> = ({
             {isVoiceMuted ? <VolumeX size={11} /> : <Volume2 size={11} />}
             <span>VOICE: {isVoiceMuted ? 'MUTED' : 'ACTIVE'}</span>
           </button>
-          <span className="px-2 py-0.5 rounded bg-blue-500/10 text-blue-400 border border-blue-500/20 text-[10px] uppercase font-bold tracking-wider">
-            YOLOv8 + BYTETRACK
-          </span>
+
+          {/* Model Telemetry Modal Trigger */}
+          <button
+            onClick={() => setShowModelTelemetryModal(true)}
+            className="px-2.5 py-1 rounded-xl bg-blue-500/10 hover:bg-blue-500/20 text-blue-400 border border-blue-500/30 text-[10px] uppercase font-bold tracking-wider flex items-center gap-1 cursor-pointer transition-colors"
+            title="View YOLOv8x & TensorRT Telemetry Specifications"
+          >
+            <Cpu size={12} />
+            <span>YOLOv8x + BYTETRACK</span>
+          </button>
         </div>
       </div>
 
-      {/* Live Tactical Alert Notification Toast Banner */}
+      {/* Snapshot Toast Notification */}
+      {snapshotToast && (
+        <div className="p-3 bg-cyan-950/90 border border-cyan-400 text-cyan-200 rounded-xl font-mono text-xs flex items-center justify-between shadow-[0_0_20px_rgba(6,182,212,0.4)] animate-in fade-in duration-200">
+          <div className="flex items-center gap-2">
+            <CheckCircle2 size={16} className="text-cyan-400" />
+            <span className="font-bold">{snapshotToast}</span>
+          </div>
+          <button
+            onClick={() => setSnapshotToast(null)}
+            className="text-cyan-400 hover:text-white px-2 cursor-pointer"
+          >
+            ✕
+          </button>
+        </div>
+      )}
+
+      {/* Rapid Response Dispatch Toast Notification */}
+      {rapidResponseToast && (
+        <div className="p-3 bg-emerald-950/90 border border-emerald-400 text-emerald-200 rounded-xl font-mono text-xs flex items-center justify-between shadow-[0_0_20px_rgba(16,185,129,0.4)] animate-in fade-in duration-200">
+          <div className="flex items-center gap-2">
+            <Zap size={16} className="text-emerald-400" />
+            <span className="font-bold">{rapidResponseToast}</span>
+          </div>
+          <button
+            onClick={() => setRapidResponseToast(null)}
+            className="text-emerald-400 hover:text-white px-2 cursor-pointer"
+          >
+            ✕
+          </button>
+        </div>
+      )}
+
+      {/* Live Tactical Alert Notification & Rapid Response Action Banner */}
       {recentTacticalAlert && (
-        <div className={`p-3 rounded-xl border flex items-center justify-between gap-3 font-mono text-xs shadow-2xl transition-all duration-300 ${
+        <div className={`p-3.5 rounded-2xl border flex flex-col md:flex-row items-start md:items-center justify-between gap-3 font-mono text-xs shadow-2xl transition-all duration-300 ${
           recentTacticalAlert.type === 'TRIPWIRE_CROSSING'
             ? 'bg-rose-950/95 border-rose-500 text-rose-200 shadow-rose-950/80'
             : 'bg-amber-950/95 border-amber-500 text-amber-200 shadow-amber-950/80'
         }`}>
           <div className="flex items-center gap-3">
-            <div className={`p-2 rounded-lg ${recentTacticalAlert.type === 'TRIPWIRE_CROSSING' ? 'bg-rose-600 text-white animate-pulse' : 'bg-amber-600 text-white'}`}>
-              <AlertTriangle size={18} />
+            <div className={`p-2.5 rounded-xl ${recentTacticalAlert.type === 'TRIPWIRE_CROSSING' ? 'bg-rose-600 text-white animate-pulse shadow-[0_0_12px_rgba(244,63,94,0.8)]' : 'bg-amber-600 text-white'}`}>
+              <AlertTriangle size={20} />
             </div>
             <div>
               <div className="flex items-center gap-2">
-                <span className={`text-[10px] uppercase font-bold tracking-widest px-1.5 py-0.2 rounded ${recentTacticalAlert.type === 'TRIPWIRE_CROSSING' ? 'bg-rose-900/60 border border-rose-400/40 text-rose-300' : 'bg-amber-900/60 border border-amber-400/40 text-amber-300'}`}>
-                  {recentTacticalAlert.type === 'TRIPWIRE_CROSSING' ? 'LINE CROSSING BREACH' : 'SUSPICIOUS AREA PROXIMITY'}
+                <span className={`text-[10px] uppercase font-black tracking-widest px-2 py-0.5 rounded ${recentTacticalAlert.type === 'TRIPWIRE_CROSSING' ? 'bg-rose-900/80 border border-rose-400/50 text-rose-300' : 'bg-amber-900/80 border border-amber-400/50 text-amber-300'}`}>
+                  {recentTacticalAlert.type === 'TRIPWIRE_CROSSING' ? '🚨 CRITICAL LINE CROSSING BREACH' : '⚠️ SUSPICIOUS AREA PROXIMITY'}
                 </span>
                 <span className="text-xs font-bold text-white">
                   {recentTacticalAlert.title}
                 </span>
+                <span className="text-[10px] text-slate-400">
+                  [{recentTacticalAlert.time}]
+                </span>
               </div>
-              <p className="text-[11px] opacity-90 mt-0.5">
+              <p className="text-[11px] opacity-90 mt-1">
                 {recentTacticalAlert.description}
               </p>
             </div>
           </div>
-          <div className="flex items-center gap-2">
-            <span className="text-[10px] text-slate-400">
-              {recentTacticalAlert.time}
-            </span>
+
+          <div className="flex items-center gap-2 w-full md:w-auto justify-end">
+            <button
+              onClick={handleDispatchRapidResponse}
+              className="px-3 py-1.5 rounded-xl bg-cyan-500 hover:bg-cyan-400 text-slate-950 font-mono font-black text-xs flex items-center gap-1.5 shadow-[0_0_12px_rgba(6,182,212,0.4)] cursor-pointer active:scale-95 transition-all"
+            >
+              <Zap size={13} />
+              <span>DISPATCH PATROL SWARM</span>
+            </button>
+
+            <button
+              onClick={handleToggleLockdown}
+              className={`px-3 py-1.5 rounded-xl font-mono font-bold text-xs flex items-center gap-1.5 border cursor-pointer active:scale-95 transition-all ${
+                isSectorLocked
+                  ? 'bg-rose-600 text-white border-rose-400 shadow-[0_0_10px_rgba(244,63,94,0.5)]'
+                  : 'bg-white/[0.06] hover:bg-white/[0.12] text-slate-200 border-white/[0.15]'
+              }`}
+            >
+              {isSectorLocked ? <Lock size={13} /> : <Unlock size={13} />}
+              <span>{isSectorLocked ? 'LOCKDOWN ACTIVE' : 'LOCK SECTOR'}</span>
+            </button>
+
             <button
               onClick={() => setRecentTacticalAlert(null)}
-              className="p-1 rounded hover:bg-white/10 text-slate-300 cursor-pointer"
+              className="p-1.5 rounded-lg hover:bg-white/10 text-slate-300 cursor-pointer"
+              title="Dismiss Alert"
             >
               ✕
             </button>
@@ -714,16 +993,17 @@ export const QuadLiveStreamView: React.FC<QuadLiveStreamViewProps> = ({
 
       {/* Flash overlay during snapshot */}
       {snapshotFlash && (
-        <div className="fixed inset-0 bg-white/20 z-50 pointer-events-none transition-opacity duration-200" />
+        <div className="fixed inset-0 bg-white/25 z-50 pointer-events-none transition-opacity duration-200" />
       )}
 
-      {/* Quad Section / Channel Paging Bar */}
+      {/* 4. Quad Section / Channel Paging Bar */}
       <div className="p-3 bg-slate-900/90 border border-white/10 rounded-2xl flex flex-wrap items-center justify-between gap-3 shadow-lg backdrop-blur-md">
         <div className="flex items-center gap-2">
           <span className="text-xs font-mono font-bold text-slate-400 uppercase">QUAD SECTIONS:</span>
           <div className="flex items-center gap-1.5">
             {quadSections.map((sec, sIdx) => {
               const isActive = sIdx === safeSectionIndex;
+              const hasThreat = sectionHasThreat(sIdx);
               const camStart = sIdx * 4 + 1;
               const camEnd = Math.min((sIdx + 1) * 4, cameras.length);
               return (
@@ -731,13 +1011,16 @@ export const QuadLiveStreamView: React.FC<QuadLiveStreamViewProps> = ({
                   key={sIdx}
                   id={`btn-quad-section-${sIdx + 1}`}
                   onClick={() => handleSelectSection(sIdx)}
-                  className={`px-3 py-1.5 rounded-xl text-xs font-mono font-bold tracking-wider transition-all cursor-pointer border ${
+                  className={`px-3 py-1.5 rounded-xl text-xs font-mono font-bold tracking-wider transition-all cursor-pointer border flex items-center gap-1.5 relative ${
                     isActive
                       ? 'bg-cyan-500/25 text-cyan-300 border-cyan-400/50 shadow-[0_0_15px_rgba(0,240,255,0.3)] ring-1 ring-cyan-400/50'
                       : 'bg-white/[0.04] text-slate-400 border-white/[0.08] hover:text-white hover:bg-white/[0.08]'
                   }`}
                 >
-                  SECTION {sIdx + 1} ({camStart}-{camEnd})
+                  {hasThreat && (
+                    <span className="w-2 h-2 rounded-full bg-rose-500 animate-ping"></span>
+                  )}
+                  <span>SECTION {sIdx + 1} ({camStart}-{camEnd})</span>
                 </button>
               );
             })}
@@ -748,7 +1031,7 @@ export const QuadLiveStreamView: React.FC<QuadLiveStreamViewProps> = ({
           <span className="text-xs font-mono text-slate-400 hidden sm:inline">
             SECTION {safeSectionIndex + 1} OF {quadSections.length} ({currentQuadCameras.length} CAMERAS)
           </span>
-          <div className="flex items-center gap-1">
+          <div className="flex items-center gap-1.5">
             <button
               id="btn-prev-quad-section"
               onClick={handlePrevSection}
@@ -771,7 +1054,7 @@ export const QuadLiveStreamView: React.FC<QuadLiveStreamViewProps> = ({
         </div>
       </div>
 
-      {/* 2. Primary Video Feeds Container */}
+      {/* 5. Primary Video Feeds: Layout Mode 2x2 QUAD */}
       {layoutMode === '2x2' && (
         <>
           <div
@@ -796,16 +1079,16 @@ export const QuadLiveStreamView: React.FC<QuadLiveStreamViewProps> = ({
                     setFocusedCamId(cam.id);
                     onSelectCamera(cam.id);
                   }}
-                  className={`flex flex-col bg-[#0a0f1d] rounded-2xl border transition-all duration-200 overflow-hidden shadow-[0_4px_25px_rgba(0,0,0,0.7)] group ${
+                  className={`flex flex-col bg-[#0a0f1d] rounded-2xl border transition-all duration-200 overflow-hidden shadow-[0_4px_25px_rgba(0,0,0,0.7)] group relative ${
                     isFocused
-                      ? 'border-blue-500 shadow-[0_0_20px_rgba(59,130,246,0.3)] ring-1 ring-blue-500/50'
-                      : 'border-white/[0.08] hover:border-white/30'
+                      ? 'border-cyan-400 shadow-[0_0_20px_rgba(6,182,212,0.35)] ring-1 ring-cyan-400/50'
+                      : 'border-white/[0.08] hover:border-cyan-500/30'
                   }`}
                 >
                   {/* Cell Header */}
                   <div className="px-3.5 py-2.5 bg-[#0d1424]/90 border-b border-white/[0.06] flex items-center justify-between">
                     <div className="flex items-center gap-2">
-                      <span className="font-mono font-bold text-xs text-blue-400 bg-blue-500/10 border border-blue-500/20 px-2 py-0.5 rounded">
+                      <span className="font-mono font-bold text-xs text-cyan-300 bg-cyan-500/10 border border-cyan-500/30 px-2 py-0.5 rounded">
                         {cam.code}
                       </span>
                       <span className="text-xs font-bold text-white truncate font-mono">{cam.name}</span>
@@ -813,7 +1096,7 @@ export const QuadLiveStreamView: React.FC<QuadLiveStreamViewProps> = ({
 
                     <div className="flex items-center gap-2">
                       {/* Live Object Counts Pill */}
-                      <div className="hidden lg:flex items-center gap-1.5 px-2 py-0.5 rounded bg-black/60 border border-white/10 text-[9px] font-mono text-slate-300">
+                      <div className="hidden lg:flex items-center gap-1.5 px-2 py-0.5 rounded-lg bg-black/60 border border-white/10 text-[9px] font-mono text-slate-300">
                         <span className="text-emerald-400 font-bold" title="Active Persons">👥 {camCountsMap[cam.id]?.persons ?? (cam.id.includes('8') ? 2 : 15)}</span>
                         <span className="text-slate-600">•</span>
                         <span className="text-cyan-400 font-bold" title="Active Vehicles">🚗 {camCountsMap[cam.id]?.vehicles ?? (cam.id.includes('8') ? 8 : 0)}</span>
@@ -863,6 +1146,8 @@ export const QuadLiveStreamView: React.FC<QuadLiveStreamViewProps> = ({
                         camera={cam}
                         showAiBoxes={globalAiBoxes}
                         showZones={globalZones}
+                        showOpticalGrid={showOpticalGrid}
+                        classFilter={activeClassFilter}
                         isNightVision={isNight}
                         muted={isVideoMuted || (activeAudioCam !== null && activeAudioCam !== cam.id)}
                         onCountsUpdate={(counts) => handleCountsUpdate(cam.id, counts)}
@@ -883,10 +1168,10 @@ export const QuadLiveStreamView: React.FC<QuadLiveStreamViewProps> = ({
                     )}
 
                     {/* Tactical Corner Brackets */}
-                    <div className="absolute top-2 left-2 w-3.5 h-3.5 border-t-2 border-l-2 border-cyan-400/50 pointer-events-none z-10" />
-                    <div className="absolute top-2 right-2 w-3.5 h-3.5 border-t-2 border-r-2 border-cyan-400/50 pointer-events-none z-10" />
-                    <div className="absolute bottom-2 left-2 w-3.5 h-3.5 border-b-2 border-l-2 border-cyan-400/50 pointer-events-none z-10" />
-                    <div className="absolute bottom-2 right-2 w-3.5 h-3.5 border-b-2 border-r-2 border-cyan-400/50 pointer-events-none z-10" />
+                    <div className="absolute top-2 left-2 w-3.5 h-3.5 border-t-2 border-l-2 border-cyan-400/60 pointer-events-none z-10" />
+                    <div className="absolute top-2 right-2 w-3.5 h-3.5 border-t-2 border-r-2 border-cyan-400/60 pointer-events-none z-10" />
+                    <div className="absolute bottom-2 left-2 w-3.5 h-3.5 border-b-2 border-l-2 border-cyan-400/60 pointer-events-none z-10" />
+                    <div className="absolute bottom-2 right-2 w-3.5 h-3.5 border-b-2 border-r-2 border-cyan-400/60 pointer-events-none z-10" />
 
                     {/* Top-Left Live HUD Badge */}
                     <div className="absolute top-2.5 left-2.5 flex items-center gap-1.5 z-20 pointer-events-none">
@@ -910,14 +1195,19 @@ export const QuadLiveStreamView: React.FC<QuadLiveStreamViewProps> = ({
                         {liveTimestamp}
                       </div>
                       {zoom > 1 && (
-                        <div className="px-2 py-0.5 bg-blue-600/90 text-white text-[9px] font-mono rounded-md shadow-sm">
+                        <div className="px-2 py-0.5 bg-cyan-600/90 text-white text-[9px] font-mono rounded-md shadow-sm">
                           {zoom.toFixed(1)}x ZOOM
                         </div>
                       )}
-                      {/* Audio status indicator pill on feed */}
+                      {/* Audio status indicator & animated equalizer waveform pill */}
                       {!isVideoMuted && (activeAudioCam === null || activeAudioCam === cam.id) && (
-                        <div className="px-2 py-0.5 bg-cyan-600/90 text-white text-[9px] font-mono rounded-md shadow-sm flex items-center gap-1 animate-pulse">
-                          <Volume2 size={9} />
+                        <div className="px-2 py-0.5 bg-cyan-600/90 text-white text-[9px] font-mono rounded-md shadow-sm flex items-center gap-1">
+                          <div className="flex items-end gap-0.5 h-2.5">
+                            <span className="w-0.5 h-1 bg-white animate-[pulse_0.4s_ease-in-out_infinite]" />
+                            <span className="w-0.5 h-2 bg-white animate-[pulse_0.6s_ease-in-out_infinite]" />
+                            <span className="w-0.5 h-1.5 bg-white animate-[pulse_0.3s_ease-in-out_infinite]" />
+                            <span className="w-0.5 h-2.5 bg-white animate-[pulse_0.5s_ease-in-out_infinite]" />
+                          </div>
                           <span>AUDIO</span>
                         </div>
                       )}
@@ -978,7 +1268,7 @@ export const QuadLiveStreamView: React.FC<QuadLiveStreamViewProps> = ({
                           e.stopPropagation();
                           handleCaptureCameraSnapshot(cam);
                         }}
-                        title="Snapshot Feed"
+                        title="Snapshot Feed (4K Frame)"
                         className="p-1.5 rounded-lg bg-black/70 hover:bg-black/90 text-slate-200 border border-white/10 text-xs transition-colors cursor-pointer"
                       >
                         <Camera size={13} />
@@ -991,8 +1281,9 @@ export const QuadLiveStreamView: React.FC<QuadLiveStreamViewProps> = ({
                           setFocusedCamId(cam.id);
                           onSelectCamera(cam.id);
                           setLayoutMode('single');
+                          audioAlertEngine.playSonarPing();
                         }}
-                        title="Expand to Full View"
+                        title="Expand to Full Spotlight View"
                         className="p-1.5 rounded-lg bg-black/70 hover:bg-black/90 text-slate-200 border border-white/10 text-xs transition-colors cursor-pointer"
                       >
                         <Maximize size={13} />
@@ -1008,7 +1299,7 @@ export const QuadLiveStreamView: React.FC<QuadLiveStreamViewProps> = ({
                             e.stopPropagation();
                             handleZoom(cam.id, 0.5);
                           }}
-                          className="p-1 rounded-lg bg-black/70 hover:bg-black/90 text-slate-300 text-[10px] flex items-center border border-white/10"
+                          className="p-1 rounded-lg bg-black/70 hover:bg-black/90 text-slate-300 text-[10px] flex items-center border border-white/10 cursor-pointer"
                           title="Digital Zoom In"
                         >
                           <ZoomIn size={12} />
@@ -1018,7 +1309,7 @@ export const QuadLiveStreamView: React.FC<QuadLiveStreamViewProps> = ({
                             e.stopPropagation();
                             handleZoom(cam.id, -0.5);
                           }}
-                          className="p-1 rounded-lg bg-black/70 hover:bg-black/90 text-slate-300 text-[10px] flex items-center border border-white/10"
+                          className="p-1 rounded-lg bg-black/70 hover:bg-black/90 text-slate-300 text-[10px] flex items-center border border-white/10 cursor-pointer"
                           title="Digital Zoom Out"
                         >
                           <ZoomOut size={12} />
@@ -1029,7 +1320,7 @@ export const QuadLiveStreamView: React.FC<QuadLiveStreamViewProps> = ({
                               e.stopPropagation();
                               resetPanZoom(cam.id);
                             }}
-                            className="px-2 py-0.5 rounded-lg bg-black/70 hover:bg-black/90 text-slate-300 text-[9px] font-mono border border-white/10"
+                            className="px-2 py-0.5 rounded-lg bg-black/70 hover:bg-black/90 text-slate-300 text-[9px] font-mono border border-white/10 cursor-pointer"
                           >
                             1x
                           </button>
@@ -1061,12 +1352,61 @@ export const QuadLiveStreamView: React.FC<QuadLiveStreamViewProps> = ({
                     <div className="flex items-center gap-2 shrink-0">
                       <span className="text-emerald-400 font-bold">{cam.bitrate}</span>
                       <span className="text-slate-600">•</span>
-                      <span className="text-blue-400">{cam.aiModels[0]}</span>
+                      <span className="text-cyan-400">{cam.aiModels[0]}</span>
                     </div>
                   </div>
                 </div>
               );
             })}
+
+            {/* Standby Aux Recon Sentry Cells for Section 3 where only 1 camera exists */}
+            {currentQuadCameras.length < 4 && Array.from({ length: 4 - currentQuadCameras.length }).map((_, idx) => (
+              <div
+                key={`standby-slot-${idx}`}
+                className="flex flex-col bg-[#070c18] rounded-2xl border border-dashed border-cyan-500/20 overflow-hidden shadow-inner p-5 items-center justify-center text-center space-y-3 relative"
+              >
+                <div className="absolute top-2.5 left-2.5 px-2 py-0.5 rounded bg-cyan-950/60 border border-cyan-500/30 text-cyan-300 text-[9px] font-mono font-bold">
+                  AUX SENTRY NODE #{idx + 10}
+                </div>
+
+                <div className="relative w-16 h-16 rounded-full bg-cyan-950/40 border border-cyan-500/30 flex items-center justify-center">
+                  <Radio size={24} className="text-cyan-400 animate-pulse" />
+                  <div className="absolute inset-0 rounded-full border border-cyan-400/40 animate-ping" />
+                </div>
+
+                <div>
+                  <h4 className="text-xs font-mono font-bold text-white uppercase tracking-wider">
+                    STANDBY AUX RECON SENSOR
+                  </h4>
+                  <p className="text-[10px] font-mono text-slate-400 mt-0.5">
+                    GEO: 34°08'42.1"N 74°48'18.5"E • RF LINK: 99.4% RSSI
+                  </p>
+                </div>
+
+                <div className="flex items-center gap-2 pt-1">
+                  <button
+                    onClick={() => {
+                      audioAlertEngine.playSonarPing();
+                      setRapidResponseToast(`Aux UAV Recon Drone deployed to Sector Grid ${idx + 2}`);
+                      setTimeout(() => setRapidResponseToast(null), 3500);
+                    }}
+                    className="px-3 py-1 rounded-xl bg-cyan-500/20 hover:bg-cyan-500/30 text-cyan-300 border border-cyan-400/40 text-[10px] font-mono font-bold cursor-pointer"
+                  >
+                    DEPLOY DRONE SENTRY
+                  </button>
+                  <button
+                    onClick={() => {
+                      audioAlertEngine.playSonarPing();
+                      setRapidResponseToast(`Aux Sentry RTSP node pair initiated on port 55${idx + 4}`);
+                      setTimeout(() => setRapidResponseToast(null), 3500);
+                    }}
+                    className="px-3 py-1 rounded-xl bg-white/[0.04] hover:bg-white/[0.08] text-slate-300 border border-white/10 text-[10px] font-mono font-bold cursor-pointer"
+                  >
+                    PAIR AUX SENSOR
+                  </button>
+                </div>
+              </div>
+            ))}
           </div>
 
           {/* Bottom Quick Section Switcher Bar */}
@@ -1115,14 +1455,14 @@ export const QuadLiveStreamView: React.FC<QuadLiveStreamViewProps> = ({
         </>
       )}
 
-      {/* 3. Layout: 1+3 Master Split */}
+      {/* 6. Layout: 1+3 Master Split */}
       {layoutMode === '1+3' && (
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-4">
           {/* Main Master Large Stream (8 cols) */}
-          <div className="lg:col-span-8 flex flex-col bg-[#0a0f1d] rounded-2xl border border-blue-500/40 overflow-hidden shadow-[0_0_30px_rgba(59,130,246,0.15)]">
+          <div className="lg:col-span-8 flex flex-col bg-[#0a0f1d] rounded-2xl border border-cyan-500/40 overflow-hidden shadow-[0_0_35px_rgba(6,182,212,0.2)]">
             <div className="px-4 py-3 bg-[#0d1424] border-b border-white/[0.06] flex items-center justify-between">
               <div className="flex items-center gap-2">
-                <span className="font-mono font-bold text-xs text-blue-400 bg-blue-500/10 border border-blue-500/20 px-2.5 py-0.5 rounded">
+                <span className="font-mono font-bold text-xs text-cyan-300 bg-cyan-500/10 border border-cyan-500/30 px-2.5 py-0.5 rounded">
                   {activeFocusCam.code} — MASTER FOCUS
                 </span>
                 <span className="text-sm font-bold text-white font-mono">{activeFocusCam.name}</span>
@@ -1138,6 +1478,8 @@ export const QuadLiveStreamView: React.FC<QuadLiveStreamViewProps> = ({
                 camera={activeFocusCam}
                 showAiBoxes={globalAiBoxes}
                 showZones={globalZones}
+                showOpticalGrid={showOpticalGrid}
+                classFilter={activeClassFilter}
                 isNightVision={nightVisionMap[activeFocusCam.id] || false}
                 muted={isVideoMuted}
                 onCountsUpdate={(counts) => handleCountsUpdate(activeFocusCam.id, counts)}
@@ -1186,8 +1528,9 @@ export const QuadLiveStreamView: React.FC<QuadLiveStreamViewProps> = ({
                 onClick={() => {
                   setFocusedCamId(cam.id);
                   onSelectCamera(cam.id);
+                  audioAlertEngine.playSonarPing();
                 }}
-                className="bg-[#0a0f1d] border border-white/[0.08] hover:border-blue-500/50 rounded-xl overflow-hidden cursor-pointer transition-all flex flex-col shadow-[0_4px_15px_rgba(0,0,0,0.6)] group"
+                className="bg-[#0a0f1d] border border-white/[0.08] hover:border-cyan-400/60 rounded-xl overflow-hidden cursor-pointer transition-all flex flex-col shadow-[0_4px_15px_rgba(0,0,0,0.6)] group"
               >
                 <div className="px-3 py-1.5 bg-[#0d1424] flex items-center justify-between text-xs border-b border-white/[0.06]">
                   <span className="font-bold text-white font-mono">{cam.code}: {cam.name}</span>
@@ -1198,11 +1541,13 @@ export const QuadLiveStreamView: React.FC<QuadLiveStreamViewProps> = ({
                     camera={cam}
                     showAiBoxes={globalAiBoxes}
                     showZones={globalZones}
+                    showOpticalGrid={showOpticalGrid}
+                    classFilter={activeClassFilter}
                     isNightVision={nightVisionMap[cam.id] || false}
                     muted={isVideoMuted}
                   />
-                  <div className="absolute inset-0 bg-black/30 hover:bg-transparent transition-colors flex items-center justify-center opacity-0 hover:opacity-100">
-                    <span className="px-3 py-1.5 rounded-lg bg-blue-600 text-white text-[11px] font-mono font-bold shadow-[0_0_12px_rgba(59,130,246,0.5)]">
+                  <div className="absolute inset-0 bg-black/40 hover:bg-transparent transition-colors flex items-center justify-center opacity-0 hover:opacity-100">
+                    <span className="px-3 py-1.5 rounded-lg bg-cyan-500 text-slate-950 text-[11px] font-mono font-bold shadow-[0_0_12px_rgba(6,182,212,0.6)]">
                       SWITCH TO MASTER
                     </span>
                   </div>
@@ -1213,12 +1558,12 @@ export const QuadLiveStreamView: React.FC<QuadLiveStreamViewProps> = ({
         </div>
       )}
 
-      {/* 4. Layout: 1x1 Single Focus View with Full PTZ Controls */}
+      {/* 7. Layout: 1x1 Single Focus View with Full PTZ Hardware Controller */}
       {layoutMode === 'single' && (
-        <div className="bg-[#0a0f1d] border border-white/[0.08] rounded-2xl overflow-hidden shadow-[0_4px_30px_rgba(0,0,0,0.8)] space-y-4">
+        <div className="bg-[#0a0f1d] border border-cyan-500/30 rounded-2xl overflow-hidden shadow-[0_4px_35px_rgba(0,0,0,0.85)] space-y-4">
           <div className="px-4 py-3 bg-[#0d1424] border-b border-white/[0.06] flex flex-wrap items-center justify-between gap-3">
             <div className="flex items-center gap-3">
-              <span className="font-mono font-bold text-sm text-blue-400 bg-blue-500/10 border border-blue-500/20 px-2.5 py-0.5 rounded">
+              <span className="font-mono font-bold text-sm text-cyan-300 bg-cyan-500/10 border border-cyan-500/30 px-2.5 py-0.5 rounded">
                 {activeFocusCam.code}
               </span>
               <div>
@@ -1235,10 +1580,11 @@ export const QuadLiveStreamView: React.FC<QuadLiveStreamViewProps> = ({
                   onClick={() => {
                     setFocusedCamId(c.id);
                     onSelectCamera(c.id);
+                    audioAlertEngine.playSonarPing();
                   }}
                   className={`px-3 py-1 rounded-xl text-xs font-mono font-bold transition-all cursor-pointer whitespace-nowrap ${
                     focusedCamId === c.id
-                      ? 'bg-blue-600 text-white shadow-[0_0_12px_rgba(59,130,246,0.4)]'
+                      ? 'bg-cyan-500 text-slate-950 font-black shadow-[0_0_12px_rgba(6,182,212,0.5)]'
                       : 'bg-white/[0.04] text-slate-400 hover:text-white border border-white/[0.06]'
                   }`}
                 >
@@ -1263,6 +1609,8 @@ export const QuadLiveStreamView: React.FC<QuadLiveStreamViewProps> = ({
                   camera={activeFocusCam}
                   showAiBoxes={globalAiBoxes}
                   showZones={globalZones}
+                  showOpticalGrid={showOpticalGrid}
+                  classFilter={activeClassFilter}
                   isNightVision={nightVisionMap[activeFocusCam.id] || false}
                   muted={isVideoMuted}
                   onCountsUpdate={(counts) => handleCountsUpdate(activeFocusCam.id, counts)}
@@ -1273,10 +1621,13 @@ export const QuadLiveStreamView: React.FC<QuadLiveStreamViewProps> = ({
               <div className="absolute top-3 left-3 flex items-center gap-2 z-20 pointer-events-none">
                 <div className="px-2.5 py-1 bg-rose-600 text-white text-[10px] font-mono font-bold rounded flex items-center gap-1 shadow-[0_0_10px_rgba(244,63,94,0.4)]">
                   <span className="w-1.5 h-1.5 bg-white rounded-full animate-ping"></span>
-                  <span>LIVE</span>
+                  <span>LIVE 4K</span>
                 </div>
                 <div className="px-2.5 py-1 bg-black/80 text-amber-400 text-[10px] font-mono font-bold border border-amber-500/30 rounded">
                   {liveTimestamp}
+                </div>
+                <div className="px-2.5 py-1 bg-black/80 text-cyan-300 text-[10px] font-mono font-bold border border-cyan-500/30 rounded">
+                  AZ: {ptzAngles[activeFocusCam.id]?.azimuth ?? 180.0}° • EL: {ptzAngles[activeFocusCam.id]?.elevation ?? 12.0}°
                 </div>
               </div>
             </div>
@@ -1284,24 +1635,27 @@ export const QuadLiveStreamView: React.FC<QuadLiveStreamViewProps> = ({
             {/* PTZ & Feed Analytics Control Panel (4 cols) */}
             <div className="lg:col-span-4 flex flex-col justify-between p-4 bg-[#060911] border border-white/[0.08] rounded-xl space-y-4">
               <div>
-                <h4 className="text-xs font-bold text-white uppercase tracking-wider mb-2 flex items-center gap-2 font-mono">
-                  <Sliders size={14} className="text-blue-400" />
-                  <span>PTZ HARDWARE CONTROLLER</span>
-                </h4>
+                <div className="flex items-center justify-between mb-2">
+                  <h4 className="text-xs font-bold text-white uppercase tracking-wider flex items-center gap-2 font-mono">
+                    <Sliders size={14} className="text-cyan-400" />
+                    <span>PTZ HARDWARE CONSOLE</span>
+                  </h4>
+                  <span className="text-[10px] font-mono text-emerald-400 font-bold">CONNECTED</span>
+                </div>
 
                 {/* Joystick D-pad */}
                 <div className="flex flex-col items-center justify-center p-3.5 bg-[#0a0f1d] rounded-2xl border border-white/[0.08] my-2 shadow-inner">
                   <button
                     onClick={() => handlePan(activeFocusCam.id, 0, 15)}
-                    className="p-2.5 rounded-xl bg-white/[0.06] hover:bg-blue-600 text-white transition-colors cursor-pointer border border-white/[0.08]"
-                    title="Pan Up"
+                    className="p-2.5 rounded-xl bg-white/[0.06] hover:bg-cyan-500 hover:text-slate-950 text-white transition-colors cursor-pointer border border-white/[0.08]"
+                    title="Pan / Tilt Up"
                   >
                     <ArrowUp size={16} />
                   </button>
                   <div className="flex items-center gap-4 my-1.5">
                     <button
                       onClick={() => handlePan(activeFocusCam.id, 15, 0)}
-                      className="p-2.5 rounded-xl bg-white/[0.06] hover:bg-blue-600 text-white transition-colors cursor-pointer border border-white/[0.08]"
+                      className="p-2.5 rounded-xl bg-white/[0.06] hover:bg-cyan-500 hover:text-slate-950 text-white transition-colors cursor-pointer border border-white/[0.08]"
                       title="Pan Left"
                     >
                       <ArrowLeft size={16} />
@@ -1315,7 +1669,7 @@ export const QuadLiveStreamView: React.FC<QuadLiveStreamViewProps> = ({
                     </button>
                     <button
                       onClick={() => handlePan(activeFocusCam.id, -15, 0)}
-                      className="p-2.5 rounded-xl bg-white/[0.06] hover:bg-blue-600 text-white transition-colors cursor-pointer border border-white/[0.08]"
+                      className="p-2.5 rounded-xl bg-white/[0.06] hover:bg-cyan-500 hover:text-slate-950 text-white transition-colors cursor-pointer border border-white/[0.08]"
                       title="Pan Right"
                     >
                       <ArrowRight size={16} />
@@ -1323,15 +1677,46 @@ export const QuadLiveStreamView: React.FC<QuadLiveStreamViewProps> = ({
                   </div>
                   <button
                     onClick={() => handlePan(activeFocusCam.id, 0, -15)}
-                    className="p-2.5 rounded-xl bg-white/[0.06] hover:bg-blue-600 text-white transition-colors cursor-pointer border border-white/[0.08]"
-                    title="Pan Down"
+                    className="p-2.5 rounded-xl bg-white/[0.06] hover:bg-cyan-500 hover:text-slate-950 text-white transition-colors cursor-pointer border border-white/[0.08]"
+                    title="Pan / Tilt Down"
                   >
                     <ArrowDown size={16} />
                   </button>
                 </div>
 
+                {/* Preset Guard Tours */}
+                <div className="my-3 space-y-1.5">
+                  <span className="text-[10px] font-mono text-slate-400 font-bold uppercase">PRESET GUARD TOURS:</span>
+                  <div className="grid grid-cols-2 gap-1.5">
+                    <button
+                      onClick={() => handlePresetTour(activeFocusCam.id, 'MAIN GATE', 142.4, 12.0, 1.5)}
+                      className="px-2 py-1 rounded-lg bg-white/[0.04] hover:bg-cyan-500/20 text-slate-300 hover:text-cyan-300 border border-white/[0.08] text-[10px] font-mono font-bold text-left truncate cursor-pointer"
+                    >
+                      1: MAIN GATE
+                    </button>
+                    <button
+                      onClick={() => handlePresetTour(activeFocusCam.id, 'PERIMETER LINE', 184.6, 14.5, 2.0)}
+                      className="px-2 py-1 rounded-lg bg-white/[0.04] hover:bg-cyan-500/20 text-slate-300 hover:text-cyan-300 border border-white/[0.08] text-[10px] font-mono font-bold text-left truncate cursor-pointer"
+                    >
+                      2: PERIMETER LINE
+                    </button>
+                    <button
+                      onClick={() => handlePresetTour(activeFocusCam.id, 'BUNKER HQ', 215.0, 9.5, 1.0)}
+                      className="px-2 py-1 rounded-lg bg-white/[0.04] hover:bg-cyan-500/20 text-slate-300 hover:text-cyan-300 border border-white/[0.08] text-[10px] font-mono font-bold text-left truncate cursor-pointer"
+                    >
+                      3: BUNKER HQ
+                    </button>
+                    <button
+                      onClick={() => handlePresetTour(activeFocusCam.id, 'HELIPAD LZ', 285.5, 16.0, 3.0)}
+                      className="px-2 py-1 rounded-lg bg-white/[0.04] hover:bg-cyan-500/20 text-slate-300 hover:text-cyan-300 border border-white/[0.08] text-[10px] font-mono font-bold text-left truncate cursor-pointer"
+                    >
+                      4: HELIPAD LZ
+                    </button>
+                  </div>
+                </div>
+
                 {/* Zoom Sliders */}
-                <div className="flex items-center justify-between gap-2 mt-3 p-2 bg-[#0a0f1d] rounded-xl border border-white/[0.06]">
+                <div className="flex items-center justify-between gap-2 p-2 bg-[#0a0f1d] rounded-xl border border-white/[0.06]">
                   <span className="text-xs text-slate-400 font-mono font-bold">OPTICAL ZOOM:</span>
                   <div className="flex items-center gap-1.5">
                     <button
@@ -1375,9 +1760,9 @@ export const QuadLiveStreamView: React.FC<QuadLiveStreamViewProps> = ({
         </div>
       )}
 
-      {/* 5. Matrix Stream Health & Neural Net Statistics Footer */}
-      <div className="p-4 bg-[#0a0f1d] border border-white/[0.08] rounded-2xl grid grid-cols-2 md:grid-cols-4 gap-4 text-xs font-mono shadow-[0_4px_25px_rgba(0,0,0,0.7)]">
-        <div className="flex items-center gap-3 p-2 rounded-xl bg-white/[0.02] border border-white/[0.04]">
+      {/* 8. Matrix Stream Health & Neural Net Statistics Footer */}
+      <div className="p-4 bg-[#0a0f1d] border border-cyan-500/20 rounded-2xl grid grid-cols-2 md:grid-cols-4 gap-4 text-xs font-mono shadow-[0_4px_25px_rgba(0,0,0,0.7)]">
+        <div className="flex items-center gap-3 p-2.5 rounded-xl bg-white/[0.02] border border-white/[0.04]">
           <div className="w-2.5 h-2.5 rounded-full bg-emerald-400 animate-pulse shadow-[0_0_6px_#10b981]" />
           <div>
             <p className="text-slate-500 uppercase text-[9px] font-bold">Matrix Throughput</p>
@@ -1385,23 +1770,23 @@ export const QuadLiveStreamView: React.FC<QuadLiveStreamViewProps> = ({
           </div>
         </div>
 
-        <div className="flex items-center gap-3 p-2 rounded-xl bg-white/[0.02] border border-white/[0.04]">
-          <div className="w-2.5 h-2.5 rounded-full bg-blue-400 shadow-[0_0_6px_#3b82f6]" />
+        <div className="flex items-center gap-3 p-2.5 rounded-xl bg-white/[0.02] border border-white/[0.04]">
+          <div className="w-2.5 h-2.5 rounded-full bg-cyan-400 shadow-[0_0_6px_#06b6d4]" />
           <div>
             <p className="text-slate-500 uppercase text-[9px] font-bold">FPS Synchronization</p>
             <p className="text-emerald-400 font-bold">30.0 / 30.0 FPS Sync</p>
           </div>
         </div>
 
-        <div className="flex items-center gap-3 p-2 rounded-xl bg-white/[0.02] border border-white/[0.04]">
+        <div className="flex items-center gap-3 p-2.5 rounded-xl bg-white/[0.02] border border-white/[0.04]">
           <div className="w-2.5 h-2.5 rounded-full bg-purple-400 shadow-[0_0_6px_#a855f7]" />
           <div>
             <p className="text-slate-500 uppercase text-[9px] font-bold">Inference Latency</p>
-            <p className="text-purple-300 font-bold">8.4 ms (TensorRT)</p>
+            <p className="text-purple-300 font-bold">8.4 ms (TensorRT INT8)</p>
           </div>
         </div>
 
-        <div className="flex items-center gap-3 p-2 rounded-xl bg-white/[0.02] border border-white/[0.04]">
+        <div className="flex items-center gap-3 p-2.5 rounded-xl bg-white/[0.02] border border-white/[0.04]">
           <div className="w-2.5 h-2.5 rounded-full bg-amber-400 shadow-[0_0_6px_#f59e0b]" />
           <div>
             <p className="text-slate-500 uppercase text-[9px] font-bold">Active Vision Models</p>
@@ -1409,6 +1794,73 @@ export const QuadLiveStreamView: React.FC<QuadLiveStreamViewProps> = ({
           </div>
         </div>
       </div>
+
+      {/* Edge Neural Net Telemetry Popover Modal */}
+      {showModelTelemetryModal && (
+        <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4">
+          <div className="bg-[#0a0f1d] border border-cyan-500/40 rounded-2xl max-w-lg w-full p-5 space-y-4 shadow-[0_0_40px_rgba(6,182,212,0.3)] font-mono">
+            <div className="flex items-center justify-between border-b border-white/10 pb-3">
+              <div className="flex items-center gap-2">
+                <Cpu size={20} className="text-cyan-400" />
+                <h3 className="text-sm font-bold text-white uppercase tracking-wider">
+                  EDGE NEURAL INFERENCE ENGINE // TELEMETRY
+                </h3>
+              </div>
+              <button
+                onClick={() => setShowModelTelemetryModal(false)}
+                className="text-slate-400 hover:text-white cursor-pointer"
+              >
+                ✕
+              </button>
+            </div>
+
+            <div className="space-y-3 text-xs">
+              <div className="grid grid-cols-2 gap-2">
+                <div className="p-3 bg-black/50 rounded-xl border border-white/[0.06]">
+                  <span className="text-[10px] text-slate-400">OBJECT DETECTOR</span>
+                  <p className="text-white font-bold mt-0.5">YOLOv8x Defense v3.2</p>
+                </div>
+                <div className="p-3 bg-black/50 rounded-xl border border-white/[0.06]">
+                  <span className="text-[10px] text-slate-400">QUANTIZATION</span>
+                  <p className="text-cyan-400 font-bold mt-0.5">TensorRT FP16 / INT8</p>
+                </div>
+                <div className="p-3 bg-black/50 rounded-xl border border-white/[0.06]">
+                  <span className="text-[10px] text-slate-400">TRACKER</span>
+                  <p className="text-white font-bold mt-0.5">ByteTrack + Kalman Filter</p>
+                </div>
+                <div className="p-3 bg-black/50 rounded-xl border border-white/[0.06]">
+                  <span className="text-[10px] text-slate-400">VRAM ALLOCATION</span>
+                  <p className="text-emerald-400 font-bold mt-0.5">3.8 GB / 16.0 GB</p>
+                </div>
+              </div>
+
+              <div className="p-3 bg-black/50 rounded-xl border border-white/[0.06] space-y-1.5">
+                <div className="flex items-center justify-between text-[11px]">
+                  <span className="text-slate-400">mAP@50 Detection Precision:</span>
+                  <span className="text-emerald-400 font-bold">99.2%</span>
+                </div>
+                <div className="flex items-center justify-between text-[11px]">
+                  <span className="text-slate-400">Average Frame Latency:</span>
+                  <span className="text-cyan-400 font-bold">8.4 ms</span>
+                </div>
+                <div className="flex items-center justify-between text-[11px]">
+                  <span className="text-slate-400">ReID Feature Vector Dim:</span>
+                  <span className="text-white font-bold">512-d Cosine Embeddings</span>
+                </div>
+              </div>
+            </div>
+
+            <div className="pt-2 flex justify-end">
+              <button
+                onClick={() => setShowModelTelemetryModal(false)}
+                className="px-4 py-1.5 rounded-xl bg-cyan-500 text-slate-950 font-bold text-xs cursor-pointer"
+              >
+                CLOSE
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

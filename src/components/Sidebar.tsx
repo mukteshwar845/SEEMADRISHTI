@@ -69,7 +69,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
     { id: 'sandbox' as ViewMode, label: 'Defense Sandbox', icon: Zap, badge: 'EVAL LAB', isAlert: true, code: '[SIM_LAB]' },
     { id: 'terminal' as ViewMode, label: 'Edge Node CLI', icon: Terminal, badge: 'PORT 8000', code: '[TACTICAL_SH]' },
     { id: 'mission-control' as ViewMode, label: 'Mission Control', icon: Activity, badge: 'OPERATIONAL', isHealth: true, code: '[HQ_CMD]' },
-    { id: 'agents' as ViewMode, label: 'Autonomous AI Swarm', icon: Bot, badge: '5 AGENTS', isAlert: true, code: '[AI_SWARM]' },
+    { id: 'agents' as ViewMode, label: 'Autonomous Swarm', icon: Bot, badge: '5 AGENTS', isAlert: true, code: '[AI_SWARM]' },
     { id: 'camera-fleet' as ViewMode, label: 'Camera Fleet', icon: Video, badge: '9 NODES', code: '[FLEET_09]' },
     { id: 'evidence-queue' as ViewMode, label: 'Evidence Vault', icon: Film, isRecTab: true, badge: 'SHA-256', code: '[FORENSIC_REC]' },
     { id: 'system-timeline' as ViewMode, label: 'Operator Timeline', icon: Layers, code: '[AUDIT_LOG]' },

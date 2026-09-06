@@ -120,46 +120,53 @@ export function HelpBotWidget() {
             animate={{ opacity: 1, y: 0, scale: 1 }}
             exit={{ opacity: 0, y: 20, scale: 0.95 }}
             transition={{ duration: 0.2 }}
-            className="w-80 sm:w-96 h-[500px] bg-gray-900 border border-gray-800 rounded-2xl shadow-2xl flex flex-col overflow-hidden mb-4"
+            className="w-84 sm:w-96 h-[520px] bg-[#040812]/95 border border-cyan-500/30 rounded-2xl shadow-[0_0_40px_rgba(0,0,0,0.95)] backdrop-blur-xl flex flex-col overflow-hidden mb-3"
           >
-            {/* Header */}
-            <div className="bg-gray-950 px-4 py-3 border-b border-gray-800 flex items-center justify-between">
-              <div className="flex items-center gap-2">
-                <div className="bg-indigo-500/20 p-1.5 rounded-lg">
-                  <Bot className="w-5 h-5 text-indigo-400" />
+            {/* Tactical Header */}
+            <div className="bg-[#02040a] px-4 py-3 border-b border-cyan-500/20 flex items-center justify-between">
+              <div className="flex items-center gap-2.5">
+                <div className="bg-cyan-950/80 border border-cyan-500/40 p-1.5 rounded-lg text-cyan-300 shadow-[0_0_10px_rgba(0,240,255,0.3)]">
+                  <Bot className="w-4 h-4" />
                 </div>
                 <div>
-                  <h3 className="text-sm font-semibold text-gray-100">Seemadrishti Help Bot</h3>
-                  <p className="text-xs text-gray-400">Ask about agents & tasks</p>
+                  <div className="flex items-center gap-1.5">
+                    <h3 className="text-xs font-bold text-cyan-200 font-mono tracking-wider uppercase">
+                      SEEMADRISHTI COPILOT
+                    </h3>
+                    <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse"></span>
+                  </div>
+                  <p className="text-[10px] text-slate-400 font-mono">Autonomous Swarm & Defense Advisory</p>
                 </div>
               </div>
               <button 
                 onClick={() => setIsOpen(false)}
-                className="text-gray-400 hover:text-white p-1 rounded-md transition-colors"
+                className="text-slate-400 hover:text-rose-400 p-1 rounded-md transition-colors cursor-pointer"
+                title="Close Copilot"
               >
-                <X className="w-5 h-5" />
+                <X className="w-4 h-4" />
               </button>
             </div>
 
             {/* Messages Area */}
-            <div className="flex-1 overflow-y-auto p-4 space-y-4 bg-gray-900/50">
+            <div className="flex-1 overflow-y-auto p-3.5 space-y-3 bg-[#030712]/70 font-mono text-xs">
               {messages.length === 0 ? (
                 <div className="h-full flex flex-col items-center justify-center text-center px-4 py-3">
-                  <div className="w-10 h-10 bg-indigo-950/60 border border-indigo-500/30 rounded-full flex items-center justify-center mb-2 text-indigo-400">
-                    <Bot className="w-5 h-5" />
+                  <div className="w-12 h-12 bg-cyan-950/60 border border-cyan-500/40 rounded-full flex items-center justify-center mb-2.5 text-cyan-300 shadow-[0_0_15px_rgba(0,240,255,0.25)]">
+                    <Bot className="w-6 h-6" />
                   </div>
-                  <h4 className="text-gray-100 font-bold text-sm mb-1 font-mono">SEEMADRISHTI TACTICAL AI</h4>
-                  <p className="text-[11px] text-gray-400 max-w-[280px] mb-3">
-                    Ask any question about border sectors, swarm agents, or computer vision diagnostics:
+                  <h4 className="text-cyan-200 font-bold text-xs mb-1 tracking-wider uppercase">TACTICAL INTELLIGENCE COPILOT</h4>
+                  <p className="text-[10px] text-slate-400 max-w-[280px] mb-3 font-sans leading-relaxed">
+                    Direct access to surveillance telemetry, 5-agent swarm coordination, and Section 65B forensics:
                   </p>
-                  <div className="flex flex-wrap gap-1.5 justify-center max-w-sm">
+                  <div className="flex flex-col gap-1.5 w-full">
                     {SUGGESTED_QUESTIONS.map((q, idx) => (
                       <button
                         key={idx}
                         onClick={() => sendQuery(q)}
-                        className="px-2.5 py-1 text-[11px] rounded-lg bg-gray-800/80 hover:bg-indigo-900/40 text-cyan-300 border border-cyan-500/20 hover:border-cyan-400 transition-all text-left font-mono cursor-pointer"
+                        className="w-full px-3 py-1.5 text-[11px] rounded-lg bg-[#090d16] hover:bg-cyan-950/40 text-cyan-300 border border-cyan-500/20 hover:border-cyan-400/60 transition-all text-left font-mono cursor-pointer flex items-center justify-between group"
                       >
-                        {q}
+                        <span className="truncate">{q}</span>
+                        <span className="text-slate-600 group-hover:text-cyan-400 text-[10px]">→</span>
                       </button>
                     ))}
                   </div>
@@ -170,20 +177,22 @@ export function HelpBotWidget() {
                     key={msg.id} 
                     className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}
                   >
-                    <div className={`flex gap-2 max-w-[85%] ${msg.role === 'user' ? 'flex-row-reverse' : ''}`}>
-                      <div className={`shrink-0 w-6 h-6 rounded-full flex items-center justify-center mt-1 ${
-                        msg.role === 'user' ? 'bg-indigo-600' : 'bg-gray-800'
+                    <div className={`flex gap-2 max-w-[88%] ${msg.role === 'user' ? 'flex-row-reverse' : ''}`}>
+                      <div className={`shrink-0 w-6 h-6 rounded-full flex items-center justify-center mt-0.5 border ${
+                        msg.role === 'user' 
+                          ? 'bg-cyan-950 border-cyan-400/50 text-cyan-300' 
+                          : 'bg-slate-900 border-slate-700 text-slate-300'
                       }`}>
                         {msg.role === 'user' ? (
-                          <User className="w-3.5 h-3.5 text-white" />
+                          <User className="w-3 h-3 text-cyan-300" />
                         ) : (
-                          <Bot className="w-3.5 h-3.5 text-indigo-400" />
+                          <Bot className="w-3 h-3 text-cyan-400" />
                         )}
                       </div>
-                      <div className={`px-3 py-2 rounded-2xl text-sm whitespace-pre-wrap leading-relaxed ${
+                      <div className={`px-3 py-2 rounded-xl text-xs whitespace-pre-wrap leading-relaxed ${
                         msg.role === 'user' 
-                          ? 'bg-indigo-600 text-white rounded-tr-sm' 
-                          : 'bg-gray-800 text-gray-200 border border-gray-700/50 rounded-tl-sm'
+                          ? 'bg-cyan-900/60 text-cyan-100 border border-cyan-500/40 rounded-tr-xs shadow-[0_0_12px_rgba(0,240,255,0.15)]' 
+                          : 'bg-[#090d16] text-slate-200 border border-slate-800 rounded-tl-xs shadow-md'
                       }`}>
                         {msg.text}
                       </div>
@@ -194,11 +203,12 @@ export function HelpBotWidget() {
               {isLoading && (
                 <div className="flex justify-start">
                   <div className="flex gap-2 max-w-[85%]">
-                    <div className="shrink-0 w-6 h-6 rounded-full flex items-center justify-center mt-1 bg-gray-800">
-                      <Bot className="w-3.5 h-3.5 text-indigo-400" />
+                    <div className="shrink-0 w-6 h-6 rounded-full flex items-center justify-center mt-0.5 bg-slate-900 border border-slate-700">
+                      <Bot className="w-3 h-3 text-cyan-400" />
                     </div>
-                    <div className="px-3 py-2 rounded-2xl bg-gray-800 border border-gray-700/50 rounded-tl-sm flex items-center h-[38px]">
-                      <Loader2 className="w-4 h-4 text-gray-400 animate-spin" />
+                    <div className="px-3 py-2 rounded-xl bg-[#090d16] border border-cyan-500/30 rounded-tl-xs flex items-center gap-2 h-[34px]">
+                      <Loader2 className="w-3.5 h-3.5 text-cyan-400 animate-spin" />
+                      <span className="text-[10px] text-slate-400 font-mono">Synthesizing intelligence...</span>
                     </div>
                   </div>
                 </div>
@@ -207,21 +217,21 @@ export function HelpBotWidget() {
             </div>
 
             {/* Input Area */}
-            <div className="p-3 bg-gray-950 border-t border-gray-800">
+            <div className="p-2.5 bg-[#02040a] border-t border-cyan-500/20">
               <form onSubmit={handleSubmit} className="relative">
                 <input
                   type="text"
                   value={input}
                   onChange={(e) => setInput(e.target.value)}
-                  placeholder="Ask a question..."
-                  className="w-full bg-gray-900 border border-gray-700 rounded-xl pl-4 pr-10 py-2.5 text-sm text-white placeholder-gray-500 focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 transition-all"
+                  placeholder="Enter tactical query..."
+                  className="w-full bg-[#090d16] border border-slate-800 rounded-lg pl-3 pr-9 py-2 text-xs text-white placeholder-slate-500 font-mono focus:outline-none focus:border-cyan-400 focus:ring-1 focus:ring-cyan-500/40 transition-all"
                 />
                 <button
                   type="submit"
                   disabled={!input.trim() || isLoading}
-                  className="absolute right-1.5 top-1.5 bottom-1.5 px-2 bg-indigo-600 hover:bg-indigo-500 disabled:bg-gray-800 disabled:text-gray-500 text-white rounded-lg transition-colors flex items-center justify-center"
+                  className="absolute right-1 top-1 bottom-1 px-2.5 bg-cyan-600 hover:bg-cyan-500 disabled:opacity-40 text-white rounded-md transition-all flex items-center justify-center cursor-pointer active:scale-95 shadow-sm"
                 >
-                  <Send className="w-4 h-4" />
+                  <Send className="w-3.5 h-3.5" />
                 </button>
               </form>
             </div>
@@ -229,12 +239,23 @@ export function HelpBotWidget() {
         )}
       </AnimatePresence>
 
-      <button
-        onClick={() => setIsOpen(!isOpen)}
-        className="w-14 h-14 bg-indigo-600 hover:bg-indigo-500 text-white rounded-full shadow-lg shadow-indigo-600/30 flex items-center justify-center transition-transform hover:scale-105 active:scale-95"
-      >
-        {isOpen ? <X className="w-6 h-6" /> : <MessageCircle className="w-6 h-6" />}
-      </button>
+      {/* Floating Tactical Launcher Button */}
+      <div className="flex items-center gap-2">
+        {!isOpen && (
+          <div className="hidden sm:flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-[#040812]/90 border border-cyan-500/30 text-[10px] font-mono font-bold tracking-wider text-cyan-300 shadow-[0_0_15px_rgba(0,240,255,0.2)] backdrop-blur-md">
+            <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse"></span>
+            AI COPILOT
+          </div>
+        )}
+        <button
+          onClick={() => setIsOpen(!isOpen)}
+          className="relative w-12 h-12 rounded-full bg-[#040812] border-2 border-cyan-400/80 hover:border-cyan-300 text-cyan-300 shadow-[0_0_20px_rgba(0,240,255,0.35)] hover:shadow-[0_0_30px_rgba(0,240,255,0.6)] flex items-center justify-center transition-all duration-300 hover:scale-105 active:scale-95 cursor-pointer"
+          title="Tactical AI Copilot & Defense Help Bot"
+        >
+          <span className="absolute -inset-1 rounded-full border border-cyan-500/30 animate-ping pointer-events-none opacity-40"></span>
+          {isOpen ? <X className="w-5 h-5 text-rose-400" /> : <Bot className="w-5 h-5 text-cyan-300" />}
+        </button>
+      </div>
     </div>
   );
 }

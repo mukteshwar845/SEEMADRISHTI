@@ -149,11 +149,11 @@ export const IntelligenceSearch: React.FC<IntelligenceSearchProps> = ({
   };
 
   return (
-    <div className="w-full bg-slate-900/90 border border-cyan-500/20 rounded-xl shadow-2xl backdrop-blur-md overflow-hidden transition-all mb-4">
+    <div className="w-full hacked-panel hud-corner-brackets rounded-xl border border-cyan-500/30 shadow-[0_0_30px_rgba(0,0,0,0.85)] backdrop-blur-md overflow-hidden transition-all mb-4">
       {/* Search Input Bar */}
-      <div className="p-3 sm:p-4 border-b border-slate-800/80 flex flex-col gap-2.5">
+      <div className="p-3 sm:p-4 border-b border-cyan-500/20 flex flex-col gap-2.5">
         <div className="flex items-center gap-3">
-          <div className="p-2 rounded-lg bg-cyan-950/60 border border-cyan-500/30 text-cyan-400">
+          <div className="p-2 rounded-lg bg-cyan-950/80 border border-cyan-500/40 text-cyan-300 shadow-[0_0_12px_rgba(0,240,255,0.25)]">
             <Search className="w-5 h-5" />
           </div>
 
@@ -170,12 +170,12 @@ export const IntelligenceSearch: React.FC<IntelligenceSearchProps> = ({
                 if (history.length > 0 && !searchResponse) setShowHistory(true);
               }}
               placeholder="Search surveillance intelligence... (e.g., 'Show critical incidents in the last 10 minutes', 'Show person #27 journey')"
-              className="w-full bg-slate-950/90 border border-slate-800 rounded-lg px-3.5 py-2 text-sm text-slate-100 placeholder:text-slate-500 focus:outline-none focus:border-cyan-500/60 focus:ring-1 focus:ring-cyan-500/40 font-mono"
+              className="w-full bg-[#020409]/95 border border-cyan-500/20 rounded-lg px-3.5 py-2 text-sm text-cyan-100 placeholder:text-slate-500 focus:outline-none focus:border-cyan-400 focus:ring-1 focus:ring-cyan-500/40 font-mono shadow-inner transition-all"
             />
             {query && (
               <button
                 onClick={handleClear}
-                className="absolute right-2.5 top-1/2 -translate-y-1/2 p-1 text-slate-500 hover:text-slate-200"
+                className="absolute right-2.5 top-1/2 -translate-y-1/2 p-1 text-slate-400 hover:text-cyan-300 cursor-pointer transition-colors"
               >
                 <X className="w-4 h-4" />
               </button>

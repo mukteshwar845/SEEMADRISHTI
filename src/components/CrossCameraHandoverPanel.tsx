@@ -47,7 +47,12 @@ export const CrossCameraHandoverPanel: React.FC = () => {
               temporal_gap: Math.max(1.0, Math.round(((new Date(c.last_seen_at).getTime() - new Date(c.started_at).getTime()) / 1000) * 10) / 10),
               confidence: conf,
               confidence_percent: Math.round(conf * 100),
-              reason: Array.isArray(c.reasons) ? c.reasons.map((r: any) => r.message || r.code).join('; ') : 'Corridor topology transition verified',
+              reason: (() => {
+                const clean = Array.isArray(c.reasons)
+                  ? c.reasons.map((r: any) => (typeof r === 'string' ? r : (r?.message || r?.code || r?.description || ''))).filter(Boolean).join('; ')
+                  : '';
+                return clean || 'Spatial-temporal corridor transit within calibrated sector boundary';
+              })(),
               spatial_relationship: `${(srcObs.camera_id || 'cam-01').toUpperCase()} -> ${(dstObs.camera_id || 'cam-02').toUpperCase()}`,
               status: c.correlation_score >= 50 ? 'VERIFIED' : 'UNCERTAIN',
               display_status: c.correlation_score >= 50 ? 'TARGET HANDOVER DETECTED' : 'CORRELATION UNCERTAIN',

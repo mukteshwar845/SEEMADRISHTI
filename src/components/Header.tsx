@@ -129,7 +129,7 @@ export const Header: React.FC<HeaderProps> = ({
                     : 'text-cyan-300 drop-shadow-[0_0_8px_rgba(0,240,255,0.4)]'
                 }`}
               >
-                SEEMADRISHTI AI DASHBOARD
+                SEEMADRISHTI DASHBOARD
               </h2>
             </div>
             <p

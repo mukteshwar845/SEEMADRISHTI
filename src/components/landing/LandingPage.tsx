@@ -304,7 +304,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onEnterAuth }) => {
           <div>
             <div className="flex items-center gap-2">
               <span className="text-base sm:text-lg font-black tracking-widest text-transparent bg-clip-text bg-gradient-to-r from-cyan-300 via-cyan-400 to-teal-300 drop-shadow-[0_0_12px_rgba(0,240,255,0.4)]">
-                SEEMADRISHTI AI
+                SEEMADRISHTI
               </span>
               <span className="px-2 py-0.5 rounded-md bg-emerald-500/10 border border-emerald-400/30 text-[9px] font-bold text-emerald-400 hidden sm:inline-flex items-center gap-1">
                 <ShieldCheck size={10} className="text-emerald-400" />
@@ -739,7 +739,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onEnterAuth }) => {
           <div className="flex items-center gap-3">
             <SeemadrishtiLogo className="w-6 h-6 text-cyan-400" />
             <span className="tracking-widest font-bold text-slate-400">
-              &copy; 2026 SEEMADRISHTI AI DEFENSE TECHNOLOGIES
+              &copy; 2026 SEEMADRISHTI DEFENSE TECHNOLOGIES
             </span>
           </div>
 

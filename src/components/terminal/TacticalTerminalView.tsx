@@ -65,7 +65,7 @@ export const TacticalTerminalView: React.FC<TacticalTerminalViewProps> = ({
  |_____/|______|______|_|  |_/_/    \\_\\_____/|_|  \\_\\_____|_____/|_|  |_|  |_|  |_____|`}
           </pre>
           <div className="mt-2 text-slate-300">
-            SEEMADRISHTI AI DEFENSE OS v4.2.0-EDGE [BTI-KERNEL-64]
+            SEEMADRISHTI DEFENSE OS v4.2.0-EDGE [BTI-KERNEL-64]
           </div>
           <div className="text-slate-500 text-[11px]">
             Connected to Tactical Command Node CAM-GATEWAY // Secure Terminal Session Active
@@ -444,7 +444,7 @@ export const TacticalTerminalView: React.FC<TacticalTerminalViewProps> = ({
         addLog(
           'output',
           <div className="space-y-1 text-xs font-mono text-slate-300">
-            <div>SEEMADRISHTI AI TACTICAL CORE: <span className="text-cyan-300 font-bold">v4.2.0-RELEASE</span></div>
+            <div>SEEMADRISHTI TACTICAL CORE: <span className="text-cyan-300 font-bold">v4.2.0-RELEASE</span></div>
             <div>Build Architecture: <span className="text-slate-200">Node.js + Python OpenCV + React Vite</span></div>
             <div>Security Standards: <span className="text-emerald-400 font-bold">SHA-256 HMAC & WSS Binary TLS</span></div>
             <div>Defense Deployment: <span className="text-slate-200">Smart India Hackathon 2024 / Border Perimeter</span></div>

@@ -189,7 +189,7 @@ export const TargetJourneyView: React.FC<TargetJourneyViewProps> = ({
     if (!journey) return '';
     const now = new Date().toISOString();
     return `================================================================================
-SEEMADRISHTI AI // BORDER SURVEILLANCE TACTICAL INTELLIGENCE DOSSIER
+SEEMADRISHTI // BORDER SURVEILLANCE TACTICAL INTELLIGENCE DOSSIER
 CONFIDENTIAL // RESTRICTED ACCESS — SECTOR DEFENSE COMMAND
 ================================================================================
 REPORT ID: DOSSIER-TRK-${journey.track_id}-${Date.now()}

@@ -60,7 +60,7 @@ export const ReportsModal: React.FC<ReportsModalProps> = ({ isOpen, onClose }) =
           </div>
           <div>
             <h2 className="text-lg font-bold font-mono tracking-wider">TACTICAL REPORT GENERATOR</h2>
-            <p className="text-xs text-slate-400 font-mono">SEEMADRISHTI AI // Official Intelligence Dossier Export</p>
+            <p className="text-xs text-slate-400 font-mono">SEEMADRISHTI // Official Intelligence Dossier Export</p>
           </div>
         </div>
 

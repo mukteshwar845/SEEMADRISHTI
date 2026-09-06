@@ -379,7 +379,7 @@ export const SihDemoGuideModal: React.FC<SihDemoGuideModalProps> = ({
             <div>
               <div className="flex items-center gap-2">
                 <h3 className="text-sm font-black text-white tracking-widest uppercase">
-                  SEEMADRISHTI AI // SIH JUDGE DEMONSTRATION WORKFLOW
+                  SEEMADRISHTI // SIH JUDGE DEMONSTRATION WORKFLOW
                 </h3>
                 <span className="text-[10px] bg-cyan-950 text-cyan-400 px-2 py-0.5 rounded border border-cyan-500/30">
                   IQ100 // SIH26187

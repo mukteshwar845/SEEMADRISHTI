@@ -345,7 +345,7 @@ export const AnalyticsDashboard: React.FC<AnalyticsDashboardProps> = ({ cameras 
   // Export JSON Report
   const handleExportJSON = () => {
     const payload = {
-      reportTitle: 'SEEMADRISHTI AI Surveillance 24H Analytics & Flow Report',
+      reportTitle: 'SEEMADRISHTI Surveillance 24H Analytics & Flow Report',
       generatedAt: new Date().toISOString(),
       timeRange,
       selectedCamera: selectedCameraFilter,

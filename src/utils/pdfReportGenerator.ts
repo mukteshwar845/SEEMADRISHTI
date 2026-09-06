@@ -30,7 +30,7 @@ export async function generateAlertPdfReport(alert: AlertItem, operatorNotes?: s
   doc.setFont('helvetica', 'bold');
   doc.setFontSize(16);
   doc.setTextColor(255, 255, 255);
-  doc.text('SEEMADRISHTI AI DEFENSE COMMAND', 14, 20);
+  doc.text('SEEMADRISHTI DEFENSE COMMAND', 14, 20);
 
   doc.setFont('helvetica', 'normal');
   doc.setFontSize(9);

@@ -169,7 +169,7 @@ systemRouter.get('/version', (req: Request, res: Response) => {
   res.json({
     success: true,
     data: {
-      application_name: 'SEEMADRISHTI AI',
+      application_name: 'SEEMADRISHTI',
       team: 'IQ100',
       problem_statement: 'SIH26187',
       application_version: '1.15.0',
@@ -412,7 +412,7 @@ systemRouter.get('/reports/generate', (req: Request, res: Response, next: NextFu
     const highIncidents = incRows.filter((i) => i.risk_level === 'HIGH').length;
 
     const reportData = {
-      title: 'SEEMADRISHTI AI — Tactical Intelligence & Operations Report',
+      title: 'SEEMADRISHTI — Tactical Intelligence & Operations Report',
       generated_at: new Date().toISOString(),
       classification: 'OFFICIAL USE ONLY // LAW ENFORCEMENT & BORDER COMMAND',
       summary: {

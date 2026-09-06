@@ -38,7 +38,7 @@ if (process.env.NODE_ENV !== 'test' || !module.parent) {
   server.listen(PORT, HOST, () => {
     console.log(`
 ┌─────────────────────────────────────────────────────────────────────────────┐
-│ 👁️  SEEMADRISHTI AI - TACTICAL BACKEND GATEWAY (PHASE 1)                     │
+│ 👁️  SEEMADRISHTI - TACTICAL BACKEND GATEWAY (PHASE 1)                        │
 ├─────────────────────────────────────────────────────────────────────────────┤
 │ ● Service:          seemadrishti-backend                                    │
 │ ● REST Base URL:    http://127.0.0.1:${PORT}/api                                │

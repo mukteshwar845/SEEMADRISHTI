@@ -97,7 +97,7 @@ export function initializeWebSocketServer(server: http.Server): WebSocketServer 
     const ackMessage: WebSocketMessage = {
       type: 'connection_ack',
       data: {
-        message: 'SEEMADRISHTI AI WebSocket Gateway Connected',
+        message: 'SEEMADRISHTI WebSocket Gateway Connected',
         service: 'seemadrishti-backend',
         clientPath: rawUrl,
         authenticated: isAuthed,

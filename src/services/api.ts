@@ -1,5 +1,5 @@
 /**
- * SEEMADRISHTI AI - Frontend API Integration Service (Phase 1)
+ * SEEMADRISHTI - Frontend API Integration Service (Phase 1)
  *
  * NOTE: For Phase 1, the frontend continues to use its existing local mockData
  * to prevent any visual or behavioural regressions. This API client provides the
@@ -762,7 +762,7 @@ export function exportDetectionsCSV(detections: any[]): void {
 
 export function exportAnalyticsSummaryJSON(summary: any, occupancy: any[], anomalies: any[], corridors: any[]): void {
   const exportPayload = {
-    report: 'SEEMADRISHTI AI — Traffic Flow, Movement & Behavior Intelligence Dossier',
+    report: 'SEEMADRISHTI — Traffic Flow, Movement & Behavior Intelligence Dossier',
     export_timestamp: new Date().toISOString(),
     engine: 'Phase 10 & 12 Advanced Analytics Engine',
     system_mode: 'OPERATIONAL',

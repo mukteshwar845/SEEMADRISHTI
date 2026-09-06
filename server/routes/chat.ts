@@ -23,7 +23,7 @@ const TACTICAL_KNOWLEDGE_BASE: TacticalKnowledgeEntry[] = [
       /system\s+overview/i,
       /what\s+does\s+this\s+do/i,
     ],
-    title: 'SEEMADRISHTI AI Surveillance Matrix',
+    title: 'SEEMADRISHTI Surveillance Matrix',
     response:
       `**SEEMADRISHTI (सीमा दृष्टि — "Border Vision")** is an autonomous, AI-driven multi-camera border surveillance and tactical reconnaissance matrix engineered for defense forces and high-security installations.\n\n` +
       `**Core Capabilities:**\n` +

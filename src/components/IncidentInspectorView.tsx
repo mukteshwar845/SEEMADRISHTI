@@ -983,7 +983,7 @@ export const IncidentInspectorView: React.FC<IncidentInspectorViewProps> = ({
           </span>
           <div>
             <h1 className="text-xs font-mono font-black text-[#dce1fb] uppercase tracking-widest flex items-center gap-2">
-              <span>SEEMADRISHTI AI | SECTOR COMMAND</span>
+              <span>SEEMADRISHTI | SECTOR COMMAND</span>
               <span className="text-[#869397] font-normal">|</span>
               <span className="text-[#4cd7f6]">INCIDENT INSPECTOR &amp; XAI</span>
             </h1>

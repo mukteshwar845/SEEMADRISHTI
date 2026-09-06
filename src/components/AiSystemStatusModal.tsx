@@ -240,7 +240,7 @@ export const AiSystemStatusModal: React.FC<AiSystemStatusModalProps> = ({
         {/* Footer */}
         <div className="px-6 py-3.5 border-t border-white/10 bg-slate-950 flex items-center justify-between text-xs font-mono">
           <span className="text-slate-400">
-            SEEMADRISHTI AI Core Architecture // Inspect source code at: <code className="text-cyan-400">cv_service/</code> and <code className="text-cyan-400">server/</code>
+            SEEMADRISHTI Core Architecture // Inspect source code at: <code className="text-cyan-400">cv_service/</code> and <code className="text-cyan-400">server/</code>
           </span>
           <button
             onClick={onClose}

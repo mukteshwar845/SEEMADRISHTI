@@ -48,29 +48,6 @@ export const Auth3DView: React.FC<Auth3DViewProps> = ({
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
 
-  // Live Defense Clock Telemetry
-  const [liveUtcTime, setLiveUtcTime] = useState('');
-  const [liveIstTime, setLiveIstTime] = useState('');
-
-  useEffect(() => {
-    const updateClocks = () => {
-      const now = new Date();
-      setLiveUtcTime(now.toISOString().substring(11, 19) + ' UTC');
-      setLiveIstTime(
-        now.toLocaleTimeString('en-IN', {
-          timeZone: 'Asia/Kolkata',
-          hour12: false,
-          hour: '2-digit',
-          minute: '2-digit',
-          second: '2-digit',
-        }) + ' IST'
-      );
-    };
-    updateClocks();
-    const timer = setInterval(updateClocks, 1000);
-    return () => clearInterval(timer);
-  }, []);
-
   const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
     setIsCapsLockOn(e.getModifierState('CapsLock'));
   };
@@ -209,12 +186,6 @@ export const Auth3DView: React.FC<Auth3DViewProps> = ({
         </div>
 
         <div className="flex items-center gap-3.5">
-          {/* Live UTC / IST Clocks */}
-          <div className="hidden md:flex flex-col text-right font-mono text-[10px] border-r border-white/10 pr-3.5">
-            <span className="text-cyan-400 font-bold tracking-wider">{liveIstTime}</span>
-            <span className="text-slate-500">{liveUtcTime}</span>
-          </div>
-
           <button
             onClick={() => {
               if (onNavigateLanding) onNavigateLanding();
@@ -527,16 +498,16 @@ export const Auth3DView: React.FC<Auth3DViewProps> = ({
         </div>
       </main>
 
-      {/* Footer Status with Minimal Defense Telemetry */}
-      <footer className="relative z-10 py-2.5 px-6 flex flex-col sm:flex-row items-center justify-between gap-2 text-[10px] text-slate-400 border-t border-white/[0.08] backdrop-blur-2xl bg-black/30">
+      {/* Clean Classified Defense Footer */}
+      <footer className="relative z-10 py-2.5 px-6 flex flex-col sm:flex-row items-center justify-between gap-2 text-[10px] text-slate-500 border-t border-white/[0.08] backdrop-blur-2xl bg-black/40">
         <div className="flex items-center gap-2">
-          <span className="w-2 h-2 rounded-full bg-emerald-400 shadow-[0_0_8px_#10b981]" />
-          <span>SEEMADRISHTI AI DEFENSE MATRIX &bull; BORDER CCTV INTELLIGENCE PLATFORM</span>
+          <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 shadow-[0_0_8px_#10b981]" />
+          <span>&copy; 2026 SEEMADRISHTI AI DEFENSE TECHNOLOGIES</span>
         </div>
-        <div className="flex items-center gap-4 text-slate-400 font-mono">
-          <span>LATENCY: &lt;12MS</span>
-          <span>CIPHER: AES-256 GCM</span>
-          <span className="text-cyan-400 font-bold">NODE 01 ACTIVE</span>
+        <div className="flex items-center gap-3 text-slate-500 tracking-wider">
+          <span>RESTRICTED // MIL-STD-810H COMPLIANT</span>
+          <span className="text-slate-700">|</span>
+          <span className="text-cyan-400/80 font-bold">DEFENSE NETWORK ONLY</span>
         </div>
       </footer>
     </div>

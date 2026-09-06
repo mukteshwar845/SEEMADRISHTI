@@ -2,6 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { CameraFeed, RecordedClip, AlertItem } from '../types';
 import { recordingEngine, ActiveRecording } from '../utils/recordingManager';
 import { audioAlertEngine } from '../utils/audioAlert';
+import { fetchWithAuth } from '../utils/fetchWithAuth';
 import {
   Film,
   Play,
@@ -87,7 +88,7 @@ export const HistoricalLogsView: React.FC<HistoricalLogsViewProps> = ({
     });
 
     // Also fetch real incidents to populate historical log clips
-    fetch('/api/incidents')
+    fetchWithAuth('/api/incidents')
       .then((res) => res.json())
       .then((payload) => {
         if (payload?.success && Array.isArray(payload.data)) {

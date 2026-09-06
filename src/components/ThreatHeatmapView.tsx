@@ -370,7 +370,7 @@ export const ThreatHeatmapView: React.FC<ThreatHeatmapViewProps> = ({
           if (showSectorLabels) {
             ctx.font = 'bold 10px "JetBrains Mono", monospace';
             ctx.fillStyle = isSelected ? '#ffffff' : '#94a3b8';
-            ctx.fillText(cam.camera_id.toUpperCase(), cx + 15, cy - 2);
+            ctx.fillText(String(cam.camera_id || '').toUpperCase(), cx + 15, cy - 2);
 
             ctx.font = 'bold 9px "JetBrains Mono", monospace';
             ctx.fillStyle = nodeColor;
@@ -525,7 +525,7 @@ export const ThreatHeatmapView: React.FC<ThreatHeatmapViewProps> = ({
           <div className="flex items-center gap-2">
             <Compass className="w-4 h-4 text-cyan-400 shrink-0" />
             <span>
-              TARGET JOURNEY ACTIVE: Highlighting nodes traversed by target: {targetHighlightCameras.map((c) => c.toUpperCase()).join(' ➔ ')}
+              TARGET JOURNEY ACTIVE: Highlighting nodes traversed by target: {targetHighlightCameras.map((c) => String(c || '').toUpperCase()).join(' ➔ ')}
             </span>
           </div>
           <button
@@ -571,7 +571,7 @@ export const ThreatHeatmapView: React.FC<ThreatHeatmapViewProps> = ({
                 </span>
               </div>
               <h2 className="text-base font-black text-white mt-1">
-                {hotspot.camera_id.toUpperCase()} // {hotspot.camera_name} ({hotspot.sector})
+                {String(hotspot.camera_id || '').toUpperCase()} // {hotspot.camera_name} ({hotspot.sector})
               </h2>
             </div>
           </div>
@@ -757,7 +757,7 @@ export const ThreatHeatmapView: React.FC<ThreatHeatmapViewProps> = ({
                         <div className="flex items-center justify-between">
                           <div>
                             <span className="text-xs font-bold text-white block">
-                              {cam.camera_id.toUpperCase()}
+                              {String(cam.camera_id || '').toUpperCase()}
                             </span>
                             <span className="text-[10px] text-slate-500 block truncate max-w-[130px]">
                               {cam.sector}
@@ -845,7 +845,7 @@ export const ThreatHeatmapView: React.FC<ThreatHeatmapViewProps> = ({
                       <span className="font-bold text-white">{sec.threat_index}/100</span>
                     </div>
                     <div className="text-[10px] text-slate-500 mt-1 truncate">
-                      {sec.cameras.map((c) => c.toUpperCase()).join(', ')} ({sec.total_events} events)
+                      {sec.cameras.map((c) => String(c || '').toUpperCase()).join(', ')} ({sec.total_events} events)
                     </div>
                   </div>
                 );
@@ -903,7 +903,7 @@ export const ThreatHeatmapView: React.FC<ThreatHeatmapViewProps> = ({
               NODE THREAT PROFILE
             </span>
             <span className="text-xs text-cyan-400 font-bold">
-              {selectedCameraId ? selectedCameraId.toUpperCase() : 'SELECT NODE'}
+              {selectedCameraId ? String(selectedCameraId).toUpperCase() : 'SELECT NODE'}
             </span>
           </div>
 
@@ -1020,7 +1020,7 @@ export const ThreatHeatmapView: React.FC<ThreatHeatmapViewProps> = ({
 
                 <button
                   onClick={() => {
-                    setActionAlertMsg(`[DEFCON ALERT] Quick Reaction Team dispatched to ${cameraProfile.camera_id.toUpperCase()} (${cameraProfile.sector}).`);
+                    setActionAlertMsg(`[DEFCON ALERT] Quick Reaction Team dispatched to ${String(cameraProfile.camera_id || '').toUpperCase()} (${cameraProfile.sector}).`);
                     setTimeout(() => setActionAlertMsg(null), 5000);
                   }}
                   className="w-full py-2 px-3 rounded-lg bg-rose-950 hover:bg-rose-900 text-rose-300 border border-rose-500/40 font-bold text-xs flex items-center justify-center gap-1.5 transition-colors cursor-pointer"

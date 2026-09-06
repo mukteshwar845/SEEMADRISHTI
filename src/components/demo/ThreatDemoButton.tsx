@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { Shield, AlertTriangle, Zap, Eye, Navigation, Scale, Globe, Square, Play, RotateCcw } from 'lucide-react';
+import { fetchWithAuth } from '../../utils/fetchWithAuth';
 
 interface SimStatus {
   running: boolean;
@@ -46,7 +47,7 @@ export const ThreatDemoButton: React.FC = () => {
   const startLoop = useCallback(async (loopNum: number) => {
     // Fire backend
     try {
-      await fetch('/api/v1/agents/simulation/start', { method: 'POST' });
+      await fetchWithAuth('/api/v1/agents/simulation/start', { method: 'POST' });
     } catch {
       // fallback to frontend-only
     }
@@ -110,7 +111,7 @@ export const ThreatDemoButton: React.FC = () => {
     setCompletedSteps([]);
     setLoopProgress(0);
     try {
-      await fetch('/api/v1/agents/simulation/stop', { method: 'POST' });
+      await fetchWithAuth('/api/v1/agents/simulation/stop', { method: 'POST' });
     } catch {}
   }, [clearAll]);
 

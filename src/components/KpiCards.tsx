@@ -13,6 +13,7 @@ import {
 } from 'lucide-react';
 import { webSocketService, FleetCounts } from '../services/websocketService';
 import { CrossCameraHandoverPanel } from './CrossCameraHandoverPanel';
+import { fetchWithAuth } from '../utils/fetchWithAuth';
 
 interface KpiCardsProps {
   onFilterChange?: (filter: string) => void;
@@ -45,7 +46,7 @@ export const KpiCards: React.FC<KpiCardsProps> = ({ alerts = [] }) => {
     // Fetch initial multi-camera and fusion stats
     async function fetchIntelligenceStats() {
       try {
-        const res = await fetch('/api/correlations?limit=50');
+        const res = await fetchWithAuth('/api/correlations?limit=50');
         if (res.ok) {
           const json = await res.json();
           if (json.success && Array.isArray(json.data)) {
@@ -56,7 +57,7 @@ export const KpiCards: React.FC<KpiCardsProps> = ({ alerts = [] }) => {
       } catch {}
 
       try {
-        const resInc = await fetch('/api/incidents?limit=50');
+        const resInc = await fetchWithAuth('/api/incidents?limit=50');
         if (resInc.ok) {
           const jsonInc = await resInc.json();
           if (jsonInc.success && Array.isArray(jsonInc.data)) {

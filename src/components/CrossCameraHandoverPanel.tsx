@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { ArrowRight, ShieldCheck, HelpCircle, RefreshCw, Layers, Clock, Video } from 'lucide-react';
 import { webSocketService } from '../services/websocketService';
+import { fetchWithAuth } from '../utils/fetchWithAuth';
 
 export interface HandoverItem {
   correlation_id: string;
@@ -27,7 +28,7 @@ export const CrossCameraHandoverPanel: React.FC = () => {
   const fetchCorrelations = async () => {
     try {
       setIsLoading(true);
-      const res = await fetch('/api/correlations?limit=10');
+      const res = await fetchWithAuth('/api/correlations?limit=10');
       if (res.ok) {
         const json = await res.json();
         if (json.success && Array.isArray(json.data) && json.data.length > 0) {

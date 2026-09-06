@@ -62,8 +62,30 @@ function SeemadrishtiMainApp() {
   const { theme, isDaylight } = useTheme();
   const navigate = useNavigate();
   const location = useLocation();
-  const pathView = location.pathname.substring(1);
-  const currentView: ViewMode = (pathView || 'dashboard') as ViewMode;
+  const rawPath = location.pathname.substring(1).toLowerCase();
+
+  const ROUTE_ALIASES: Record<string, ViewMode> = {
+    notifications: 'notification-history',
+    'notification-history': 'notification-history',
+    radar: 'radar-map',
+    gis: 'radar-map',
+    'radar-map': 'radar-map',
+    swarm: 'agents',
+    agent: 'agents',
+    agents: 'agents',
+    vault: 'evidence-queue',
+    evidence: 'evidence-queue',
+    'evidence-queue': 'evidence-queue',
+    timeline: 'system-timeline',
+    'system-timeline': 'system-timeline',
+    nvr: 'historical-logs',
+    logs: 'historical-logs',
+    'historical-logs': 'historical-logs',
+    matrix: 'dashboard',
+    dashboard: 'dashboard',
+  };
+
+  const currentView: ViewMode = (ROUTE_ALIASES[rawPath] || rawPath || 'dashboard') as ViewMode;
 
   const setCurrentView = useCallback((view: string) => {
     navigate(`/${view}`);

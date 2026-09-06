@@ -110,7 +110,7 @@ export const UserManagementView: React.FC = () => {
       const res = await updateUser(user.id, { status: nextStatus });
       if (res.success) {
         setUsers((prev) => prev.map((u) => (u.id === user.id ? { ...u, status: nextStatus } : u)));
-        setToastMessage(`Duty status for ${user.name} changed to ${nextStatus.toUpperCase()}`);
+        setToastMessage(`Duty status for ${user.name} changed to ${String(nextStatus || '').toUpperCase()}`);
         setTimeout(() => setToastMessage(null), 3000);
       }
     } catch (err) {
@@ -198,7 +198,7 @@ export const UserManagementView: React.FC = () => {
               </span>
               {currentOperator && (
                 <span className="px-2 py-0.5 rounded text-[10px] font-mono font-bold bg-cyan-500/20 text-cyan-300 border border-cyan-500/40">
-                  {currentOperator.role.toUpperCase()}
+                  {String(currentOperator?.role || 'OPERATOR').toUpperCase()}
                 </span>
               )}
             </div>

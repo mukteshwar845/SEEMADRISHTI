@@ -1,6 +1,7 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { MessageCircle, X, Send, Bot, User, Loader2 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
+import { fetchWithAuth } from '../../utils/fetchWithAuth';
 
 export interface ChatMessage {
   id: string;
@@ -30,7 +31,7 @@ export function HelpBotWidget() {
     try {
       const historyPayload = messages.map(m => ({ role: m.role, text: m.text }));
       
-      const response = await fetch('/api/chat', {
+      const response = await fetchWithAuth('/api/chat', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

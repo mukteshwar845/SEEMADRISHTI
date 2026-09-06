@@ -5,7 +5,19 @@ import { requireRole } from '../middleware/auth';
 
 export const agentsRouter = Router();
 
-const AGENT_ROLES = ['Admin', 'Commander', 'Surveillance Operator', 'AI Analyst'];
+const AGENT_ROLES = [
+  'Admin',
+  'Commander',
+  'Surveillance Operator',
+  'AI Analyst',
+  'Patrol Officer',
+  'admin',
+  'commander',
+  'operator',
+  'analyst',
+  'patrol',
+  'service',
+];
 
 // GET /api/v1/agents/status -> Get all agents telemetry & states
 agentsRouter.get('/status', (req: Request, res: Response) => {

@@ -45,6 +45,7 @@ import {
 import { useTheme } from '../../context/ThemeContext';
 import { audioAlertEngine } from '../../utils/audioAlert';
 import { ThreatDemoButton } from '../demo/ThreatDemoButton';
+import { fetchWithAuth } from '../../utils/fetchWithAuth';
 
 export const CLIENT_PRESET_PARALLEL_JOBS: Record<string, ParallelOrchestrationJob> = {
   perimeter_sweep_9cam: {
@@ -582,7 +583,7 @@ export const MultiAgentOrchestratorView: React.FC = () => {
 
   const fetchAgentStatus = async () => {
     try {
-      const res = await fetch('/api/v1/agents/status');
+      const res = await fetchWithAuth('/api/v1/agents/status');
       const data = await res.json();
       if (data.success) {
         if (data.agents && data.agents.length > 0) setAgents(data.agents);
@@ -608,7 +609,7 @@ export const MultiAgentOrchestratorView: React.FC = () => {
     setIsDispatchingParallel(true);
     audioAlertEngine.playTone('electronic_chirp', { force: true, volumeOverride: 0.7 });
     try {
-      const res = await fetch('/api/v1/agents/jobs/dispatch', {
+      const res = await fetchWithAuth('/api/v1/agents/jobs/dispatch', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ jobKey: jobKeyOrQuery, query: jobKeyOrQuery }),
@@ -644,7 +645,7 @@ export const MultiAgentOrchestratorView: React.FC = () => {
     setSelectedScenario(scenarioKey);
     setIsDeliberating(true);
     try {
-      const res = await fetch('/api/v1/agents/deliberate', {
+      const res = await fetchWithAuth('/api/v1/agents/deliberate', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ scenario: scenarioKey }),
@@ -665,7 +666,7 @@ export const MultiAgentOrchestratorView: React.FC = () => {
   const handleExecuteCountermeasure = async (actionId: string) => {
     audioAlertEngine.playTone('klaxon_pulse', { force: true, volumeOverride: 0.8 });
     try {
-      const res = await fetch('/api/v1/agents/execute', {
+      const res = await fetchWithAuth('/api/v1/agents/execute', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ actionId }),
@@ -708,7 +709,7 @@ export const MultiAgentOrchestratorView: React.FC = () => {
     setIsCopilotThinking(true);
 
     try {
-      const res = await fetch('/api/v1/agents/copilot', {
+      const res = await fetchWithAuth('/api/v1/agents/copilot', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ query: q }),

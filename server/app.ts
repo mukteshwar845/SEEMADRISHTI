@@ -108,6 +108,8 @@ export function createApp(): express.Application {
       normPath === '/webcam/status' ||
       normPath === '/sensors/pair' ||
       normPath === '/sensors/heartbeat' ||
+      normPath === '/chat' ||
+      normPath.startsWith('/chat') ||
       /^\/cameras\/[^\/]+\/video/.test(normPath);
 
     if (isPublic) {

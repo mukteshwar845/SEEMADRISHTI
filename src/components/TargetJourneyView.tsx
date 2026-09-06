@@ -171,14 +171,15 @@ export const TargetJourneyView: React.FC<TargetJourneyViewProps> = ({
   const pathSequence = useMemo(() => {
     if (!journey) return [];
     const cams: string[] = [];
-    journey.camera_path.forEach((step) => {
-      const cid = step.camera_id.toLowerCase();
-      if (!cams.includes(cid)) {
+    const path = Array.isArray(journey.camera_path) ? journey.camera_path : [];
+    path.forEach((step: any) => {
+      const cid = (typeof step === 'string' ? step : step?.camera_id || '').toLowerCase();
+      if (cid && !cams.includes(cid)) {
         cams.push(cid);
       }
     });
-    if (cams.length === 0 && journey.unique_cameras.length > 0) {
-      return journey.unique_cameras.map((c) => c.toLowerCase());
+    if (cams.length === 0 && Array.isArray(journey.unique_cameras) && journey.unique_cameras.length > 0) {
+      return journey.unique_cameras.map((c: any) => (typeof c === 'string' ? c : c?.camera_id || '').toLowerCase()).filter(Boolean);
     }
     return cams;
   }, [journey]);
@@ -194,7 +195,7 @@ CONFIDENTIAL // RESTRICTED ACCESS — SECTOR DEFENSE COMMAND
 REPORT ID: DOSSIER-TRK-${journey.track_id}-${Date.now()}
 TIMESTAMP: ${now}
 TARGET ID: TRACK #${journey.track_id}
-CLASS:     ${journey.class.toUpperCase()}
+CLASS:     ${String(journey.class || (journey as any).class_name || 'PERSON').toUpperCase()}
 THREAT:    ${journey.risk_score}/100 [${journey.risk_level}]
 CORRELATION ID: ${journey.correlation_id || 'CORR-N/A'}
 STATUS:    ${journey.status_note}
@@ -203,14 +204,14 @@ KINEMATICS & TELEMETRY:
 - Distance Traversed: ${journey.kinematics?.distance_meters || 85} meters along perimeter fence
 - Estimated Velocity: ${journey.kinematics?.average_speed_mps || 2.4} m/s (${journey.kinematics?.speed_kmh || 8.6} km/h)
 - Movement Profile:   ${journey.kinematics?.velocity_profile || 'TACTICAL INVASION'}
-- Sectors Traversed:  ${journey.unique_cameras.map((c) => c.toUpperCase()).join(' ➔ ')}
+- Sectors Traversed:  ${(journey.unique_cameras || []).map((c: any) => String(c?.camera_id || c || '').toUpperCase()).filter(Boolean).join(' ➔ ')}
 - Total Transit Time: ${journey.duration_seconds} seconds
 
 CHRONOLOGICAL CORRIDOR HANDOVERS:
-${journey.handovers.length > 0 ? journey.handovers.map((h, i) => `  [${i + 1}] ${h.from_camera.toUpperCase()} ➔ ${h.to_camera.toUpperCase()} | Gap: ${h.temporal_gap_seconds}s | Conf: ${h.confidence_display} | Status: VERIFIED`).join('\n') : '  - Single Sector Traversal Recorded'}
+${(journey.handovers || []).length > 0 ? journey.handovers.map((h, i) => `  [${i + 1}] ${String(h?.from_camera || '').toUpperCase()} ➔ ${String(h?.to_camera || '').toUpperCase()} | Gap: ${h?.temporal_gap_seconds ?? 0}s | Conf: ${h?.confidence_display || 'HIGH'} | Status: VERIFIED`).join('\n') : '  - Single Sector Traversal Recorded'}
 
 CHRONOLOGICAL EVENT LOG:
-${journey.observed_events.map((ev, i) => `  [${new Date(ev.timestamp).toLocaleTimeString()}] ${ev.camera_id.toUpperCase()} : ${ev.event} — ${ev.description}`).join('\n')}
+${(journey.observed_events || []).map((ev, i) => `  [${new Date(ev.timestamp).toLocaleTimeString()}] ${String(ev?.camera_id || '').toUpperCase()} : ${ev?.event || 'INCURSION'} — ${ev?.description || 'Detected'}`).join('\n')}
 
 CRYPTOGRAPHIC EVIDENCE INTEGRITY:
 SHA-256: ${journey.kinematics?.sha256_verification || 'e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855'}
@@ -462,7 +463,7 @@ INTELLIGENCE GATEWAY: SEEMADRISHTI TACTICAL DEFENSE AI v2.0
                     <div className="flex items-center justify-between text-[10px] font-mono text-slate-400 mt-2 pt-2 border-t border-slate-900">
                       <span className="flex items-center gap-1 text-slate-300 font-bold">
                         <Camera className="w-3 h-3 text-cyan-400" />
-                        {tgt.latest_camera.toUpperCase()}
+                        {String(tgt?.latest_camera || 'CAM').toUpperCase()}
                       </span>
                       <span>{new Date(tgt.last_seen).toLocaleTimeString()}</span>
                     </div>
@@ -471,7 +472,7 @@ INTELLIGENCE GATEWAY: SEEMADRISHTI TACTICAL DEFENSE AI v2.0
                     {tgt.camera_path && tgt.camera_path.length > 1 && (
                       <div className="mt-1.5 flex items-center gap-1 text-[9px] font-mono text-cyan-400/80 overflow-hidden text-ellipsis whitespace-nowrap">
                         <ArrowRight className="w-2.5 h-2.5 shrink-0" />
-                        <span>{tgt.camera_path.map((c) => c.toUpperCase()).join(' ➔ ')}</span>
+                        <span>{(tgt.camera_path || []).map((c: any) => String(typeof c === 'string' ? c : c?.camera_id || '').toUpperCase()).filter(Boolean).join(' ➔ ')}</span>
                       </div>
                     )}
                   </div>
@@ -509,7 +510,7 @@ INTELLIGENCE GATEWAY: SEEMADRISHTI TACTICAL DEFENSE AI v2.0
                       TARGET #{journey.track_id}
                     </span>
                     <span className="px-2 py-0.5 rounded text-xs bg-slate-800 text-slate-300 border border-slate-700">
-                      CLASS: {journey.class.toUpperCase()}
+                      CLASS: {String(journey.class || (journey as any).class_name || 'PERSON').toUpperCase()}
                     </span>
                     {journey.correlation_id && (
                       <span className="px-2 py-0.5 rounded text-xs bg-indigo-950 text-indigo-300 border border-indigo-500/40">
@@ -614,7 +615,7 @@ INTELLIGENCE GATEWAY: SEEMADRISHTI TACTICAL DEFENSE AI v2.0
                       {journey.unique_cameras.length} NODES
                     </div>
                     <div className="text-[9px] text-slate-400 mt-1 uppercase">
-                      {journey.unique_cameras.map((c) => c.toUpperCase()).join(' ➔ ')}
+                      {(journey.unique_cameras || []).map((c: any) => String(c?.camera_id || c || '').toUpperCase()).filter(Boolean).join(' ➔ ')}
                     </div>
                   </div>
                 </div>
@@ -881,7 +882,7 @@ INTELLIGENCE GATEWAY: SEEMADRISHTI TACTICAL DEFENSE AI v2.0
                           </td>
                           <td className="py-2.5 px-2">
                             <span className="px-1.5 py-0.5 rounded bg-slate-950 border border-slate-700 text-cyan-300 text-[10px] font-bold">
-                              {ev.camera_id.toUpperCase()}
+                              {String(ev?.camera_id || 'CAM').toUpperCase()}
                             </span>
                           </td>
                           <td className="py-2.5 px-2 font-bold text-white">

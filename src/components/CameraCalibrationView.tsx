@@ -45,7 +45,7 @@ export const CameraCalibrationView: React.FC = () => {
   // Fetch zones for current camera
   const loadZones = useCallback(async (camId: string) => {
     try {
-      const res = await fetch(`/api/zones?camera_id=${camId}`);
+      const res = await fetchWithAuth(`/api/zones?camera_id=${camId}`);
       if (res.ok) {
         const json = await res.json();
         if (json.success && Array.isArray(json.data) && json.data.length > 0) {

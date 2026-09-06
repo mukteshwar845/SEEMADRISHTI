@@ -257,7 +257,7 @@ export const MultiCamStitchingView: React.FC = () => {
 
       tCtx.fillStyle = '#10b981';
       tCtx.font = 'bold 12px monospace';
-      tCtx.fillText(`SEEMADRISHTI SYNCHRONIZED MULTI-STREAM // ${activePair.name.toUpperCase()}`, 16, tempCanvas.height - 14);
+      tCtx.fillText(`SEEMADRISHTI SYNCHRONIZED MULTI-STREAM // ${String(activePair?.name || 'SECTOR PAIR').toUpperCase()}`, 16, tempCanvas.height - 14);
 
       tCtx.fillStyle = '#94a3b8';
       tCtx.font = '11px monospace';
@@ -824,7 +824,7 @@ export const MultiCamStitchingView: React.FC = () => {
           <div className="absolute top-3 left-3 flex flex-wrap items-center gap-2 z-20 pointer-events-none">
             <div className="px-2.5 py-1 rounded-lg bg-purple-600/90 backdrop-blur-md text-white text-xs font-bold font-mono tracking-wider flex items-center gap-1.5 shadow-[0_0_12px_rgba(168,85,247,0.4)]">
               <Radio size={13} className="animate-pulse" />
-              <span>{activePair.name.toUpperCase()}</span>
+              <span>{String(activePair?.name || 'SECTOR PAIR').toUpperCase()}</span>
             </div>
             <div className="px-2.5 py-1 rounded-lg bg-black/80 text-emerald-400 text-xs font-mono border border-emerald-500/30 font-bold flex items-center gap-1.5">
               <Activity size={12} />
@@ -1118,7 +1118,7 @@ export const MultiCamStitchingView: React.FC = () => {
                   <div className="flex flex-wrap items-center justify-between gap-2">
                     <div className="flex items-center gap-2">
                       <span className="px-2 py-0.5 rounded bg-purple-950 text-purple-300 border border-purple-500/40 font-bold">
-                        CORRIDOR #{corr.id.slice(0, 8).toUpperCase()}
+                        CORRIDOR #{String(corr?.id || 'CORR-000').slice(0, 8).toUpperCase()}
                       </span>
                       <span
                         className={`px-2 py-0.5 rounded font-bold uppercase ${
@@ -1142,14 +1142,17 @@ export const MultiCamStitchingView: React.FC = () => {
                     <span className="text-[10px] text-slate-400 font-bold uppercase tracking-wider mr-1">
                       HANDOVER CHAIN:
                     </span>
-                    {seq.map((cam, sIdx) => (
-                      <React.Fragment key={sIdx}>
-                        <span className="px-2.5 py-1 rounded bg-purple-900/60 border border-purple-500/40 text-purple-200 font-bold">
-                          {cam.toUpperCase()}
-                        </span>
-                        {sIdx < seq.length - 1 && <span className="text-purple-400 font-black">➔</span>}
-                      </React.Fragment>
-                    ))}
+                    {seq.map((cam: any, sIdx: number) => {
+                      const camStr = typeof cam === 'string' ? cam : (cam?.camera_id || cam?.name || `CAM-${sIdx + 1}`);
+                      return (
+                        <React.Fragment key={sIdx}>
+                          <span className="px-2.5 py-1 rounded bg-purple-900/60 border border-purple-500/40 text-purple-200 font-bold">
+                            {String(camStr).toUpperCase()}
+                          </span>
+                          {sIdx < seq.length - 1 && <span className="text-purple-400 font-black">➔</span>}
+                        </React.Fragment>
+                      );
+                    })}
                   </div>
 
                   {/* Observations & Reasons */}
@@ -1159,14 +1162,17 @@ export const MultiCamStitchingView: React.FC = () => {
                         OBSERVATIONS ACROSS NODES:
                       </span>
                       {obs.length > 0 ? (
-                        obs.map((o, oIdx) => (
-                          <div key={oIdx} className="text-slate-300 flex items-center justify-between">
-                            <span>
-                              {o.camera_id.toUpperCase()}: Track #{o.track_id || '?'} ({o.class_name || 'person'})
-                            </span>
-                            <span className="text-cyan-400">{new Date(o.timestamp).toLocaleTimeString()}</span>
-                          </div>
-                        ))
+                        obs.map((o: any, oIdx: number) => {
+                          const camName = String(o?.camera_id || o?.cam || 'CAM').toUpperCase();
+                          return (
+                            <div key={oIdx} className="text-slate-300 flex items-center justify-between">
+                              <span>
+                                {camName}: Track #{o?.track_id || '?'} ({o?.class_name || o?.pattern || 'detected'})
+                              </span>
+                              <span className="text-cyan-400">{o?.timestamp ? new Date(o.timestamp).toLocaleTimeString() : 'RECENT'}</span>
+                            </div>
+                          );
+                        })
                       ) : (
                         <div className="text-slate-500">Autonomous spatial correlation registered.</div>
                       )}

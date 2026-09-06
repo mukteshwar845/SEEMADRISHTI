@@ -70,7 +70,7 @@ export const AlertDetailModal: React.FC<AlertDetailModalProps> = ({
     async function fetchIncidentData() {
       // 1. Fetch Timeline
       try {
-        const res = await fetch(`/api/incidents/${incId}/timeline`);
+        const res = await fetchWithAuth(`/api/incidents/${incId}/timeline`);
         if (res.ok) {
           const json = await res.json();
           if (isMounted && json.success && Array.isArray(json.timeline) && json.timeline.length > 0) {
@@ -81,7 +81,7 @@ export const AlertDetailModal: React.FC<AlertDetailModalProps> = ({
 
       // 2. Fetch Behaviors
       try {
-        const resBeh = await fetch(`/api/incidents/${incId}/behaviors`);
+        const resBeh = await fetchWithAuth(`/api/incidents/${incId}/behaviors`);
         if (resBeh.ok) {
           const jsonBeh = await resBeh.json();
           if (isMounted && jsonBeh.success && Array.isArray(jsonBeh.behaviors)) {
@@ -92,7 +92,7 @@ export const AlertDetailModal: React.FC<AlertDetailModalProps> = ({
 
       // 3. Fetch Risk Progression History
       try {
-        const resRisk = await fetch(`/api/incidents/${incId}/risk-history`);
+        const resRisk = await fetchWithAuth(`/api/incidents/${incId}/risk-history`);
         if (resRisk.ok) {
           const jsonRisk = await resRisk.json();
           if (isMounted && jsonRisk.success && Array.isArray(jsonRisk.history)) {
@@ -103,7 +103,7 @@ export const AlertDetailModal: React.FC<AlertDetailModalProps> = ({
 
       // 4. Fetch Camera Corridor History
       try {
-        const resCam = await fetch(`/api/incidents/${incId}/camera-history`);
+        const resCam = await fetchWithAuth(`/api/incidents/${incId}/camera-history`);
         if (resCam.ok) {
           const jsonCam = await resCam.json();
           if (isMounted && jsonCam.success) {
@@ -119,7 +119,7 @@ export const AlertDetailModal: React.FC<AlertDetailModalProps> = ({
 
       // 5. Fetch Incident Record
       try {
-        const resInc = await fetch(`/api/incidents/${incId}`);
+        const resInc = await fetchWithAuth(`/api/incidents/${incId}`);
         if (resInc.ok) {
           const jsonInc = await resInc.json();
           if (isMounted && jsonInc.success && jsonInc.data) {

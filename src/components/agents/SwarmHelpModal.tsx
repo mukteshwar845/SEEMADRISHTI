@@ -23,6 +23,7 @@ import {
   Globe,
 } from 'lucide-react';
 import { ParallelOrchestrationJob, ParallelSubTask, ViewMode } from '../../types';
+import { fetchWithAuth } from '../../utils/fetchWithAuth';
 import { PRESET_PARALLEL_JOBS, agentOrchestrator } from '../../../server/services/agentOrchestrator';
 import { useTheme } from '../../context/ThemeContext';
 import { audioAlertEngine } from '../../utils/audioAlert';
@@ -53,7 +54,7 @@ export const SwarmHelpModal: React.FC<SwarmHelpModalProps> = ({
     setIsProcessing(true);
     audioAlertEngine.playTone('electronic_chirp', { force: true, volumeOverride: 0.7 });
     try {
-      const res = await fetch('/api/v1/agents/jobs/dispatch', {
+      const res = await fetchWithAuth('/api/v1/agents/jobs/dispatch', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ jobKey: jobKeyOrQuery, query: jobKeyOrQuery }),

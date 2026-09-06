@@ -1025,12 +1025,38 @@ function SeemadrishtiMainApp() {
 }
 
 function RootAppPortal() {
-  const { currentPortal, setPortal, enterDemoMode } = useAuth();
+  const { currentPortal, setPortal, enterDemoMode, isAuthenticated } = useAuth();
+  const location = useLocation();
+  const navigate = useNavigate();
 
-  if (currentPortal === 'landing') {
+  const isAuthRoute =
+    location.pathname === '/login' ||
+    location.pathname === '/auth' ||
+    location.pathname === '/signin';
+
+  const isSignupRoute =
+    location.pathname === '/signup' ||
+    location.pathname === '/register';
+
+  if (isAuthRoute || isSignupRoute || currentPortal === 'auth') {
+    return (
+      <Auth3DView
+        initialMode={isSignupRoute ? 'signup' : 'login'}
+        onNavigateLanding={() => {
+          setPortal('landing');
+          navigate('/');
+        }}
+      />
+    );
+  }
+
+  if (currentPortal === 'landing' && !isAuthenticated) {
     return (
       <LandingPage
-        onEnterAuth={() => setPortal('auth')}
+        onEnterAuth={() => {
+          setPortal('auth');
+          navigate('/login');
+        }}
         onEnterDemo={async () => {
           try {
             await enterDemoMode('Commander');
@@ -1038,15 +1064,6 @@ function RootAppPortal() {
             console.error('[AUTH] Failed to enter demo mode:', err);
           }
         }}
-      />
-    );
-  }
-
-  if (currentPortal === 'auth') {
-    return (
-      <Auth3DView
-        initialMode="login"
-        onNavigateLanding={() => setPortal('landing')}
       />
     );
   }

@@ -175,7 +175,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       setUser(null);
       setToken(null);
       setAuthToken(null);
-      setCurrentPortal('landing');
+      setCurrentPortal('auth');
       setIsLoading(false);
     }
   }, []);

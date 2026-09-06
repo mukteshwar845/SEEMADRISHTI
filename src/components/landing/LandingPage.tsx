@@ -395,7 +395,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onEnterAuth }) => {
             className="px-4 py-2 rounded-xl bg-gradient-to-r from-cyan-400 via-cyan-300 to-teal-300 hover:from-cyan-300 hover:to-teal-200 text-black text-xs font-black tracking-wider transition-all duration-200 cursor-pointer shadow-[0_0_20px_rgba(0,240,255,0.45)] hover:shadow-[0_0_30px_rgba(0,240,255,0.65)] active:scale-95 flex items-center gap-1.5"
           >
             <Lock size={13} />
-            <span>Terminal Login</span>
+            <span>Access</span>
             <ArrowRight size={13} />
           </button>
         </div>
@@ -728,7 +728,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onEnterAuth }) => {
             className="shrink-0 px-6 py-3.5 rounded-xl bg-gradient-to-r from-cyan-400 via-cyan-300 to-teal-300 hover:from-cyan-300 hover:to-teal-200 text-black font-black text-xs tracking-widest flex items-center gap-2 shadow-[0_0_25px_rgba(0,240,255,0.4)] hover:shadow-[0_0_35px_rgba(0,240,255,0.65)] transition-all cursor-pointer active:scale-95"
           >
             <Lock size={15} />
-            <span>OPERATOR TERMINAL LOGIN</span>
+            <span>ACCESS</span>
             <ArrowRight size={15} />
           </button>
         </div>

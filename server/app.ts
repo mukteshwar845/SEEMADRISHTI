@@ -1,27 +1,29 @@
 import express, { Request, Response, NextFunction } from 'express';
 import path from 'path';
 import fs from 'fs';
-import { camerasRouter } from './routes/cameras';
-import { zonesRouter } from './routes/zones';
-import { eventsRouter } from './routes/events';
-import { alertsRouter } from './routes/alerts';
-import { incidentsRouter } from './routes/incidents';
-import { correlationsRouter } from './routes/correlations';
-import { environmentRouter } from './routes/environment';
-import { analyticsRouter } from './routes/analytics';
-import { telemetryRouter } from './routes/telemetry';
-import { systemRouter } from './routes/system';
-import { devRouter } from './routes/dev';
-import { usersRouter } from './routes/users';
-import { authRouter } from './routes/auth';
-import { behaviorChainsRouter } from './routes/behavior_chains';
-import { searchRouter } from './routes/search';
-import { intelligenceRouter } from './routes/intelligence';
-import { agentsRouter } from './routes/agents';
-import { chatRouter } from './routes/chat';
-import { webcamRouter } from './routes/webcam';
-import { sensorsRouter } from './routes/sensors';
-import { evidenceRouter } from './routes/evidence';
+import {
+  camerasRouter,
+  zonesRouter,
+  eventsRouter,
+  alertsRouter,
+  incidentsRouter,
+  correlationsRouter,
+  environmentRouter,
+  analyticsRouter,
+  telemetryRouter,
+  systemRouter,
+  devRouter,
+  usersRouter,
+  authRouter,
+  behaviorChainsRouter,
+  searchRouter,
+  intelligenceRouter,
+  agentsRouter,
+  chatRouter,
+  webcamRouter,
+  sensorsRouter,
+  evidenceRouter,
+} from './routes';
 import { errorHandler, notFoundHandler } from './middleware/errorHandler';
 import { requireAuth } from './middleware/auth';
 

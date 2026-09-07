@@ -1,9 +1,50 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { BrowserRouter, useNavigate, useLocation } from 'react-router-dom';
 import { ViewMode, AlertItem, CameraFeed, MatrixCameraFeed, DefconLevel } from './types';
+import {
+  Sidebar,
+  Header,
+  KpiCards,
+  SystemGauges,
+  TacticalMatrixView,
+  MultiCamStitchingView,
+  QuadLiveStreamView,
+  DetectionsView,
+  AlertsManagementView,
+  AlertsLog,
+  SettingsView,
+  UserManagementView,
+  AlertDetailModal,
+  CameraDetailModal,
+  SihDemoGuideModal,
+  AnalyticsDashboard,
+  IncidentInspectorView,
+  IntelligenceSearch,
+  TargetJourneyView,
+  ThreatHeatmapView,
+  HistoricalLogsView,
+  NotificationHistory,
+  CameraHealthDiagnosticsView,
+  MissionControlView,
+  CameraFleetView,
+  EvidenceQueueView,
+  SystemTimelineView,
+  CameraCalibrationView,
+  ReportsModal,
+} from './components';
 import { TacticalTerminalView } from './components/terminal/TacticalTerminalView';
 import { TacticalRadarGisView } from './components/gis/TacticalRadarGisView';
 import { DefenseSandboxView } from './components/sandbox/DefenseSandboxView';
+import { MultiAgentOrchestratorView } from './components/agents/MultiAgentOrchestratorView';
+import { SwarmHelpModal } from './components/agents/SwarmHelpModal';
+import { HelpBotWidget } from './components/chat/HelpBotWidget';
+import { ScreenLockOverlay } from './components/security/ScreenLockOverlay';
+import { PinConfigModal } from './components/security/PinConfigModal';
+import { ProfileModal } from './components/profile/ProfileModal';
+import { LandingPage } from './components/landing/LandingPage';
+import { Auth3DView } from './components/auth/Auth3DView';
+import { TacticalOperationsAtmosphere } from './components/background/TacticalOperationsAtmosphere';
+
 import {
   initialAlerts,
   initialCameras,
@@ -11,52 +52,11 @@ import {
   initialTelemetry,
   initialDetections,
 } from './data/mockData';
-import { Sidebar } from './components/Sidebar';
-import { Header } from './components/Header';
-import { KpiCards } from './components/KpiCards';
-import { TacticalMatrixView } from './components/TacticalMatrixView';
-import { AlertsLog } from './components/AlertsLog';
-import { SystemGauges } from './components/SystemGauges';
-import { MultiCamStitchingView } from './components/MultiCamStitchingView';
-import { QuadLiveStreamView } from './components/QuadLiveStreamView';
-import { DetectionsView } from './components/DetectionsView';
-import { AlertsManagementView } from './components/AlertsManagementView';
-import { SettingsView } from './components/SettingsView';
-import { UserManagementView } from './components/UserManagementView';
-import { AlertDetailModal } from './components/AlertDetailModal';
-import { CameraDetailModal } from './components/CameraDetailModal';
-import { SihDemoGuideModal } from './components/SihDemoGuideModal';
-import { AnalyticsDashboard } from './components/AnalyticsDashboard';
-import { IncidentInspectorView } from './components/IncidentInspectorView';
-import { IntelligenceSearch } from './components/IntelligenceSearch';
-import { TargetJourneyView } from './components/TargetJourneyView';
-import { ThreatHeatmapView } from './components/ThreatHeatmapView';
-import { HistoricalLogsView } from './components/HistoricalLogsView';
-import { NotificationHistory } from './components/NotificationHistory';
-import { CameraHealthDiagnosticsView } from './components/CameraHealthDiagnosticsView';
-import { MissionControlView } from './components/MissionControlView';
-import { CameraFleetView } from './components/CameraFleetView';
-import { MultiAgentOrchestratorView } from './components/agents/MultiAgentOrchestratorView';
-import { SwarmHelpModal } from './components/agents/SwarmHelpModal';
-import { HelpBotWidget } from './components/chat/HelpBotWidget';
-import { EvidenceQueueView } from './components/EvidenceQueueView';
-import { SystemTimelineView } from './components/SystemTimelineView';
-import { CameraCalibrationView } from './components/CameraCalibrationView';
-import { ReportsModal } from './components/ReportsModal';
-import { audioAlertEngine, triggerIntrusionAudioAlert } from './utils/audioAlert';
+import { audioAlertEngine, triggerIntrusionAudioAlert, tacticalAlertDispatcher } from './utils';
+import { webSocketService, voiceCommandService, fetchAlerts, fetchCameras, fetchTelemetry } from './services';
 import { ThemeProvider, useTheme } from './context/ThemeContext';
 import { AuthProvider, useAuth } from './context/AuthContext';
 import { SecurityProvider } from './context/SecurityContext';
-import { ScreenLockOverlay } from './components/security/ScreenLockOverlay';
-import { PinConfigModal } from './components/security/PinConfigModal';
-import { ProfileModal } from './components/profile/ProfileModal';
-import { LandingPage } from './components/landing/LandingPage';
-import { Auth3DView } from './components/auth/Auth3DView';
-import { webSocketService } from './services/websocketService';
-import { voiceCommandService } from './services/voiceCommandService';
-import { fetchAlerts, fetchCameras, fetchTelemetry } from './services/api';
-import { tacticalAlertDispatcher } from './utils/tacticalAlertDispatcher';
-import { TacticalOperationsAtmosphere } from './components/background/TacticalOperationsAtmosphere';
 import { Siren, ShieldAlert, AlertTriangle } from 'lucide-react';
 
 function SeemadrishtiMainApp() {

@@ -47,19 +47,11 @@ authRouter.post('/login', (req: Request, res: Response, next: NextFunction) => {
     const u = trimmedUser;
     const p = password.trim();
 
-    // Instant Fast Path: Support standard default credentials for built-in operator accounts
+    // Verify password hash strictly with bcrypt
     let passwordValid = false;
-    if (
-      (u === 'admin' && (p === 'admin' || p === 'admin123' || p === 'Admin@123' || p === 'password' || p === '123456')) ||
-      (u === 'operator' && (p === 'operator' || p === 'operator123' || p === 'Operator@123' || p === 'password' || p === '123456')) ||
-      (u === 'patrol' && (p === 'patrol' || p === 'patrol123' || p === 'Patrol@123' || p === 'password' || p === '123456')) ||
-      (u === 'analyst' && (p === 'analyst' || p === 'analyst123' || p === 'Analyst@123' || p === 'password' || p === '123456'))
-    ) {
-      passwordValid = true;
-    } else if (user.password_hash) {
-      // Verify password hash strictly with bcrypt
+    if (user.password_hash) {
       try {
-        passwordValid = bcrypt.compareSync(password, user.password_hash);
+        passwordValid = bcrypt.compareSync(p, user.password_hash);
       } catch {
         passwordValid = false;
       }
@@ -68,7 +60,7 @@ authRouter.post('/login', (req: Request, res: Response, next: NextFunction) => {
     if (!passwordValid) {
       return res.status(401).json({
         success: false,
-        error: 'Invalid credentials. For evaluation access, use callsign "admin" and password "admin" or "Admin@123".',
+        error: 'Invalid credentials. Please verify your tactical callsign and password.',
         timestamp: new Date().toISOString(),
       });
     }

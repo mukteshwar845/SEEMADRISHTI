@@ -871,6 +871,13 @@ export const CameraFeedCanvas: React.FC<CameraFeedCanvasProps> = ({
             ctx.fillText(labelText, bx1 + 4, by1 - 3);
             ctx.restore();
           });
+
+          // Subtle watermark tag for live inference mode
+          ctx.save();
+          ctx.font = 'bold 7.5px monospace';
+          ctx.fillStyle = 'rgba(16, 185, 129, 0.9)';
+          ctx.fillText('🟢 TRACKING: LIVE AI', w - 120, 14);
+          ctx.restore();
         } else {
           // Render High-Fidelity Synthetic YOLO Detections Tailored Per CCTV
           s.syntheticTracks.forEach((st) => {
@@ -1035,8 +1042,8 @@ export const CameraFeedCanvas: React.FC<CameraFeedCanvasProps> = ({
             // Label pill
             const conf = Math.round(92 + Math.sin(s.tick + st.id) * 5);
             const pillText = st.state === 'LINE_CROSSING' || st.state === 'SUSPICIOUS_AREA'
-              ? `#${st.id} ${style.categoryLabel} ${conf}%`
-              : `#${st.id} ${st.label} ${conf}%`;
+              ? `[SIM] #${st.id} ${style.categoryLabel} ${conf}%`
+              : `[SIM] #${st.id} ${st.label} ${conf}%`;
             ctx.font = 'bold 8px monospace';
             const pillTextWidth = ctx.measureText(pillText).width;
             ctx.fillStyle = style.badgeBg;
@@ -1045,6 +1052,13 @@ export const CameraFeedCanvas: React.FC<CameraFeedCanvasProps> = ({
             ctx.fillText(pillText, bx + 4, by - 3);
             ctx.restore();
           });
+
+          // Subtle watermark tag for synthetic preview mode
+          ctx.save();
+          ctx.font = 'bold 7.5px monospace';
+          ctx.fillStyle = 'rgba(234, 179, 8, 0.75)';
+          ctx.fillText('⚡ TRACKING: SYNTHETIC', w - 130, 14);
+          ctx.restore();
         }
       }
 

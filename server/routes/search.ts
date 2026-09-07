@@ -122,17 +122,26 @@ function parseQuery(query: string) {
 
   // 7. Event type extraction
   if (['tripwire', 'line crossing', 'crossed', 'virtual tripwire'].some((w) => q.includes(w))) {
-    filters.event_type = 'TRIPWIRE_CROSSING';
+    filters.event_type = 'TRIPWIRE';
     filters.chips.push('TRIPWIRE');
-  } else if (['restricted', 'zone breach', 'polygon breach', 'restricted area', 'perimeter entry', 'unauthorized zone'].some((w) => q.includes(w))) {
-    filters.event_type = 'RESTRICTED_ZONE_ENTRY';
-    filters.chips.push('RESTRICTED ZONE');
+  } else if (['restricted', 'zone breach', 'polygon breach', 'restricted area', 'perimeter entry', 'unauthorized zone', 'intrusion', 'breach', 'incursion', 'scaling', 'climbing', 'infiltration'].some((w) => q.includes(w))) {
+    filters.event_type = 'INTRUSION';
+    filters.chips.push('INTRUSION');
   } else if (['loitering', 'loiter', 'dwell', 'prolonged dwell'].some((w) => q.includes(w))) {
     filters.event_type = 'LOITERING';
     filters.chips.push('LOITERING');
   } else if (['re-entry', 'reentry', 'repeated entry'].some((w) => q.includes(w))) {
     filters.event_type = 'RE_ENTRY';
     filters.chips.push('RE-ENTRY');
+  } else if (['vehicle', 'car', 'truck', 'overspeed'].some((w) => q.includes(w))) {
+    filters.event_type = 'VEHICLE';
+    filters.chips.push('VEHICLE');
+  } else if (['cargo', 'payload', 'unattended', 'bag', 'backpack'].some((w) => q.includes(w))) {
+    filters.event_type = 'CARGO';
+    filters.chips.push('UNATTENDED CARGO');
+  } else if (['canopy', 'foliage', 'forest'].some((w) => q.includes(w))) {
+    filters.event_type = 'CANOPY';
+    filters.chips.push('CANOPY');
   } else if (['handover', 'cross camera', 'cross-camera'].some((w) => q.includes(w))) {
     filters.event_type = 'CROSS_CAMERA_HANDOVER';
     filters.chips.push('HANDOVER');
@@ -460,8 +469,33 @@ export function handleSearch(req: Request, res: Response, next: NextFunction) {
     }
 
     if (filters.event_type) {
-      sql += ' AND event_type LIKE ?';
-      params.push(`%${filters.event_type}%`);
+      if (filters.event_type === 'INTRUSION') {
+        sql += ' AND (event_type LIKE ? OR event_type LIKE ? OR event_type LIKE ? OR event_type LIKE ? OR zone_name LIKE ? OR metadata LIKE ?)';
+        params.push('%INTRUSION%', '%BREACH%', '%SCALING%', '%INCURSION%', '%Restricted%', '%breach%');
+      } else if (filters.event_type === 'TRIPWIRE') {
+        sql += ' AND (event_type LIKE ? OR event_type LIKE ? OR zone_name LIKE ?)';
+        params.push('%TRIPWIRE%', '%CROSSING%', '%Line%');
+      } else if (filters.event_type === 'VEHICLE') {
+        sql += ' AND (event_type LIKE ? OR metadata LIKE ? OR metadata LIKE ? OR zone_name LIKE ?)';
+        params.push('%VEHICLE%', '%"class_name":"car"%', '%"class_name":"truck"%', '%Vehicle%');
+      } else if (filters.event_type === 'CARGO') {
+        sql += ' AND (event_type LIKE ? OR event_type LIKE ? OR metadata LIKE ?)';
+        params.push('%CARGO%', '%PAYLOAD%', '%backpack%');
+      } else if (filters.event_type === 'CANOPY') {
+        sql += ' AND (event_type LIKE ? OR event_type LIKE ? OR zone_name LIKE ?)';
+        params.push('%CANOPY%', '%FOLIAGE%', '%Canopy%');
+      } else if (filters.event_type === 'LOITERING') {
+        sql += ' AND (event_type LIKE ? OR event_type LIKE ?)';
+        params.push('%LOITER%', '%DWELL%');
+      } else {
+        sql += ' AND (event_type LIKE ? OR zone_name LIKE ? OR metadata LIKE ?)';
+        params.push(`%${filters.event_type}%`, `%${filters.event_type}%`, `%${filters.event_type}%`);
+      }
+    }
+
+    if (filters.class_name) {
+      sql += ' AND (metadata LIKE ? OR event_type LIKE ?)';
+      params.push(`%"class_name":"${filters.class_name}"%`, `%${filters.class_name}%`);
     }
 
     if (filters.status === 'unresolved') {
@@ -483,12 +517,18 @@ export function handleSearch(req: Request, res: Response, next: NextFunction) {
 
     const incidentRows = db.prepare(sql).all(...params) as any[];
     incidentRows.forEach((r: any) => {
+      let clsName = 'person';
+      try {
+        const meta = JSON.parse(r.metadata || '{}');
+        if (meta.class_name) clsName = meta.class_name;
+      } catch {}
+
       results.push({
         type: 'incident',
         incident_id: r.id,
         camera_id: r.camera_id.toLowerCase(),
         track_id: r.track_id ? parseInt(String(r.track_id).replace(/\D/g, ''), 10) || 1 : 1,
-        class_name: r.class_name || 'person',
+        class_name: clsName,
         event_type: r.event_type,
         risk_level: r.risk_level,
         risk_score: r.risk_score,
@@ -501,18 +541,36 @@ export function handleSearch(req: Request, res: Response, next: NextFunction) {
       });
     });
 
-    // If no incidents found, also query events table for broad matches
-    if (results.length === 0 && filters.event_type) {
-      let evSql = 'SELECT * FROM events WHERE event_type LIKE ?';
-      const evParams = [`%${filters.event_type}%`];
-      if (filters.camera_ids.length > 0) {
-        evSql += ` AND camera_id IN (${filters.camera_ids.map(() => '?').join(',')})`;
-        evParams.push(...filters.camera_ids);
+    // Query events table for broad matches or when entity is event/all
+    let evSql = 'SELECT * FROM events WHERE 1=1';
+    const evParams: any[] = [];
+    if (filters.camera_ids.length > 0) {
+      evSql += ` AND camera_id IN (${filters.camera_ids.map(() => '?').join(',')})`;
+      evParams.push(...filters.camera_ids);
+    }
+    if (filters.event_type) {
+      if (filters.event_type === 'INTRUSION') {
+        evSql += ' AND (event_type LIKE ? OR event_type LIKE ? OR event_type LIKE ?)';
+        evParams.push('%INTRUSION%', '%BREACH%', '%SCALING%');
+      } else if (filters.event_type === 'TRIPWIRE') {
+        evSql += ' AND (event_type LIKE ? OR event_type LIKE ?)';
+        evParams.push('%TRIPWIRE%', '%CROSSING%');
+      } else {
+        evSql += ' AND event_type LIKE ?';
+        evParams.push(`%${filters.event_type}%`);
       }
-      evSql += ' ORDER BY timestamp DESC LIMIT 30';
+    }
+    if (filters.track_id !== null) {
+      evSql += ' AND (object_id = ? OR object_id = ?)';
+      evParams.push(String(filters.track_id), `TRK-${filters.track_id}`);
+    }
+    evSql += ' ORDER BY timestamp DESC LIMIT 30';
 
-      const evRows = db.prepare(evSql).all(...evParams) as any[];
-      evRows.forEach((er: any) => {
+    const evRows = db.prepare(evSql).all(...evParams) as any[];
+    evRows.forEach((er: any) => {
+      // Avoid duplicate display if incident already covers it
+      const alreadyPresent = results.some((r) => r.type === 'incident' && r.camera_id === er.camera_id.toLowerCase() && r.event_type === er.event_type);
+      if (!alreadyPresent) {
         results.push({
           type: 'event',
           event_id: er.id,
@@ -524,8 +582,8 @@ export function handleSearch(req: Request, res: Response, next: NextFunction) {
           timestamp_epoch: new Date(er.timestamp).getTime() / 1000,
           metadata: er.metadata ? JSON.parse(er.metadata) : {},
         });
-      });
-    }
+      }
+    });
 
     if (searchHistory[0]) searchHistory[0].result_count = results.length;
 

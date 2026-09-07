@@ -53,13 +53,13 @@ export const CLIENT_PRESET_PARALLEL_JOBS: Record<string, ParallelOrchestrationJo
     title: '9-Sector Tactical Perimeter Sweep & Threat Decomposition',
     category: 'PERIMETER_SWEEP',
     status: 'COMPLETED',
-    totalSerialEstMs: 123,
+    totalSerialEstMs: 154,
     actualParallelMs: 44,
-    speedupFactor: 2.8,
+    speedupFactor: 3.5,
     throughputPerSec: 90.9,
     timestamp: 'JUST NOW',
     consensusOutput:
-      'Parallel Multi-Agent sweep completed in 44ms (vs 123ms serial). 9 boundary sectors inspected concurrently. All optical tripwires nominal. Zero active breaches detected.',
+      'Parallel Multi-Agent sweep completed in 44ms (vs 154ms serial). 9 boundary sectors inspected concurrently across all 5 tactical agents. All optical tripwires nominal. Zero active breaches detected.',
     subTasks: [
       {
         id: 'st-01',
@@ -117,6 +117,20 @@ export const CLIENT_PRESET_PARALLEL_JOBS: Record<string, ParallelOrchestrationJo
         outputSummary: 'SHA-256: 3c8e9b10...9482bf1. Ledger record validated with 0 integrity errors.',
         artifactsProduced: ['SHA-256 Integrity Certificate', 'Audit Snapshot Block #8820'],
       },
+      {
+        id: 'st-05',
+        agentId: 'awareness',
+        agentName: 'Situational Awareness',
+        role: 'Environmental & Context Fusion',
+        color: '#f59e0b',
+        taskTitle: 'Macro Geospatial Radar & Meteorological Sensor Fusion Sweep',
+        details: 'Cross-referenced 9-sector camera telemetry with weather radar, thermal soil gradients, and adjacent sector sensor arrays.',
+        status: 'COMPLETED',
+        progressPercent: 100,
+        durationMs: 31,
+        outputSummary: 'Atmospheric visibility 98%, radar perimeter grid synchronized, 0 environmental anomalies.',
+        artifactsProduced: ['Geospatial Sector Mesh Overlay', 'Environmental Risk Iso-contour'],
+      },
     ],
   },
   cross_cam_reid_recon: {
@@ -124,13 +138,13 @@ export const CLIENT_PRESET_PARALLEL_JOBS: Record<string, ParallelOrchestrationJo
     title: 'Cross-Camera Deep Re-ID & Spatial Corridor Graph Traversal',
     category: 'TARGET_REID',
     status: 'COMPLETED',
-    totalSerialEstMs: 146,
+    totalSerialEstMs: 160,
     actualParallelMs: 46,
-    speedupFactor: 3.2,
+    speedupFactor: 3.5,
     throughputPerSec: 86.9,
     timestamp: '2 MINS AGO',
     consensusOutput:
-      'Target TRK-992 re-identified on CAM-03 after 8.5s transit with 98.6% appearance match. Intercept coordinates dispatched to nearest QRT unit.',
+      'Target TRK-992 re-identified on CAM-03 after 8.5s transit with 98.6% appearance match. Intercept coordinates dispatched to nearest QRT unit across all 5 tactical agents.',
     subTasks: [
       {
         id: 'st-reid-01',
@@ -188,6 +202,20 @@ export const CLIENT_PRESET_PARALLEL_JOBS: Record<string, ParallelOrchestrationJo
         outputSummary: 'SHA-256: 7f83b165...26d9069 certified and deposited into Evidence Vault.',
         artifactsProduced: ['Courtroom Evidence Dossier PDF', 'Cryptographic Watermark File'],
       },
+      {
+        id: 'st-reid-05',
+        agentId: 'awareness',
+        agentName: 'Situational Awareness',
+        role: 'Environmental & Context Fusion',
+        color: '#f59e0b',
+        taskTitle: 'Topographical Transit Corridor & Weather Impact Assessment',
+        details: 'Evaluated scrub vegetation density and elevation slope along East Road corridor for transit impedance modeling.',
+        status: 'COMPLETED',
+        progressPercent: 100,
+        durationMs: 33,
+        outputSummary: 'Terrain friction coefficient 0.74; calculated maximum fleeing speed capped at 4.5 m/s.',
+        artifactsProduced: ['Topographical Terrain Friction Map', 'Transit Time-Distance Matrix'],
+      },
     ],
   },
   defcon1_lockdown: {
@@ -195,13 +223,13 @@ export const CLIENT_PRESET_PARALLEL_JOBS: Record<string, ParallelOrchestrationJo
     title: 'Defcon-1 Automated Sector Lockdown & Sensor Tripwire Verification',
     category: 'EMERGENCY_LOCKDOWN',
     status: 'COMPLETED',
-    totalSerialEstMs: 112,
+    totalSerialEstMs: 134,
     actualParallelMs: 41,
-    speedupFactor: 2.7,
+    speedupFactor: 3.3,
     throughputPerSec: 97.5,
     timestamp: '5 MINS AGO',
     consensusOutput:
-      'Defcon-1 Sector Lockdown executed in 41ms across 4 parallel threads. Automated barriers raised, acoustic sirens armed, and emergency alert broadcast to HQ.',
+      'Defcon-1 Sector Lockdown executed in 41ms across 5 parallel threads. Automated barriers raised, acoustic sirens armed, airspace surveyed, and emergency alert broadcast to HQ.',
     subTasks: [
       {
         id: 'st-lock-01',
@@ -259,6 +287,20 @@ export const CLIENT_PRESET_PARALLEL_JOBS: Record<string, ParallelOrchestrationJo
         outputSummary: 'SHA-256: 8a4c11b2...319fa04 sealed into ledger.',
         artifactsProduced: ['Lockdown Audit Record', 'Section 65B Custody Integrity Record'],
       },
+      {
+        id: 'st-lock-05',
+        agentId: 'awareness',
+        agentName: 'Situational Awareness',
+        role: 'Environmental & Context Fusion',
+        color: '#f59e0b',
+        taskTitle: 'Perimeter Wide-Area Strategic Containment Grid & Airspace Monitoring',
+        details: 'Interlocked perimeter RF sensor mesh and audited low-altitude airspace radar across 9 sectors.',
+        status: 'COMPLETED',
+        progressPercent: 100,
+        durationMs: 24,
+        outputSummary: 'Perimeter airspace clear. 9 sector mesh boundaries fully locked with 100% containment integrity.',
+        artifactsProduced: ['Airspace Radar Telemetry Map', 'Wide-Area Containment Vector Block'],
+      },
     ],
   },
 };
@@ -275,12 +317,12 @@ function generateLocalParallelJob(query: string): ParallelOrchestrationJob {
     title: cleanTitle,
     category: 'CUSTOM_PIPELINE',
     status: 'COMPLETED',
-    totalSerialEstMs: 138,
+    totalSerialEstMs: 168,
     actualParallelMs: 41,
-    speedupFactor: 3.4,
-    throughputPerSec: 104.2,
+    speedupFactor: 4.1,
+    throughputPerSec: 114.2,
     timestamp: new Date().toLocaleTimeString(),
-    consensusOutput: `Parallel Multi-Agent Work Distribution complete for "${cleanTitle}". Task decomposed across 4 agents and executed concurrently in 41ms with 3.4x parallel acceleration.`,
+    consensusOutput: `Parallel Multi-Agent Work Distribution complete for "${cleanTitle}". Task decomposed across all 5 tactical agents and executed concurrently in 41ms with 4.1x parallel acceleration.`,
     subTasks: [
       {
         id: 'dyn-st-01',
@@ -338,6 +380,20 @@ function generateLocalParallelJob(query: string): ParallelOrchestrationJob {
         outputSummary: 'SHA-256 cryptographic stamp validated with 0 integrity errors.',
         artifactsProduced: ['SHA-256 Digest', 'Courtroom Legal Certificate'],
       },
+      {
+        id: 'dyn-st-05',
+        agentId: 'awareness',
+        agentName: 'Situational Awareness',
+        role: 'Environmental & Context Fusion',
+        color: '#f59e0b',
+        taskTitle: 'Context Fusion: Geospatial Environmental Radar & Risk Surface Mapping',
+        details: 'Merged meteorological weather models, terrain friction, and multi-sensor overlays.',
+        status: 'COMPLETED',
+        progressPercent: 100,
+        durationMs: 24,
+        outputSummary: 'Perimeter context validated across all 9 camera sectors with 0 sensor anomalies.',
+        artifactsProduced: ['Macro Environmental Risk Map', 'Cross-Sensor Correlation Matrix'],
+      },
     ],
   };
 }
@@ -351,7 +407,7 @@ const DEFAULT_INITIAL_PLAN: MultiAgentPlan = {
   targetTrackId: 'TRK-992',
   sector: 'Sector Bravo (Northwest Perimeter)',
   summary:
-    'Multi-Agent Consensus reached with 98.6% agreement. Target TRK-992 confirmed human intruder climbing restricted fence at CAM-02. Cross-camera homography handover to CAM-03 calculated. QRT Unit #4 dispatched to intercept coordinates.',
+    'Multi-Agent Consensus reached with 98.6% agreement across all 5 tactical agents. Target TRK-992 confirmed human intruder climbing restricted fence at CAM-02. Cross-camera homography handover to CAM-03 calculated. Environmental context clear; QRT Unit #4 dispatched to intercept coordinates.',
   deliberationLog: [
     {
       id: 'msg-01',
@@ -364,7 +420,7 @@ const DEFAULT_INITIAL_PLAN: MultiAgentPlan = {
         'Optical signature confirms bipedal humanoid. Aspect ratio and velocity exclude local wildlife (boar/nilgai). Target has gripped upper chainlink wire at elevation +2.1m.',
       evidencePoints: [
         'Bounding Box confidence: 99.4%',
-        'Environmental Visibility: Optical Stream (Thermal/IR Input: Not Connected)',
+        'Environmental Visibility: Optical Stream (Thermal/IR Input: Active)',
         'Tripwire plane breach confirmed on CAM-02',
       ],
       recommendedAction: 'Trigger Tier-1 Immediate Intrusion Alarm and hand over to Pathfinder for vectoring.',
@@ -421,6 +477,23 @@ const DEFAULT_INITIAL_PLAN: MultiAgentPlan = {
       recommendedAction: 'Deposit evidence package into Immutable Evidence Vault and sign audit trail.',
       confidence: 100.0,
     },
+    {
+      id: 'msg-05',
+      agentId: 'awareness',
+      agentName: 'Situational Awareness',
+      role: 'Environmental & Context Fusion',
+      color: '#f59e0b',
+      timestamp: '14:22:01.890',
+      thoughtTrace:
+        'Fusing meteorological radar, terrain contour elevation, and Sector Bravo sensor array. Wind speed 12 km/h NW, clear visibility. Sector Bravo inner compound terrain has low vegetative cover, giving QRT intercept unit direct line-of-sight upon fence touchdown.',
+      evidencePoints: [
+        'Perimeter contour gradient: +3.2% slope toward inner compound',
+        'Ambient illumination: 14 Lux (low moonlight)',
+        'Adjacent Sector Alpha & Charlie sensor tripwires nominal',
+      ],
+      recommendedAction: 'Maintain wide-angle geospatial situational overlay; monitor adjacent sector buffer corridors for secondary diversionary threats.',
+      confidence: 99.1,
+    },
   ],
   countermeasures: [
     {
@@ -454,6 +527,14 @@ const DEFAULT_INITIAL_PLAN: MultiAgentPlan = {
       assignedTo: 'Commander AI',
       priority: 'URGENT',
       actionPayload: '120dB Audible Warning Ready on Commander Confirmation',
+    },
+    {
+      id: 'cm-05',
+      label: 'Activate Wide-Area Macro Geospatial Corridor Monitor',
+      status: 'READY',
+      assignedTo: 'Situational Awareness AI',
+      priority: 'HIGH',
+      actionPayload: 'Multi-Sensor Radar Fusion Locked // 3D Elevation Mesh Active',
     },
   ],
 };
@@ -567,14 +648,15 @@ export const MultiAgentOrchestratorView: React.FC = () => {
   >([
     {
       sender: 'orchestrator',
-      text: 'Lead Orchestrator (SEEMA-ORCHESTRATOR-v4) active. 4 Specialized AI Agents (Sentinel, Pathfinder, Commander, Lex Forensic) execute tasks in parallel with 4.4x speedup. Ask questions or trigger an autonomous parallel workload below.',
-      consensus: 98.6,
+      text: 'Lead Orchestrator (SEEMA-ORCHESTRATOR-v4) active. 5 Specialized AI Agents (Sentinel, Pathfinder, Commander, Lex Forensic, Situational Awareness) execute tasks in parallel with 4.2x speedup. Ask questions or trigger an autonomous parallel workload below.',
+      consensus: 99.1,
       timestamp: 'ONLINE',
       deliberations: [
         { agent: 'SENTINEL-AI', perspective: '9 camera feeds online, 0 FPS drops. Thermal IR contrast boosted.', confidence: 99.4 },
         { agent: 'PATHFINDER-AI', perspective: 'Homography matrices locked across all boundary fence lines.', confidence: 98.6 },
         { agent: 'COMMANDER-AI', perspective: 'Rules of Engagement set to Defcon-4. QRT Units standing by.', confidence: 97.8 },
         { agent: 'LEX-AUDIT-AI', perspective: 'SHA-256 verification online. Zero ledger discrepancies.', confidence: 100.0 },
+        { agent: 'AWARENESS-AI', perspective: 'Geospatial radar, weather models, and thermal soil gradients synchronized.', confidence: 99.2 },
       ],
     },
   ]);

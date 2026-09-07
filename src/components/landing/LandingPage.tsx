@@ -416,21 +416,21 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onEnterAuth }) => {
             </div>
 
             {/* Key Defense Metrics Strip */}
-            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 pt-4">
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 pt-4 perspective-1000">
               {defenseMetrics.map((dm, idx) => {
                 const Icon = dm.icon;
                 return (
                   <div
                     key={idx}
-                    className="p-3.5 rounded-2xl border border-cyan-500/20 bg-gradient-to-b from-cyan-950/20 to-black/70 backdrop-blur-xl shadow-lg relative overflow-hidden group hover:border-cyan-400/50 hover:shadow-[0_0_20px_rgba(0,240,255,0.15)] transition-all"
+                    className="tactical-3d-card p-3.5 rounded-2xl border border-cyan-500/25 bg-gradient-to-b from-cyan-950/25 to-black/75 backdrop-blur-xl shadow-lg relative overflow-hidden group hover:border-cyan-400/60 hover:shadow-[0_0_25px_rgba(0,240,255,0.2)] transition-all"
                   >
                     <div className="flex items-center justify-between mb-1">
                       <p className="text-[9px] text-slate-400 font-bold uppercase tracking-wider">{dm.label}</p>
-                      <span className="text-[8px] font-bold text-emerald-400 bg-emerald-500/10 px-1 py-0.2 rounded border border-emerald-400/30">
+                      <span className="text-[8px] font-bold text-emerald-400 bg-emerald-500/15 px-1.5 py-0.5 rounded border border-emerald-400/40 shadow-[0_0_8px_rgba(16,185,129,0.2)]">
                         {dm.badge}
                       </span>
                     </div>
-                    <p className="text-lg sm:text-xl font-black text-cyan-400 mt-1">{dm.value}</p>
+                    <p className="text-lg sm:text-xl font-black text-cyan-400 mt-1 drop-shadow-[0_0_8px_rgba(0,240,255,0.4)]">{dm.value}</p>
                     <p className="text-[9px] text-slate-400 leading-tight mt-0.5">{dm.sub}</p>
                   </div>
                 );
@@ -534,18 +534,18 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onEnterAuth }) => {
 
         {/* Tab 1: Tactical AI Capabilities */}
         {activeTab === 'capabilities' && (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5 animate-in fade-in duration-300">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5 animate-in fade-in duration-300 perspective-1000">
             {tacticalCapabilities.map((feat, idx) => {
               const Icon = feat.icon;
               return (
                 <div
                   key={idx}
-                  className="p-6 rounded-3xl border border-white/[0.1] bg-gradient-to-b from-white/[0.04] to-black/70 backdrop-blur-xl hover:border-cyan-400/50 hover:shadow-[0_0_25px_rgba(0,240,255,0.15)] transition-all duration-200 group flex flex-col justify-between"
+                  className="tactical-3d-card p-6 rounded-3xl border border-white/[0.12] bg-gradient-to-b from-white/[0.05] to-black/80 backdrop-blur-xl hover:border-cyan-400/60 hover:shadow-[0_0_30px_rgba(0,240,255,0.22)] transition-all duration-200 group flex flex-col justify-between"
                 >
                   <div>
                     <div className="flex items-center justify-between mb-4">
                       <div
-                        className="p-3 rounded-2xl shadow-inner"
+                        className="p-3 rounded-2xl shadow-inner transition-transform group-hover:scale-110"
                         style={{ backgroundColor: `${feat.color}15`, color: feat.color }}
                       >
                         <Icon size={22} />
@@ -566,8 +566,8 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onEnterAuth }) => {
                   </div>
 
                   <div className="mt-5 pt-4 border-t border-white/[0.08]">
-                    <p className="text-[10px] text-cyan-400 font-mono flex items-center gap-1.5">
-                      <CheckCircle2 size={12} />
+                    <p className="text-[10px] text-cyan-400 font-mono flex items-center gap-1.5 font-bold">
+                      <CheckCircle2 size={12} className="text-cyan-400" />
                       <span>{feat.metrics}</span>
                     </p>
                   </div>
@@ -579,12 +579,12 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onEnterAuth }) => {
 
         {/* Tab 2: Border Sectors & Operational Readiness */}
         {activeTab === 'sectors' && (
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-5 animate-in fade-in duration-300">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-5 animate-in fade-in duration-300 perspective-1000">
             {borderSectors.map((sec) => (
               <div
                 key={sec.id}
-                className="p-6 rounded-3xl border bg-gradient-to-b from-white/[0.04] to-black/80 backdrop-blur-xl space-y-4"
-                style={{ borderColor: `${sec.color}40` }}
+                className="tactical-3d-card p-6 rounded-3xl border bg-gradient-to-b from-white/[0.05] to-black/85 backdrop-blur-xl space-y-4 hover:shadow-[0_0_30px_rgba(0,240,255,0.18)] transition-all"
+                style={{ borderColor: `${sec.color}50` }}
               >
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-2.5">

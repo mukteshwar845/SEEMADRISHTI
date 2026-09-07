@@ -46,6 +46,7 @@ import { useTheme } from '../../context/ThemeContext';
 import { audioAlertEngine } from '../../utils/audioAlert';
 import { ThreatDemoButton } from '../demo/ThreatDemoButton';
 import { fetchWithAuth } from '../../utils/fetchWithAuth';
+import { Swarm3DTopology } from './Swarm3DTopology';
 
 export const CLIENT_PRESET_PARALLEL_JOBS: Record<string, ParallelOrchestrationJob> = {
   perimeter_sweep_9cam: {
@@ -661,6 +662,7 @@ export const MultiAgentOrchestratorView: React.FC = () => {
     },
   ]);
 
+  const [show3DTopology, setShow3DTopology] = useState<boolean>(true);
   const chatEndRef = useRef<HTMLDivElement>(null);
 
   const fetchAgentStatus = async () => {
@@ -892,9 +894,28 @@ export const MultiAgentOrchestratorView: React.FC = () => {
                 {currentPlan?.threatLevel || 'CRITICAL'}
               </span>
             </div>
+
+            <button
+              onClick={() => setShow3DTopology(!show3DTopology)}
+              className={`px-3 py-1.5 rounded-xl text-xs font-mono font-bold flex items-center gap-1.5 border transition-all cursor-pointer ${
+                show3DTopology
+                  ? 'bg-cyan-500/20 text-cyan-300 border-cyan-400/50 shadow-[0_0_15px_rgba(0,240,255,0.3)]'
+                  : 'bg-black/60 text-slate-400 border-slate-800 hover:text-white'
+              }`}
+            >
+              <Sparkles size={13} className={show3DTopology ? 'animate-spin-slow' : ''} />
+              <span>{show3DTopology ? '3D MESH ON' : '3D MESH OFF'}</span>
+            </button>
           </div>
         </div>
       </div>
+
+      {/* 3D Interactive Multi-Agent Swarm Topology */}
+      {show3DTopology && (
+        <div className="transition-all duration-300 animate-fadeIn">
+          <Swarm3DTopology />
+        </div>
+      )}
 
       {/* 2. Swarm Agents Telemetry Grid (The 5 Autonomous Agents) */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-4">

@@ -1004,5 +1004,158 @@ input:-webkit-autofill:active {
   box-shadow: 0 0 15px rgba(0, 240, 255, 0.25);
 }
 
+/* ============================================================================
+   3D PERSPECTIVE, SPATIAL DEPTH & HOLOGRAPHIC TACTICAL UTILITIES
+   ============================================================================ */
+
+.perspective-800 {
+  perspective: 800px;
+}
+
+.perspective-1000 {
+  perspective: 1000px;
+}
+
+.perspective-1500 {
+  perspective: 1500px;
+}
+
+.preserve-3d {
+  transform-style: preserve-3d;
+}
+
+.backface-hidden {
+  backface-visibility: hidden;
+}
+
+.translate-z-sm {
+  transform: translateZ(8px);
+}
+
+.translate-z-md {
+  transform: translateZ(16px);
+}
+
+.translate-z-lg {
+  transform: translateZ(28px);
+}
+
+.translate-z-xl {
+  transform: translateZ(42px);
+}
+
+/* 3D Tactical Card with Dynamic Hover Lift & Bevel Glow */
+.tactical-3d-card {
+  position: relative;
+  transition: transform 0.3s cubic-bezier(0.23, 1, 0.32, 1), box-shadow 0.3s cubic-bezier(0.23, 1, 0.32, 1), border-color 0.3s ease;
+  transform-style: preserve-3d;
+}
+
+.tactical-3d-card:hover {
+  transform: translateY(-4px) translateZ(12px);
+  box-shadow: 0 12px 35px -5px rgba(0, 0, 0, 0.8), 0 0 25px rgba(0, 240, 255, 0.18);
+  border-color: rgba(0, 240, 255, 0.45);
+}
+
+/* Dynamic Glare Overlay Effect */
+.tactical-3d-card::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  background: radial-gradient(
+    circle at var(--glare-x, 50%) var(--glare-y, 50%),
+    rgba(255, 255, 255, 0.2) 0%,
+    rgba(0, 240, 255, 0.08) 35%,
+    transparent 70%
+  );
+  opacity: var(--glare-opacity, 0);
+  pointer-events: none;
+  transition: opacity 0.3s ease;
+}
+
+/* 3D Tactile Interactive Button */
+.tactical-btn-3d {
+  position: relative;
+  transition: all 0.15s cubic-bezier(0.4, 0, 0.2, 1);
+  box-shadow: 0 3px 0 rgba(0, 0, 0, 0.5), 0 4px 12px rgba(0, 0, 0, 0.3);
+}
+
+.tactical-btn-3d:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 5px 0 rgba(0, 0, 0, 0.5), 0 8px 20px rgba(0, 240, 255, 0.2);
+}
+
+.tactical-btn-3d:active {
+  transform: translateY(2px);
+  box-shadow: 0 1px 0 rgba(0, 0, 0, 0.5), 0 2px 6px rgba(0, 0, 0, 0.4);
+}
+
+/* Holographic Edge Pulse Glow */
+@keyframes holoEdgePulse {
+  0%, 100% {
+    border-color: rgba(0, 240, 255, 0.3);
+    box-shadow: 0 0 15px rgba(0, 240, 255, 0.1), inset 0 0 15px rgba(0, 240, 255, 0.02);
+  }
+  50% {
+    border-color: rgba(0, 240, 255, 0.7);
+    box-shadow: 0 0 30px rgba(0, 240, 255, 0.3), inset 0 0 25px rgba(0, 240, 255, 0.06);
+  }
+}
+
+.tactical-holo-glow {
+  animation: holoEdgePulse 3s ease-in-out infinite;
+}
+
+/* Holographic Vertical Scan Sweep */
+@keyframes holoScanSweep {
+  0% {
+    transform: translateY(-100%) rotate(0deg);
+  }
+  100% {
+    transform: translateY(400%) rotate(0deg);
+  }
+}
+
+.holo-scanline-3d {
+  position: absolute;
+  left: 0;
+  right: 0;
+  height: 30%;
+  background: linear-gradient(
+    180deg,
+    transparent 0%,
+    rgba(0, 240, 255, 0.04) 50%,
+    rgba(0, 240, 255, 0.15) 95%,
+    rgba(0, 240, 255, 0.6) 100%
+  );
+  pointer-events: none;
+  animation: holoScanSweep 4s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+}
+
+/* Floating 3D HUD Layer */
+.hud-floating-layer {
+  transform: translateZ(20px);
+  filter: drop-shadow(0 10px 20px rgba(0, 0, 0, 0.6));
+}
+
+/* Slow Spin Helper for 3D HUD Rings */
+@keyframes spinSlow {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.animate-spin-slow {
+  animation: spinSlow 16s linear infinite;
+}
+
+.animate-spin-reverse {
+  animation: spinSlow 22s linear infinite reverse;
+}
+
 
 

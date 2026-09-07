@@ -99,50 +99,50 @@ export const KpiCards: React.FC<KpiCardsProps> = ({ alerts = [] }) => {
   const [isExpanded, setIsExpanded] = useState(false);
 
   return (
-    <div id="kpi-command-centre-container" className="font-mono">
-      {/* Sleek Single-Row Horizontal Telemetry Glass Bar */}
-      <div className="bg-slate-900/60 border border-white/[0.10] rounded-2xl px-3.5 py-2 shadow-lg backdrop-blur-md">
+    <div id="kpi-command-centre-container" className="font-mono perspective-1000">
+      {/* Sleek Single-Row Horizontal Telemetry Glass Bar with 3D Depth */}
+      <div className="bg-slate-900/75 border border-white/[0.14] rounded-2xl px-3.5 py-2.5 shadow-[0_8px_30px_rgba(0,0,0,0.6),inset_0_1px_1px_rgba(255,255,255,0.15)] backdrop-blur-xl transition-all duration-300">
         <div className="flex flex-wrap items-center justify-between gap-2.5">
           {/* Quick Metrics Badges */}
           <div className="flex items-center gap-2 sm:gap-3 flex-wrap text-xs">
             {/* Active Persons */}
-            <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-xl bg-cyan-500/10 border border-cyan-400/25">
-              <Users size={12} className="text-cyan-400" />
-              <span className="text-[10px] text-slate-400">PERSONS:</span>
+            <div className="tactical-btn-3d flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-cyan-500/10 border border-cyan-400/30 hover:border-cyan-400/60 transition-all cursor-default">
+              <Users size={13} className="text-cyan-400 drop-shadow-[0_0_6px_#00f0ff]" />
+              <span className="text-[10px] text-slate-400 font-bold">PERSONS:</span>
               <span className="text-xs font-black text-cyan-300">{activePersons.toString().padStart(2, '0')}</span>
             </div>
 
             {/* Active Vehicles */}
-            <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-xl bg-blue-500/10 border border-blue-400/25">
-              <Car size={12} className="text-blue-400" />
-              <span className="text-[10px] text-slate-400">VEHICLES:</span>
+            <div className="tactical-btn-3d flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-blue-500/10 border border-blue-400/30 hover:border-blue-400/60 transition-all cursor-default">
+              <Car size={13} className="text-blue-400 drop-shadow-[0_0_6px_#60a5fa]" />
+              <span className="text-[10px] text-slate-400 font-bold">VEHICLES:</span>
               <span className="text-xs font-black text-blue-300">{activeVehicles.toString().padStart(2, '0')}</span>
             </div>
 
             {/* Active Tracks */}
-            <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-xl bg-emerald-500/10 border border-emerald-400/25">
-              <Crosshair size={12} className="text-emerald-400" />
-              <span className="text-[10px] text-slate-400">TRACKS:</span>
+            <div className="tactical-btn-3d flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-emerald-500/10 border border-emerald-400/30 hover:border-emerald-400/60 transition-all cursor-default">
+              <Crosshair size={13} className="text-emerald-400 drop-shadow-[0_0_6px_#34d399]" />
+              <span className="text-[10px] text-slate-400 font-bold">TRACKS:</span>
               <span className="text-xs font-black text-emerald-300">{activeTracks.toString().padStart(2, '0')}</span>
             </div>
 
             {/* Fused Incidents */}
-            <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-xl bg-purple-500/10 border border-purple-400/25">
-              <Activity size={12} className="text-purple-400" />
-              <span className="text-[10px] text-slate-400">FUSED INCIDENTS:</span>
+            <div className="tactical-btn-3d flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-purple-500/10 border border-purple-400/30 hover:border-purple-400/60 transition-all cursor-default">
+              <Activity size={13} className="text-purple-400 drop-shadow-[0_0_6px_#c084fc]" />
+              <span className="text-[10px] text-slate-400 font-bold">FUSED INCIDENTS:</span>
               <span className="text-xs font-black text-purple-300">{fusedCount.toString().padStart(2, '0')}</span>
             </div>
 
             {/* Ingress / Egress */}
-            <div className="hidden md:flex items-center gap-1.5 px-2.5 py-1 rounded-xl bg-white/[0.04] border border-white/10">
-              <LogIn size={12} className="text-slate-400" />
-              <span className="text-[10px] text-slate-400">ENTRIES/EXITS:</span>
+            <div className="tactical-btn-3d hidden md:flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-white/[0.04] border border-white/10 hover:border-white/20 transition-all cursor-default">
+              <LogIn size={13} className="text-slate-400" />
+              <span className="text-[10px] text-slate-400 font-bold">ENTRIES/EXITS:</span>
               <span className="text-xs font-bold text-slate-200">+{entries} / -{exits}</span>
             </div>
 
             {/* Critical Defense Breaches */}
-            <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-xl bg-rose-500/15 border border-rose-500/30">
-              <ShieldAlert size={12} className="text-rose-400 animate-pulse" />
+            <div className="tactical-btn-3d flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-rose-500/15 border border-rose-500/40 hover:border-rose-500/70 transition-all cursor-default shadow-[0_0_12px_rgba(244,63,94,0.2)]">
+              <ShieldAlert size={13} className="text-rose-400 animate-pulse drop-shadow-[0_0_8px_#f43f5e]" />
               <span className="text-[10px] text-rose-300 font-bold">BREACHES:</span>
               <span className="text-xs font-black text-rose-400">{entries.toString().padStart(2, '0')}</span>
             </div>
@@ -150,14 +150,14 @@ export const KpiCards: React.FC<KpiCardsProps> = ({ alerts = [] }) => {
 
           {/* Right: Subsystem online pill & Expand telemetry toggle */}
           <div className="flex items-center gap-2 text-[10px]">
-            <span className="hidden lg:flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-emerald-500/15 border border-emerald-400/30 text-emerald-300 font-bold">
-              <CheckCircle2 size={11} className="text-emerald-400" />
+            <span className="hidden lg:flex items-center gap-1.5 px-3 py-1 rounded-full bg-emerald-500/15 border border-emerald-400/40 text-emerald-300 font-bold shadow-[0_0_12px_rgba(16,185,129,0.2)]">
+              <CheckCircle2 size={12} className="text-emerald-400 animate-pulse" />
               ALL 9 NODES SYNCED
             </span>
 
             <button
               onClick={() => setIsExpanded(!isExpanded)}
-              className="px-2.5 py-1 rounded-xl bg-white/[0.04] hover:bg-white/[0.08] text-slate-300 hover:text-white border border-white/10 text-[10px] transition-all cursor-pointer"
+              className="tactical-btn-3d px-3 py-1.5 rounded-xl bg-white/[0.05] hover:bg-white/[0.12] text-slate-200 hover:text-white border border-white/15 text-[10px] font-bold transition-all cursor-pointer shadow-md"
             >
               {isExpanded ? 'HIDE TELEMETRY ▲' : 'TELEMETRY DETAILS ▼'}
             </button>
@@ -166,29 +166,29 @@ export const KpiCards: React.FC<KpiCardsProps> = ({ alerts = [] }) => {
 
         {/* Collapsible Deep Telemetry Details */}
         {isExpanded && (
-          <div className="mt-3 pt-2.5 border-t border-white/[0.08] grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-6 gap-2 text-xs animate-fadeIn">
-            <div className="bg-black/40 p-2 rounded-xl border border-white/10 flex flex-col justify-between">
-              <span className="text-[9px] text-slate-400 uppercase">CAMERA HANDOVERS</span>
+          <div className="mt-3.5 pt-3 border-t border-white/[0.10] grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-6 gap-2.5 text-xs animate-fadeIn">
+            <div className="tactical-3d-card bg-black/50 p-2.5 rounded-xl border border-white/10 flex flex-col justify-between hover:border-cyan-400/40">
+              <span className="text-[9px] text-slate-400 uppercase font-bold">CAMERA HANDOVERS</span>
               <span className="text-sm font-black text-cyan-300 mt-1">{handoverCount}</span>
             </div>
-            <div className="bg-black/40 p-2 rounded-xl border border-white/10 flex flex-col justify-between">
-              <span className="text-[9px] text-slate-400 uppercase">CORRELATED TARGETS</span>
+            <div className="tactical-3d-card bg-black/50 p-2.5 rounded-xl border border-white/10 flex flex-col justify-between hover:border-cyan-400/40">
+              <span className="text-[9px] text-slate-400 uppercase font-bold">CORRELATED TARGETS</span>
               <span className="text-sm font-black text-cyan-300 mt-1">{correlatedCount}</span>
             </div>
-            <div className="bg-black/40 p-2 rounded-xl border border-white/10 flex flex-col justify-between">
-              <span className="text-[9px] text-slate-400 uppercase">LOITERING TARGETS</span>
+            <div className="tactical-3d-card bg-black/50 p-2.5 rounded-xl border border-white/10 flex flex-col justify-between hover:border-amber-400/40">
+              <span className="text-[9px] text-slate-400 uppercase font-bold">LOITERING TARGETS</span>
               <span className="text-sm font-black text-amber-300 mt-1">{loiteringEvents}</span>
             </div>
-            <div className="bg-black/40 p-2 rounded-xl border border-white/10 flex flex-col justify-between">
-              <span className="text-[9px] text-slate-400 uppercase">NET OCCUPANCY</span>
+            <div className="tactical-3d-card bg-black/50 p-2.5 rounded-xl border border-white/10 flex flex-col justify-between hover:border-emerald-400/40">
+              <span className="text-[9px] text-slate-400 uppercase font-bold">NET OCCUPANCY</span>
               <span className="text-sm font-black text-emerald-300 mt-1">+{Math.max(0, entries - exits)}</span>
             </div>
-            <div className="bg-black/40 p-2 rounded-xl border border-white/10 flex flex-col justify-between">
-              <span className="text-[9px] text-slate-400 uppercase">DEFCON STATE</span>
+            <div className="tactical-3d-card bg-black/50 p-2.5 rounded-xl border border-white/10 flex flex-col justify-between hover:border-rose-400/40">
+              <span className="text-[9px] text-slate-400 uppercase font-bold">DEFCON STATE</span>
               <span className="text-xs font-black text-rose-400 mt-1">DEFCON 4 (GUARD)</span>
             </div>
-            <div className="bg-black/40 p-2 rounded-xl border border-white/10 flex flex-col justify-between">
-              <span className="text-[9px] text-slate-400 uppercase">NEURAL INFERENCE</span>
+            <div className="tactical-3d-card bg-black/50 p-2.5 rounded-xl border border-white/10 flex flex-col justify-between hover:border-emerald-400/40">
+              <span className="text-[9px] text-slate-400 uppercase font-bold">NEURAL INFERENCE</span>
               <span className="text-xs font-black text-emerald-300 mt-1">60 FPS // 14ms</span>
             </div>
           </div>

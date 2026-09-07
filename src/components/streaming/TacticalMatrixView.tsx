@@ -542,7 +542,7 @@ export const TacticalMatrixView: React.FC<TacticalMatrixViewProps> = ({
       {layoutMode === 'matrix-3x3' && (
         <div
           id="tactical-grid-3x3-container"
-          className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3.5"
+          className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3.5 perspective-1500"
         >
           {filteredCameras.map((cam) => {
             const isPinned = pinnedCameraIds.includes(cam.id);
@@ -553,7 +553,7 @@ export const TacticalMatrixView: React.FC<TacticalMatrixViewProps> = ({
             return (
               <div
                 key={cam.id}
-                className={`relative group rounded-2xl transition-all duration-200 ${
+                className={`tactical-3d-card relative group rounded-2xl transition-all duration-200 ${
                   isHighlighted ? 'ring-2 ring-rose-500 shadow-[0_0_25px_rgba(244,63,94,0.6)] animate-pulse' : ''
                 }`}
                 onDoubleClick={() => setFullscreenCamera(cam)}
@@ -595,12 +595,12 @@ export const TacticalMatrixView: React.FC<TacticalMatrixViewProps> = ({
       {layoutMode === 'quad-2x2' && (
         <div
           id="tactical-quad-2x2-container"
-          className="grid grid-cols-1 md:grid-cols-2 gap-3.5"
+          className="grid grid-cols-1 md:grid-cols-2 gap-3.5 perspective-1500"
         >
           {currentQuadFeeds.map((cam) => (
             <div
               key={cam.id}
-              className="relative group rounded-2xl"
+              className="tactical-3d-card relative group rounded-2xl"
               onDoubleClick={() => setFullscreenCamera(cam)}
             >
               <MatrixCameraCell

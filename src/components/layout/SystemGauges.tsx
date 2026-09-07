@@ -92,9 +92,9 @@ export const SystemGauges: React.FC<SystemGaugesProps> = ({
         </span>
       </div>
 
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-3 sm:gap-4" id="telemetry-gauges-grid">
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-3 sm:gap-4 perspective-1000" id="telemetry-gauges-grid">
         {/* 1. CPU Load */}
-        <div className="flex items-center gap-3 p-3 rounded-lg bg-slate-950 border border-slate-800/90" id="gauge-cpu">
+        <div className="tactical-3d-card flex items-center gap-3 p-3 rounded-xl bg-slate-950/80 border border-slate-800/90 hover:border-emerald-400/40" id="gauge-cpu">
           <div className="relative w-12 h-12 shrink-0">
             <svg className="w-full h-full rotate-[-90deg]" viewBox="0 0 36 36">
               <path
@@ -109,7 +109,7 @@ export const SystemGauges: React.FC<SystemGaugesProps> = ({
                 strokeDasharray={`${cpuPercent}, 100`}
                 strokeLinecap="round"
                 fill="none"
-                style={{ filter: 'drop-shadow(0 0 5px rgba(52,211,153,0.7))' }}
+                style={{ filter: 'drop-shadow(0 0 6px rgba(52,211,153,0.8))' }}
                 d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831"
               />
             </svg>
@@ -129,7 +129,7 @@ export const SystemGauges: React.FC<SystemGaugesProps> = ({
         </div>
 
         {/* 2. GPU / System Memory */}
-        <div className="flex items-center gap-3 p-3 rounded-lg bg-slate-950 border border-slate-800/90" id="gauge-memory">
+        <div className="tactical-3d-card flex items-center gap-3 p-3 rounded-xl bg-slate-950/80 border border-slate-800/90 hover:border-cyan-400/40" id="gauge-memory">
           <div className="relative w-12 h-12 shrink-0">
             <svg className="w-full h-full rotate-[-90deg]" viewBox="0 0 36 36">
               <path
@@ -144,7 +144,7 @@ export const SystemGauges: React.FC<SystemGaugesProps> = ({
                 strokeDasharray={`${memPercent}, 100`}
                 strokeLinecap="round"
                 fill="none"
-                style={{ filter: 'drop-shadow(0 0 5px rgba(34,211,238,0.7))' }}
+                style={{ filter: 'drop-shadow(0 0 6px rgba(34,211,238,0.8))' }}
                 d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831"
               />
             </svg>
@@ -164,7 +164,7 @@ export const SystemGauges: React.FC<SystemGaugesProps> = ({
         </div>
 
         {/* 3. Storage */}
-        <div className="flex items-center gap-3 p-3 rounded-lg bg-slate-950 border border-slate-800/90" id="gauge-storage">
+        <div className="tactical-3d-card flex items-center gap-3 p-3 rounded-xl bg-slate-950/80 border border-slate-800/90 hover:border-amber-400/40" id="gauge-storage">
           <div className="relative w-12 h-12 shrink-0">
             <svg className="w-full h-full rotate-[-90deg]" viewBox="0 0 36 36">
               <path
@@ -179,7 +179,7 @@ export const SystemGauges: React.FC<SystemGaugesProps> = ({
                 strokeDasharray={`${storPercent}, 100`}
                 strokeLinecap="round"
                 fill="none"
-                style={{ filter: 'drop-shadow(0 0 5px rgba(251,191,36,0.7))' }}
+                style={{ filter: 'drop-shadow(0 0 6px rgba(251,191,36,0.8))' }}
                 d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831"
               />
             </svg>
@@ -199,7 +199,7 @@ export const SystemGauges: React.FC<SystemGaugesProps> = ({
         </div>
 
         {/* 4. Network Link */}
-        <div className="flex items-center gap-3 p-3 rounded-lg bg-slate-950 border border-slate-800/90" id="gauge-network">
+        <div className="tactical-3d-card flex items-center gap-3 p-3 rounded-xl bg-slate-950/80 border border-slate-800/90 hover:border-purple-400/40" id="gauge-network">
           <div className="relative w-12 h-12 shrink-0">
             <svg className="w-full h-full rotate-[-90deg]" viewBox="0 0 36 36">
               <path
@@ -214,7 +214,7 @@ export const SystemGauges: React.FC<SystemGaugesProps> = ({
                 strokeDasharray={`${netPercent}, 100`}
                 strokeLinecap="round"
                 fill="none"
-                style={{ filter: 'drop-shadow(0 0 5px rgba(192,132,252,0.7))' }}
+                style={{ filter: 'drop-shadow(0 0 6px rgba(192,132,252,0.8))' }}
                 d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831"
               />
             </svg>

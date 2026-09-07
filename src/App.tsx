@@ -31,19 +31,19 @@ import {
   SystemTimelineView,
   CameraCalibrationView,
   ReportsModal,
+  TacticalTerminalView,
+  TacticalRadarGisView,
+  DefenseSandboxView,
+  MultiAgentOrchestratorView,
+  SwarmHelpModal,
+  HelpBotWidget,
+  ScreenLockOverlay,
+  PinConfigModal,
+  ProfileModal,
+  LandingPage,
+  Auth3DView,
+  TacticalOperationsAtmosphere,
 } from './components';
-import { TacticalTerminalView } from './components/terminal/TacticalTerminalView';
-import { TacticalRadarGisView } from './components/gis/TacticalRadarGisView';
-import { DefenseSandboxView } from './components/sandbox/DefenseSandboxView';
-import { MultiAgentOrchestratorView } from './components/agents/MultiAgentOrchestratorView';
-import { SwarmHelpModal } from './components/agents/SwarmHelpModal';
-import { HelpBotWidget } from './components/chat/HelpBotWidget';
-import { ScreenLockOverlay } from './components/security/ScreenLockOverlay';
-import { PinConfigModal } from './components/security/PinConfigModal';
-import { ProfileModal } from './components/profile/ProfileModal';
-import { LandingPage } from './components/landing/LandingPage';
-import { Auth3DView } from './components/auth/Auth3DView';
-import { TacticalOperationsAtmosphere } from './components/background/TacticalOperationsAtmosphere';
 
 import {
   initialAlerts,

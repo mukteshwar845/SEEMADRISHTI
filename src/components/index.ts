@@ -1,48 +1,67 @@
-// Core UI & Layout Components
-export * from './Header';
-export * from './Sidebar';
-export * from './SeemadrishtiLogo';
-export * from './KpiCards';
-export * from './SystemGauges';
+// ============================================================================
+// SEEMADRISHTI Tactical Command Component Barrel Hierarchy
+// ============================================================================
 
-// Streaming & Matrix Views
-export * from './CameraFeedCanvas';
-export * from './MatrixCameraCell';
-export * from './TacticalMatrixView';
-export * from './QuadLiveStreamView';
-export * from './MultiCamStitchingView';
-export * from './CameraCalibrationView';
-export * from './CameraFleetView';
-export * from './CameraHealthDiagnosticsView';
+// Layout & Core Command Primitives
+export * from './layout';
 
-// Intelligence, Threat & Forensic Views
-export * from './IntelligenceSearch';
-export * from './IncidentInspectorView';
-export * from './IncidentIntelligenceSummary';
-export * from './TargetJourneyView';
-export * from './ThreatBehaviorChain';
-export * from './ThreatHeatmapView';
-export * from './EvidenceQueueView';
+// Live Video Feeds & Matrix Streaming
+export * from './streaming';
 
-// Analytics & Reports
-export * from './AnalyticsDashboard';
-export * from './D3DwellTimeChart';
-export * from './RechartsDwellDistributionChart';
-export * from './ReportsModal';
+// Forensic Incidents & Evidence Chain of Custody
+export * from './forensics';
 
-// Alerts & Logs
-export * from './AlertsLog';
-export * from './AlertsManagementView';
-export * from './AlertDetailModal';
-export * from './NotificationHistory';
-export * from './HistoricalLogsView';
-export * from './SystemTimelineView';
-export * from './DetectionsView';
+// Spatio-Temporal Threat Intelligence & Search
+export * from './intelligence';
 
-// Management & Modals
-export * from './UserManagementView';
-export * from './SettingsView';
-export * from './MissionControlView';
-export * from './AiSystemStatusModal';
-export * from './CameraDetailModal';
-export * from './SihDemoGuideModal';
+// Triage Alerts, Notifications & System Logs
+export * from './alerts';
+
+// Movement, Dwell & Flow Analytics
+export * from './analytics';
+
+// System Settings, Fleet & Personnel Management
+export * from './management';
+
+// Tactical Modals & Dialogs
+export * from './modals';
+
+// Multi-Agent Swarm Orchestration
+export * from './agents/MultiAgentOrchestratorView';
+export * from './agents/SwarmHelpModal';
+
+// Tactical Biometric Authentication & 3D Visualizer
+export * from './auth/Auth3DView';
+export * from './auth/Auth3DCanvas';
+
+// Tactical AI Copilot & Assistance Chat
+export * from './chat/HelpBotWidget';
+
+// Geospatial Radar & Perimeter Mapping
+export * from './gis/TacticalRadarGisView';
+
+// Command Landing & Onboarding
+export * from './landing/LandingPage';
+
+// CCTV Matrix Sub-Components & Controls
+export * from './matrix/CameraControlsBar';
+export * from './matrix/CameraHudHeader';
+export * from './matrix/CinematicCameraFullscreenModal';
+export * from './matrix/PhoneCameraModal';
+
+// Clearance Profile & Bio Management
+export * from './profile/ProfileModal';
+export * from './profile/OperatorProfileDropdown';
+
+// Tactical Threat Scenario Sandbox
+export * from './sandbox/DefenseSandboxView';
+
+// Terminal Lock & Cryptographic PIN Security
+export * from './security/ScreenLockOverlay';
+export * from './security/PinConfigModal';
+
+// Real-Time CLI Terminal & Telemetry Feed
+export * from './terminal/TacticalTerminalView';
+
+// Atmospheric Visuals & Particle Simulation
+export * from './background/TacticalOperationsAtmosphere';

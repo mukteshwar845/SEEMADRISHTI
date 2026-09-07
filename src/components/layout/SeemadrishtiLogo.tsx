@@ -21,7 +21,7 @@ export const SeemadrishtiLogo: React.FC<SeemadrishtiLogoProps> = ({
         viewBox="0 0 120 120"
         fill="none"
         xmlns="http://www.w3.org/2000/svg"
-        className="shrink-0 drop-shadow-[0_0_12px_rgba(6,182,212,0.4)]"
+        className="shrink-0 max-w-full max-h-full drop-shadow-[0_0_12px_rgba(6,182,212,0.4)]"
         id="seemadrishti-brand-logo"
       >
         <defs>

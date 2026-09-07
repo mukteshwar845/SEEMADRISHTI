@@ -133,13 +133,20 @@ export const ScreenLockOverlay: React.FC = () => {
 
       {/* Top Banner */}
       <div className="w-full max-w-md flex items-center justify-between pt-3 relative z-10">
-        <div className="flex items-center gap-2.5">
-          <SeemadrishtiLogo className="w-6 h-6 text-cyan-400 drop-shadow-[0_0_10px_rgba(0,240,255,0.6)]" />
-          <span className="text-xs font-black tracking-widest text-cyan-300 drop-shadow-[0_0_8px_rgba(0,240,255,0.4)]">
-            SEEMADRISHTI DEFENSE LOCK
-          </span>
+        <div className="flex items-center gap-3">
+          <div className="w-9 h-9 rounded-xl bg-cyan-950/40 border border-cyan-500/30 backdrop-blur-md flex items-center justify-center shadow-[0_0_15px_rgba(0,240,255,0.25)] shrink-0">
+            <SeemadrishtiLogo size={24} animated={true} />
+          </div>
+          <div className="flex flex-col">
+            <span className="text-xs sm:text-sm font-black tracking-widest text-cyan-300 drop-shadow-[0_0_8px_rgba(0,240,255,0.4)] font-mono leading-tight">
+              SEEMADRISHTI
+            </span>
+            <span className="text-[9px] font-mono tracking-[0.2em] text-cyan-400/80 uppercase font-semibold leading-tight">
+              DEFENSE LOCK
+            </span>
+          </div>
         </div>
-        <div className="flex items-center gap-1.5 px-3 py-1 rounded-full bg-rose-950/40 border border-rose-500/40 text-[10px] text-rose-300 font-bold tracking-wider backdrop-blur-md shadow-[0_0_14px_rgba(244,63,94,0.2)]">
+        <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-rose-950/40 border border-rose-500/40 text-[10px] text-rose-300 font-bold tracking-wider backdrop-blur-md shadow-[0_0_14px_rgba(244,63,94,0.2)] shrink-0">
           <span className="w-1.5 h-1.5 rounded-full bg-rose-400 animate-ping" />
           <Lock size={12} className="text-rose-400" />
           <span>TERMINAL LOCKED</span>

@@ -162,7 +162,7 @@ export const Auth3DView: React.FC<Auth3DViewProps> = ({
           className="flex items-center gap-3 cursor-pointer group"
           onClick={() => (onNavigateLanding ? onNavigateLanding() : setPortal('landing'))}
         >
-          <SeemadrishtiLogo className="w-8 h-8 text-cyan-400 drop-shadow-[0_0_15px_rgba(0,240,255,0.7)] transition-transform group-hover:scale-105" />
+          <SeemadrishtiLogo size={32} className="text-cyan-400 drop-shadow-[0_0_15px_rgba(0,240,255,0.7)] transition-transform group-hover:scale-105" />
           <span className="text-sm font-black tracking-widest text-transparent bg-clip-text bg-gradient-to-r from-cyan-300 via-cyan-400 to-teal-300 drop-shadow-[0_0_12px_rgba(0,240,255,0.5)]">
             SEEMADRISHTI
           </span>

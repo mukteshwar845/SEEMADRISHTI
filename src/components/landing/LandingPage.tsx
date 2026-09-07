@@ -736,7 +736,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onEnterAuth }) => {
       <footer id="footer" className="relative z-10 border-t border-cyan-500/20 bg-black/95 py-6 px-4 sm:px-8 backdrop-blur-2xl">
         <div className="max-w-7xl mx-auto flex flex-col md:flex-row items-center justify-between gap-4 text-xs text-slate-500">
           <div className="flex items-center gap-3">
-            <SeemadrishtiLogo className="w-6 h-6 text-cyan-400" />
+            <SeemadrishtiLogo size={24} className="text-cyan-400" />
             <span className="tracking-widest font-bold text-slate-400">
               &copy; 2026 SEEMADRISHTI DEFENSE TECHNOLOGIES
             </span>

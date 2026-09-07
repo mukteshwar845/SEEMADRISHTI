@@ -17,6 +17,58 @@ const HEATMAP_WEIGHTS = {
   reentry_events: 10,
 };
 
+export const SENSITIVITY_PRESETS: Record<string, Record<string, number>> = {
+  balanced: { ...HEATMAP_WEIGHTS },
+  perimeter_strict: {
+    restricted_breaches: 35,
+    tripwire_crossings: 25,
+    loitering_events: 8,
+    anomalies: 6,
+    critical_incidents: 35,
+    high_incidents: 20,
+    reentry_events: 15,
+  },
+  loitering_focus: {
+    restricted_breaches: 20,
+    tripwire_crossings: 12,
+    loitering_events: 28,
+    anomalies: 16,
+    critical_incidents: 25,
+    high_incidents: 15,
+    reentry_events: 18,
+  },
+  high_alert: {
+    restricted_breaches: 35,
+    tripwire_crossings: 22,
+    loitering_events: 18,
+    anomalies: 14,
+    critical_incidents: 40,
+    high_incidents: 25,
+    reentry_events: 16,
+  },
+};
+
+function computeThreatIndex(stats: Record<string, number>, weights?: Record<string, number>): number {
+  const w = weights || HEATMAP_WEIGHTS;
+  const raw =
+    (stats.restricted_breaches || 0) * (w.restricted_breaches ?? 25) +
+    (stats.tripwire_crossings || 0) * (w.tripwire_crossings ?? 15) +
+    (stats.loitering || 0) * (w.loitering_events ?? 12) +
+    (stats.anomalies || 0) * (w.anomalies ?? 8) +
+    (stats.critical_incidents || 0) * (w.critical_incidents ?? 30) +
+    (stats.high_incidents || 0) * (w.high_incidents ?? 18) +
+    (stats.reentry_count || 0) * (w.reentry_events ?? 10);
+
+  return Math.min(100, Math.round(raw));
+}
+
+function getThreatLevel(score: number): 'CRITICAL' | 'HIGH' | 'MEDIUM' | 'LOW' {
+  if (score >= 75) return 'CRITICAL';
+  if (score >= 50) return 'HIGH';
+  if (score >= 25) return 'MEDIUM';
+  return 'LOW';
+}
+
 const CAMERA_SECTOR_MAP: Record<string, string> = {
   'cam-01': 'Sector Alpha',
   'cam-02': 'Sector Bravo',
@@ -69,26 +121,6 @@ function normalizeCameraId(raw?: string): string {
     return num < 10 ? `cam-0${num}` : `cam-${num}`;
   }
   return c;
-}
-
-function computeThreatIndex(stats: Record<string, number>): number {
-  const raw =
-    (stats.restricted_breaches || 0) * HEATMAP_WEIGHTS.restricted_breaches +
-    (stats.tripwire_crossings || 0) * HEATMAP_WEIGHTS.tripwire_crossings +
-    (stats.loitering || 0) * HEATMAP_WEIGHTS.loitering_events +
-    (stats.anomalies || 0) * HEATMAP_WEIGHTS.anomalies +
-    (stats.critical_incidents || 0) * HEATMAP_WEIGHTS.critical_incidents +
-    (stats.high_incidents || 0) * HEATMAP_WEIGHTS.high_incidents +
-    (stats.reentry_count || 0) * HEATMAP_WEIGHTS.reentry_events;
-
-  return Math.min(100, Math.round(raw));
-}
-
-function getThreatLevel(score: number): 'CRITICAL' | 'HIGH' | 'MEDIUM' | 'LOW' {
-  if (score >= 75) return 'CRITICAL';
-  if (score >= 50) return 'HIGH';
-  if (score >= 25) return 'MEDIUM';
-  return 'LOW';
 }
 
 function ensureDefaultThreatIntelligenceData(db: any): void {
@@ -942,12 +974,24 @@ intelligenceRouter.get('/journey/:trackId', (req: Request, res: Response, next: 
 intelligenceRouter.get('/threat-heatmap', (req: Request, res: Response, next: NextFunction) => {
   try {
     const db = getDatabase();
-    ensureDefaultThreatIntelligenceData(db);
-
-    const windowStr = (req.query.window as string) || '24h';
+    ensureDefaultThreatIntelligenceData(db);    const windowStr = (req.query.window as string) || '24h';
     const windowSecs = getWindowSeconds(windowStr);
     const cutoff = new Date(Date.now() - windowSecs * 1000).toISOString();
     const prevCutoff = new Date(Date.now() - windowSecs * 2000).toISOString();
+
+    const sensitivity = ((req.query.sensitivity as string) || 'balanced').toLowerCase();
+    const activeWeights: Record<string, number> = {
+      ...(SENSITIVITY_PRESETS[sensitivity] || HEATMAP_WEIGHTS),
+    };
+    if (req.query.custom_weights) {
+      try {
+        const parsed = typeof req.query.custom_weights === 'string'
+          ? JSON.parse(req.query.custom_weights)
+          : req.query.custom_weights;
+        Object.assign(activeWeights, parsed);
+      } catch {}
+    }
+    const minCorridorScore = req.query.corridor_threshold ? parseInt(req.query.corridor_threshold as string, 10) : 40;
 
     // 1. Query all multi-source surveillance records
     let currentEvents: any[] = [];
@@ -1109,15 +1153,25 @@ intelligenceRouter.get('/threat-heatmap', (req: Request, res: Response, next: Ne
 
     const cameraResults = CANONICAL_CAMERAS.map((c) => {
       const stats = cameraStats[c.id];
-      const threatIndex = computeThreatIndex(stats);
+      const threatIndex = computeThreatIndex(stats, activeWeights);
       const threatLevel = getThreatLevel(threatIndex);
 
       const prevStats = prevCameraStats[c.id];
-      const prevThreatIndex = computeThreatIndex(prevStats);
+      const prevThreatIndex = computeThreatIndex(prevStats, activeWeights);
 
       let trend = 'STABLE';
       if (threatIndex > prevThreatIndex + 4) trend = 'ESCALATING';
       else if (threatIndex < prevThreatIndex - 4) trend = 'DE-ESCALATING';
+
+      const factorContributions = {
+        restricted_breaches: (stats.restricted_breaches || 0) * (activeWeights.restricted_breaches ?? 25),
+        tripwire_crossings: (stats.tripwire_crossings || 0) * (activeWeights.tripwire_crossings ?? 15),
+        loitering_events: (stats.loitering || 0) * (activeWeights.loitering_events ?? 12),
+        anomalies: (stats.anomalies || 0) * (activeWeights.anomalies ?? 8),
+        critical_incidents: (stats.critical_incidents || 0) * (activeWeights.critical_incidents ?? 30),
+        high_incidents: (stats.high_incidents || 0) * (activeWeights.high_incidents ?? 18),
+        reentry_events: (stats.reentry_count || 0) * (activeWeights.reentry_events ?? 10),
+      };
 
       return {
         camera_id: c.id,
@@ -1130,6 +1184,7 @@ intelligenceRouter.get('/threat-heatmap', (req: Request, res: Response, next: Ne
         threat_index: threatIndex,
         threat_level: threatLevel,
         event_counts: stats,
+        factor_contributions: factorContributions,
         trend,
         has_activity: threatIndex > 0,
       };
@@ -1210,36 +1265,6 @@ intelligenceRouter.get('/threat-heatmap', (req: Request, res: Response, next: Ne
     // Detect High-Risk Corridors with 2D spatial coordinate endpoints
     const corridorMap: Record<string, any> = {};
 
-    // Standard high-risk defense perimeter corridor links
-    const defaultCorridorLinks = [
-      { from: 'cam-01', to: 'cam-02', score: 94, incidents: 4 },
-      { from: 'cam-02', to: 'cam-03', score: 88, incidents: 3 },
-      { from: 'cam-08', to: 'cam-09', score: 92, incidents: 3 },
-      { from: 'cam-05', to: 'cam-06', score: 82, incidents: 2 },
-    ];
-
-    defaultCorridorLinks.forEach((link) => {
-      const cid = `${link.from}->${link.to}`;
-      const fromNode = cameraMapLookup.get(link.from);
-      const toNode = cameraMapLookup.get(link.to);
-      corridorMap[cid] = {
-        corridor_id: cid,
-        from_camera: link.from,
-        to_camera: link.to,
-        from_x: fromNode?.x || 0.2,
-        from_y: fromNode?.y || 0.2,
-        to_x: toNode?.x || 0.4,
-        to_y: toNode?.y || 0.4,
-        path: [link.from.toUpperCase(), link.to.toUpperCase()],
-        correlated_incidents: link.incidents,
-        restricted_breaches: 0,
-        tripwire_crossings: 0,
-        loitering: 0,
-        threat_score: link.score,
-        event_density: link.score >= 90 ? 'HIGH' : 'MEDIUM',
-      };
-    });
-
     correlations.forEach((corr) => {
       let cams: string[] = [];
       try {
@@ -1248,21 +1273,21 @@ intelligenceRouter.get('/threat-heatmap', (req: Request, res: Response, next: Ne
 
       if (Array.isArray(cams) && cams.length >= 2) {
         for (let i = 0; i < cams.length - 1; i++) {
-          const fc = normalizeCameraId(cams[i]);
-          const tc = normalizeCameraId(cams[i + 1]);
-          const cid = `${fc}->${tc}`;
-          const fromNode = cameraMapLookup.get(fc);
-          const toNode = cameraMapLookup.get(tc);
+          const pair = [normalizeCameraId(cams[i]), normalizeCameraId(cams[i + 1])];
+          const cid = `${pair[0]}->${pair[1]}`;
+          const fromNode = cameraMapLookup.get(pair[0]);
+          const toNode = cameraMapLookup.get(pair[1]);
+
           if (!corridorMap[cid]) {
             corridorMap[cid] = {
               corridor_id: cid,
-              from_camera: fc,
-              to_camera: tc,
-              from_x: fromNode?.x || 0.3,
-              from_y: fromNode?.y || 0.3,
-              to_x: toNode?.x || 0.6,
-              to_y: toNode?.y || 0.6,
-              path: [fc.toUpperCase(), tc.toUpperCase()],
+              from_camera: pair[0],
+              to_camera: pair[1],
+              from_x: fromNode?.x || 0.5,
+              from_y: fromNode?.y || 0.5,
+              to_x: toNode?.x || 0.5,
+              to_y: toNode?.y || 0.5,
+              path: [pair[0].toUpperCase(), pair[1].toUpperCase()],
               correlated_incidents: 0,
               restricted_breaches: 0,
               tripwire_crossings: 0,
@@ -1271,7 +1296,7 @@ intelligenceRouter.get('/threat-heatmap', (req: Request, res: Response, next: Ne
             };
           }
           corridorMap[cid].correlated_incidents += 1;
-          corridorMap[cid].threat_score = Math.max(corridorMap[cid].threat_score, corr.confidence_score || 65);
+          corridorMap[cid].threat_score = Math.max(corridorMap[cid].threat_score, corr.correlation_score || 65);
         }
       }
     });
@@ -1285,18 +1310,22 @@ intelligenceRouter.get('/threat-heatmap', (req: Request, res: Response, next: Ne
       const total = corr.correlated_incidents + corr.restricted_breaches + corr.tripwire_crossings;
       corr.event_density = total >= 6 || corr.threat_score >= 85 ? 'HIGH' : total >= 3 ? 'MEDIUM' : 'LOW';
       return corr;
-    }).sort((a, b) => b.threat_score - a.threat_score);
+    })
+    .filter((corr: any) => isNaN(minCorridorScore) || minCorridorScore <= 0 || corr.threat_score >= minCorridorScore)
+    .sort((a, b) => b.threat_score - a.threat_score);
 
     const heatmapPayload = {
       success: true,
       time_window: windowStr,
       window_seconds: windowSecs,
+      sensitivity_profile: sensitivity,
+      weights: activeWeights,
+      presets: Object.keys(SENSITIVITY_PRESETS),
       hotspot,
       cameras: cameraResults,
       spatial_points: spatialPoints,
       sectors: sectorResults,
       corridors: corridorResults,
-      weights: HEATMAP_WEIGHTS,
       canvas_bounds: { width: 1000, height: 700 },
       timestamp: new Date().toISOString(),
     };
@@ -1332,6 +1361,19 @@ intelligenceRouter.get('/cameras/:cameraId/threat-profile', (req: Request, res: 
 
     const windowSecs = getWindowSeconds(req.query.window as string);
     const cutoff = new Date(Date.now() - windowSecs * 1000).toISOString();
+
+    const sensitivity = ((req.query.sensitivity as string) || 'balanced').toLowerCase();
+    const activeWeights: Record<string, number> = {
+      ...(SENSITIVITY_PRESETS[sensitivity] || HEATMAP_WEIGHTS),
+    };
+    if (req.query.custom_weights) {
+      try {
+        const parsed = typeof req.query.custom_weights === 'string'
+          ? JSON.parse(req.query.custom_weights)
+          : req.query.custom_weights;
+        Object.assign(activeWeights, parsed);
+      } catch {}
+    }
 
     const cidAlt1 = cid.replace('-0', '-');
     const cidAlt2 = cid.replace('-', '');
@@ -1384,8 +1426,18 @@ intelligenceRouter.get('/cameras/:cameraId/threat-profile', (req: Request, res: 
       else if (et.includes('TRIPWIRE')) stats.tripwire_crossings += 1;
     });
 
-    const threatIndex = computeThreatIndex(stats);
+    const threatIndex = computeThreatIndex(stats, activeWeights);
     const threatLevel = getThreatLevel(threatIndex);
+
+    const factorContributions = {
+      restricted_breaches: (stats.restricted_breaches || 0) * (activeWeights.restricted_breaches ?? 25),
+      tripwire_crossings: (stats.tripwire_crossings || 0) * (activeWeights.tripwire_crossings ?? 15),
+      loitering_events: (stats.loitering || 0) * (activeWeights.loitering_events ?? 12),
+      anomalies: (stats.anomalies || 0) * (activeWeights.anomalies ?? 8),
+      critical_incidents: (stats.critical_incidents || 0) * (activeWeights.critical_incidents ?? 30),
+      high_incidents: (stats.high_incidents || 0) * (activeWeights.high_incidents ?? 18),
+      reentry_events: (stats.reentry_count || 0) * (activeWeights.reentry_events ?? 10),
+    };
 
     const profilePayload = {
       success: true,
@@ -1399,6 +1451,9 @@ intelligenceRouter.get('/cameras/:cameraId/threat-profile', (req: Request, res: 
       threat_index: threatIndex,
       threat_level: threatLevel,
       event_counts: stats,
+      factor_contributions: factorContributions,
+      sensitivity_profile: sensitivity,
+      weights: activeWeights,
       total_events: events.length,
       total_incidents: incidents.length,
       total_anomalies: anomalies.length,

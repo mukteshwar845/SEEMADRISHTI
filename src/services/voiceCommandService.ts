@@ -4,7 +4,7 @@
  */
 
 import { ViewMode } from '../types';
-import { MatrixLayoutMode } from '../components/TacticalMatrixView';
+import { MatrixLayoutMode } from '../components/streaming/TacticalMatrixView';
 
 export type VoiceAction =
   | { type: 'NAVIGATE'; view: ViewMode }

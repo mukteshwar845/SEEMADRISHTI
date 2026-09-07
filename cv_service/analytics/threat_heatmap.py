@@ -28,6 +28,37 @@ HEATMAP_WEIGHTS = {
     "reentry_events": 10,       # Repeated boundary re-entry
 }
 
+SENSITIVITY_PRESETS = {
+    "balanced": dict(HEATMAP_WEIGHTS),
+    "perimeter_strict": {
+        "restricted_breaches": 35,
+        "tripwire_crossings": 25,
+        "loitering_events": 8,
+        "anomalies": 6,
+        "critical_incidents": 35,
+        "high_incidents": 20,
+        "reentry_events": 15,
+    },
+    "loitering_focus": {
+        "restricted_breaches": 20,
+        "tripwire_crossings": 12,
+        "loitering_events": 28,
+        "anomalies": 16,
+        "critical_incidents": 25,
+        "high_incidents": 15,
+        "reentry_events": 18,
+    },
+    "high_alert": {
+        "restricted_breaches": 35,
+        "tripwire_crossings": 22,
+        "loitering_events": 18,
+        "anomalies": 14,
+        "critical_incidents": 40,
+        "high_incidents": 25,
+        "reentry_events": 16,
+    },
+}
+
 CAMERA_SECTOR_MAP = {
     "cam-01": "Sector Alpha",
     "cam-02": "Sector Bravo",
@@ -67,6 +98,9 @@ class ThreatHeatmapEngine:
         correlated_incidents: Optional[List[Dict[str, Any]]] = None,
         time_window_seconds: int = 86400,
         current_time: Optional[float] = None,
+        sensitivity_profile: str = "balanced",
+        custom_weights: Optional[Dict[str, int]] = None,
+        min_corridor_score: int = 40,
     ) -> Dict[str, Any]:
         """
         Calculates dynamic threat heatmap across all cameras and sectors.
@@ -75,6 +109,11 @@ class ThreatHeatmapEngine:
         events = events or []
         incidents = incidents or []
         correlated_incidents = correlated_incidents or []
+
+        # Resolve active weights from preset and optional custom overrides
+        active_weights = dict(SENSITIVITY_PRESETS.get(sensitivity_profile, HEATMAP_WEIGHTS))
+        if custom_weights:
+            active_weights.update(custom_weights)
 
         now_epoch = current_time if current_time is not None else datetime.now(timezone.utc).timestamp()
         cutoff_epoch = now_epoch - time_window_seconds
@@ -126,13 +165,23 @@ class ThreatHeatmapEngine:
         for c in self.cameras:
             cid = c["id"].lower()
             stats = camera_stats.get(cid, self._empty_stats())
-            threat_index = self._compute_intensity(stats)
+            threat_index = self._compute_intensity(stats, active_weights)
             level = self._threat_level(threat_index)
 
             # Trend calculation
             prev_stats = prev_camera_stats.get(cid, self._empty_stats())
-            prev_threat_index = self._compute_intensity(prev_stats)
+            prev_threat_index = self._compute_intensity(prev_stats, active_weights)
             trend = self._derive_trend(threat_index, prev_threat_index, len(previous_events) + len(previous_incidents))
+
+            factor_contributions = {
+                "restricted_breaches": stats["restricted_breaches"] * active_weights.get("restricted_breaches", 25),
+                "tripwire_crossings": stats["tripwire_crossings"] * active_weights.get("tripwire_crossings", 15),
+                "loitering_events": stats["loitering"] * active_weights.get("loitering_events", 12),
+                "anomalies": stats["anomalies"] * active_weights.get("anomalies", 8),
+                "critical_incidents": stats["critical_incidents"] * active_weights.get("critical_incidents", 30),
+                "high_incidents": stats["high_incidents"] * active_weights.get("high_incidents", 18),
+                "reentry_events": stats["reentry_count"] * active_weights.get("reentry_events", 10),
+            }
 
             camera_results.append({
                 "camera_id": cid,
@@ -141,6 +190,7 @@ class ThreatHeatmapEngine:
                 "threat_index": threat_index,
                 "threat_level": level,
                 "event_counts": stats,
+                "factor_contributions": factor_contributions,
                 "trend": trend,
                 "has_activity": threat_index > 0,
             })
@@ -198,15 +248,17 @@ class ThreatHeatmapEngine:
             }
 
         # 6. High-Risk Corridor Detection
-        corridors = self._detect_high_risk_corridors(correlated_incidents, current_events, current_incidents)
+        corridors = self._detect_high_risk_corridors(correlated_incidents, current_events, current_incidents, min_corridor_score)
 
         return {
             "time_window_seconds": time_window_seconds,
+            "sensitivity_profile": sensitivity_profile,
             "hotspot": hotspot,
             "cameras": camera_results,
             "sectors": sector_results,
             "corridors": corridors,
-            "weights": HEATMAP_WEIGHTS,
+            "weights": active_weights,
+            "presets": list(SENSITIVITY_PRESETS.keys()),
             "timestamp": datetime.fromtimestamp(now_epoch, timezone.utc).isoformat().replace("+00:00", "Z"),
         }
 
@@ -249,15 +301,16 @@ class ThreatHeatmapEngine:
         elif "TRIPWIRE" in et:
             stats["tripwire_crossings"] += 1
 
-    def _compute_intensity(self, stats: Dict[str, int]) -> int:
+    def _compute_intensity(self, stats: Dict[str, int], weights: Optional[Dict[str, int]] = None) -> int:
+        w = weights or HEATMAP_WEIGHTS
         raw = (
-            stats["restricted_breaches"] * HEATMAP_WEIGHTS["restricted_breaches"]
-            + stats["tripwire_crossings"] * HEATMAP_WEIGHTS["tripwire_crossings"]
-            + stats["loitering"] * HEATMAP_WEIGHTS["loitering_events"]
-            + stats["anomalies"] * HEATMAP_WEIGHTS["anomalies"]
-            + stats["critical_incidents"] * HEATMAP_WEIGHTS["critical_incidents"]
-            + stats["high_incidents"] * HEATMAP_WEIGHTS["high_incidents"]
-            + stats["reentry_count"] * HEATMAP_WEIGHTS["reentry_events"]
+            stats["restricted_breaches"] * w.get("restricted_breaches", 25)
+            + stats["tripwire_crossings"] * w.get("tripwire_crossings", 15)
+            + stats["loitering"] * w.get("loitering_events", 12)
+            + stats["anomalies"] * w.get("anomalies", 8)
+            + stats["critical_incidents"] * w.get("critical_incidents", 30)
+            + stats["high_incidents"] * w.get("high_incidents", 18)
+            + stats["reentry_count"] * w.get("reentry_events", 10)
         )
         return min(100, int(round(raw)))
 
@@ -285,6 +338,7 @@ class ThreatHeatmapEngine:
         correlated_incidents: List[Dict[str, Any]],
         events: List[Dict[str, Any]],
         incidents: List[Dict[str, Any]],
+        min_corridor_score: int = 40,
     ) -> List[Dict[str, Any]]:
         """
         Detects corridors where threat activity propagates across cameras.
@@ -367,7 +421,8 @@ class ThreatHeatmapEngine:
             # Event density classification
             tot = data["correlated_incidents"] + data["restricted_breaches"] + data["tripwire_crossings"]
             data["event_density"] = "HIGH" if tot >= 8 else ("MEDIUM" if tot >= 4 else "LOW")
-            corridors.append(data)
+            if min_corridor_score <= 0 or data["threat_score"] >= min_corridor_score:
+                corridors.append(data)
 
         corridors.sort(key=lambda c: c["threat_score"], reverse=True)
         return corridors

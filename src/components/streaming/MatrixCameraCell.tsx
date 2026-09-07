@@ -53,6 +53,8 @@ interface MatrixCameraCellProps {
   onSelectSpotlight?: (cam: MatrixCameraFeed) => void;
   onTriggerAlert?: (cam: MatrixCameraFeed) => void;
   heatmapIntensity?: number;
+  heatmapPalette?: 'crimson' | 'thermal' | 'plasma' | 'cyber';
+  heatmapOpacity?: number;
 }
 
 export const MatrixCameraCell: React.FC<MatrixCameraCellProps> = ({
@@ -65,6 +67,8 @@ export const MatrixCameraCell: React.FC<MatrixCameraCellProps> = ({
   onSelectSpotlight,
   onTriggerAlert,
   heatmapIntensity,
+  heatmapPalette = 'crimson',
+  heatmapOpacity = 0.65,
 }) => {
   const videoRef = useRef<HTMLVideoElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
@@ -2034,22 +2038,100 @@ export const MatrixCameraCell: React.FC<MatrixCameraCellProps> = ({
       // -------------------------------------------------------------
       if (heatmapIntensity && heatmapIntensity > 0) {
         ctx.save();
-        // Base red overlay scaled by intensity
-        ctx.fillStyle = `rgba(225, 29, 72, ${heatmapIntensity * 0.4})`;
-        ctx.fillRect(0, 0, width, height);
-        
-        // Render a grid-like or pulse effect based on intensity
-        const pulse = Math.sin(time * 3) * 0.1 + 0.9;
-        const radius = Math.min(width, height) * 0.4 * pulse * heatmapIntensity;
+        const effectiveAlpha = Math.min(1.0, heatmapIntensity * heatmapOpacity);
+        const pulse = Math.sin(time * 3.5) * 0.12 + 0.88;
         const centerX = width / 2;
         const centerY = height / 2;
+        const radius = Math.min(width, height) * 0.45 * pulse * Math.max(0.3, heatmapIntensity);
+
+        // Palette-specific rendering
+        if (heatmapPalette === 'thermal') {
+          // Ambient cold blue background
+          ctx.fillStyle = `rgba(30, 27, 75, ${effectiveAlpha * 0.25})`;
+          ctx.fillRect(0, 0, width, height);
+
+          // FLIR Infrared gradient
+          const grad = ctx.createRadialGradient(centerX, centerY, 0, centerX, centerY, radius * 1.6);
+          grad.addColorStop(0, `rgba(255, 255, 255, ${effectiveAlpha * 0.85})`);
+          grad.addColorStop(0.2, `rgba(254, 240, 138, ${effectiveAlpha * 0.7})`);
+          grad.addColorStop(0.5, `rgba(239, 68, 68, ${effectiveAlpha * 0.45})`);
+          grad.addColorStop(0.8, `rgba(147, 51, 234, ${effectiveAlpha * 0.25})`);
+          grad.addColorStop(1, 'rgba(30, 27, 75, 0)');
+          ctx.fillStyle = grad;
+          ctx.fillRect(0, 0, width, height);
+        } else if (heatmapPalette === 'plasma') {
+          ctx.fillStyle = `rgba(49, 46, 129, ${effectiveAlpha * 0.2})`;
+          ctx.fillRect(0, 0, width, height);
+
+          const grad = ctx.createRadialGradient(centerX, centerY, 0, centerX, centerY, radius * 1.6);
+          grad.addColorStop(0, `rgba(250, 204, 21, ${effectiveAlpha * 0.85})`);
+          grad.addColorStop(0.35, `rgba(244, 63, 94, ${effectiveAlpha * 0.55})`);
+          grad.addColorStop(0.75, `rgba(168, 85, 247, ${effectiveAlpha * 0.3})`);
+          grad.addColorStop(1, 'rgba(67, 56, 202, 0)');
+          ctx.fillStyle = grad;
+          ctx.fillRect(0, 0, width, height);
+        } else if (heatmapPalette === 'cyber') {
+          ctx.fillStyle = `rgba(6, 78, 59, ${effectiveAlpha * 0.22})`;
+          ctx.fillRect(0, 0, width, height);
+
+          const grad = ctx.createRadialGradient(centerX, centerY, 0, centerX, centerY, radius * 1.6);
+          grad.addColorStop(0, `rgba(52, 211, 153, ${effectiveAlpha * 0.85})`);
+          grad.addColorStop(0.4, `rgba(16, 185, 129, ${effectiveAlpha * 0.5})`);
+          grad.addColorStop(0.8, `rgba(13, 148, 136, ${effectiveAlpha * 0.25})`);
+          grad.addColorStop(1, 'rgba(6, 78, 59, 0)');
+          ctx.fillStyle = grad;
+          ctx.fillRect(0, 0, width, height);
+        } else {
+          // Default Tactical Crimson
+          ctx.fillStyle = `rgba(225, 29, 72, ${effectiveAlpha * 0.22})`;
+          ctx.fillRect(0, 0, width, height);
+
+          const grad = ctx.createRadialGradient(centerX, centerY, 0, centerX, centerY, radius * 1.6);
+          grad.addColorStop(0, `rgba(244, 63, 94, ${effectiveAlpha * 0.75})`);
+          grad.addColorStop(0.45, `rgba(225, 29, 72, ${effectiveAlpha * 0.4})`);
+          grad.addColorStop(0.8, `rgba(159, 18, 57, ${effectiveAlpha * 0.18})`);
+          grad.addColorStop(1, 'rgba(225, 29, 72, 0)');
+          ctx.fillStyle = grad;
+          ctx.fillRect(0, 0, width, height);
+        }
+
+        // Concentric target reticle rings
+        ctx.strokeStyle = heatmapPalette === 'thermal' ? 'rgba(254, 240, 138, 0.45)' :
+                          heatmapPalette === 'cyber' ? 'rgba(52, 211, 153, 0.45)' :
+                          heatmapPalette === 'plasma' ? 'rgba(244, 114, 182, 0.45)' :
+                          'rgba(244, 63, 94, 0.5)';
+        ctx.lineWidth = 1;
+        ctx.setLineDash([4, 4]);
+        ctx.beginPath();
+        ctx.arc(centerX, centerY, radius * 0.4, 0, Math.PI * 2);
+        ctx.stroke();
+        ctx.beginPath();
+        ctx.arc(centerX, centerY, radius * 0.8, 0, Math.PI * 2);
+        ctx.stroke();
+        ctx.setLineDash([]);
+
+        // Threat HUD corner badge on canvas
+        const badgeScore = Math.round(heatmapIntensity * 100);
+        const badgeLevel = badgeScore >= 75 ? 'CRITICAL' : badgeScore >= 50 ? 'HIGH' : 'ELEVATED';
+        const badgeColor = badgeScore >= 75 ? '#f43f5e' : badgeScore >= 50 ? '#f59e0b' : '#06b6d4';
         
-        const gradient = ctx.createRadialGradient(centerX, centerY, 0, centerX, centerY, radius * 1.5);
-        gradient.addColorStop(0, `rgba(225, 29, 72, ${heatmapIntensity * 0.6})`);
-        gradient.addColorStop(1, 'rgba(225, 29, 72, 0)');
-        
-        ctx.fillStyle = gradient;
-        ctx.fillRect(0, 0, width, height);
+        ctx.fillStyle = 'rgba(15, 23, 42, 0.85)';
+        ctx.strokeStyle = badgeColor;
+        ctx.lineWidth = 1;
+        ctx.beginPath();
+        if (typeof (ctx as any).roundRect === 'function') {
+          (ctx as any).roundRect(10, 10, 135, 20, 4);
+        } else {
+          ctx.rect(10, 10, 135, 20);
+        }
+        ctx.fill();
+        ctx.stroke();
+
+        ctx.fillStyle = badgeColor;
+        ctx.font = 'bold 9px "JetBrains Mono", monospace';
+        ctx.textAlign = 'left';
+        ctx.fillText(`THREAT: ${badgeLevel} [${badgeScore}%]`, 16, 23);
+
         ctx.restore();
       }
 
@@ -2058,7 +2140,7 @@ export const MatrixCameraCell: React.FC<MatrixCameraCellProps> = ({
 
     animationFrameId = requestAnimationFrame(render);
     return () => cancelAnimationFrame(animationFrameId);
-  }, [camera, nightVision, thermalMode, showAiHud, isCompact, playbackMode, playbackTimeOffset, playbackSpeed, isAutoRotate, zoomLevel, heatmapIntensity, videoLoaded, videoError, isWebcamActive, useCvStream, phoneStreamingActive]);
+  }, [camera, nightVision, thermalMode, showAiHud, isCompact, playbackMode, playbackTimeOffset, playbackSpeed, isAutoRotate, zoomLevel, heatmapIntensity, heatmapPalette, heatmapOpacity, videoLoaded, videoError, isWebcamActive, useCvStream, phoneStreamingActive]);
 
   return (
     <div

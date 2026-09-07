@@ -1320,6 +1320,7 @@ export interface HeatmapCameraStat {
     high_incidents: number;
     reentry_count: number;
   };
+  factor_contributions?: Record<string, number>;
   trend: string;
   has_activity: boolean;
 }
@@ -1380,12 +1381,14 @@ export interface ThreatHeatmapResponse {
   success: boolean;
   time_window: string;
   window_seconds: number;
+  sensitivity_profile?: string;
+  weights: Record<string, number>;
+  presets?: string[];
   hotspot: ThreatHotspot | null;
   cameras: HeatmapCameraStat[];
   spatial_points?: SpatialHeatPoint[];
   sectors: HeatmapSectorStat[];
   corridors: ThreatCorridorItem[];
-  weights: Record<string, number>;
   canvas_bounds?: { width: number; height: number };
   timestamp: string;
 }
@@ -1402,6 +1405,9 @@ export interface CameraThreatProfile {
   threat_index: number;
   threat_level: string;
   event_counts: Record<string, number>;
+  factor_contributions?: Record<string, number>;
+  sensitivity_profile?: string;
+  weights?: Record<string, number>;
   total_events: number;
   total_incidents: number;
   total_anomalies?: number;
@@ -1433,14 +1439,39 @@ export async function fetchTrackedTargets(params?: {
   return request<any>(`/intelligence/targets${qs ? `?${qs}` : ''}`);
 }
 
-export async function fetchThreatHeatmap(windowStr?: string): Promise<ApiResponse<ThreatHeatmapResponse>> {
-  const qs = windowStr ? `?window=${windowStr}` : '';
-  return request<any>(`/intelligence/threat-heatmap${qs}`);
+export interface ThreatHeatmapOptions {
+  window?: string;
+  sensitivity?: string;
+  corridor_threshold?: number;
+  custom_weights?: Record<string, number>;
 }
 
-export async function fetchCameraThreatProfile(cameraId: string, windowStr?: string): Promise<ApiResponse<CameraThreatProfile>> {
-  const qs = windowStr ? `?window=${windowStr}` : '';
-  return request<any>(`/intelligence/cameras/${cameraId}/threat-profile${qs}`);
+export async function fetchThreatHeatmap(
+  windowOrOptions?: string | ThreatHeatmapOptions
+): Promise<ApiResponse<ThreatHeatmapResponse>> {
+  const query = new URLSearchParams();
+  if (typeof windowOrOptions === 'string') {
+    if (windowOrOptions) query.set('window', windowOrOptions);
+  } else if (windowOrOptions) {
+    if (windowOrOptions.window) query.set('window', windowOrOptions.window);
+    if (windowOrOptions.sensitivity) query.set('sensitivity', windowOrOptions.sensitivity);
+    if (windowOrOptions.corridor_threshold !== undefined) query.set('corridor_threshold', String(windowOrOptions.corridor_threshold));
+    if (windowOrOptions.custom_weights) query.set('custom_weights', JSON.stringify(windowOrOptions.custom_weights));
+  }
+  const qs = query.toString();
+  return request<any>(`/intelligence/threat-heatmap${qs ? `?${qs}` : ''}`);
+}
+
+export async function fetchCameraThreatProfile(
+  cameraId: string,
+  windowStr?: string,
+  sensitivity?: string
+): Promise<ApiResponse<CameraThreatProfile>> {
+  const query = new URLSearchParams();
+  if (windowStr) query.set('window', windowStr);
+  if (sensitivity) query.set('sensitivity', sensitivity);
+  const qs = query.toString();
+  return request<any>(`/intelligence/cameras/${cameraId}/threat-profile${qs ? `?${qs}` : ''}`);
 }
 
 export async function fetchThreatCorridors(): Promise<ApiResponse<ThreatCorridorItem[]>> {

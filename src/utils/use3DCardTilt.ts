@@ -1,4 +1,4 @@
-import { useRef, useCallback } from 'react';
+import React, { useRef, useCallback } from 'react';
 
 interface Use3DCardTiltOptions {
   maxTilt?: number; // Maximum tilt angle in degrees (e.g., 10)

@@ -1,6 +1,5 @@
 import React, { useState, useEffect } from 'react';
 import {
-  Settings,
   Shield,
   Palette,
   Key,
@@ -213,47 +212,6 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
         <div className="absolute top-1/2 right-1/4 w-96 h-96 bg-purple-500/15 rounded-full blur-[110px] animate-pulse" />
         <div className="absolute bottom-1/4 left-1/3 w-96 h-96 bg-blue-600/15 rounded-full blur-[100px]" />
         <div className="absolute inset-0 bg-[radial-gradient(#00f0ff12_1px,transparent_1px)] [background-size:28px_28px] opacity-75" />
-      </div>
-
-      {/* Top Translucent Glass Header Banner */}
-      <div className="tactical-glass-card rounded-3xl p-6 sm:p-7 relative overflow-hidden">
-        {/* Specular Light Sheen */}
-        <div className="absolute inset-0 bg-gradient-to-tr from-cyan-500/[0.08] via-transparent to-white/[0.14] pointer-events-none" />
-        <div className="h-[2px] w-full bg-gradient-to-r from-transparent via-cyan-400 to-transparent shadow-[0_0_16px_#00f0ff] absolute top-0 left-0" />
-
-        {/* Tactical Corner Reticles */}
-        <div className="absolute top-2.5 left-2.5 w-3.5 h-3.5 border-t-2 border-l-2 border-cyan-400 pointer-events-none drop-shadow-[0_0_8px_#00f0ff]" />
-        <div className="absolute top-2.5 right-2.5 w-3.5 h-3.5 border-t-2 border-r-2 border-cyan-400 pointer-events-none drop-shadow-[0_0_8px_#00f0ff]" />
-        <div className="absolute bottom-2.5 left-2.5 w-3.5 h-3.5 border-b-2 border-l-2 border-cyan-400 pointer-events-none drop-shadow-[0_0_8px_#00f0ff]" />
-        <div className="absolute bottom-2.5 right-2.5 w-3.5 h-3.5 border-b-2 border-r-2 border-cyan-400 pointer-events-none drop-shadow-[0_0_8px_#00f0ff]" />
-
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 relative z-10">
-          <div className="flex items-center gap-4">
-            <div className="w-13 h-13 rounded-2xl bg-cyan-500/15 border border-cyan-400/50 flex items-center justify-center text-cyan-300 shadow-[0_0_25px_rgba(0,240,255,0.4)] backdrop-blur-xl shrink-0">
-              <Settings size={26} className="animate-spin-slow" />
-            </div>
-            <div>
-              <div className="flex items-center gap-2">
-                <h1 className="text-base sm:text-lg font-black text-white uppercase tracking-widest font-mono drop-shadow-[0_2px_12px_rgba(0,0,0,0.8)]">
-                  SYSTEM CONFIGURATION & OPERATIONAL ROE
-                </h1>
-                <span className="px-2.5 py-0.5 rounded-full bg-cyan-500/25 text-cyan-300 border border-cyan-400/50 text-[9px] font-bold shadow-[0_0_12px_rgba(0,240,255,0.3)]">
-                  CYBERNETIC GLASS
-                </span>
-              </div>
-              <p className="text-xs text-slate-300 mt-1 font-mono leading-relaxed">
-                Cryptographic device lockdown &bull; 5 Command HUD themes &bull; Web audio synthesizer &bull; DEFCON protocols
-              </p>
-            </div>
-          </div>
-
-          <div className="flex items-center gap-2 self-start sm:self-auto">
-            <div className="px-3.5 py-1.5 rounded-xl tactical-glass-subpanel text-[11px] font-mono font-bold text-emerald-300 flex items-center gap-2 shadow-[0_0_15px_rgba(16,185,129,0.25)]">
-              <span className="w-2 h-2 rounded-full bg-emerald-400 animate-ping" />
-              <span>CLEARANCE: LEVEL 5 (HQ COMMAND)</span>
-            </div>
-          </div>
-        </div>
       </div>
 
       {/* Floating Translucent Glass Navigation Pill Matrix */}

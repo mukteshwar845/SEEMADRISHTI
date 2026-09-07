@@ -41,7 +41,7 @@ import {
   Video,
 } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
-import { SeemadrishtiLogo } from '../SeemadrishtiLogo';
+import { SeemadrishtiLogo } from '../layout/SeemadrishtiLogo';
 import { Border3DCanvas } from './Border3DCanvas';
 
 interface LandingPageProps {

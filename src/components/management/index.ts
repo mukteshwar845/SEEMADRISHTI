@@ -1,3 +1,3 @@
-export * from '../UserManagementView';
-export * from '../SettingsView';
-export * from '../MissionControlView';
+export * from './UserManagementView';
+export * from './SettingsView';
+export * from './MissionControlView';

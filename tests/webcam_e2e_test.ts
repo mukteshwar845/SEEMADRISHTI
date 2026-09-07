@@ -364,7 +364,9 @@ async function runTests() {
     // -------------------------------------------------------------
     console.log('\n[Suite 5: Verification of Zero Synthetic Webcam Targets]');
     {
-      const componentPath = path.resolve(process.cwd(), 'src/components/MatrixCameraCell.tsx');
+      const componentPath = fs.existsSync(path.resolve(process.cwd(), 'src/components/streaming/MatrixCameraCell.tsx'))
+        ? path.resolve(process.cwd(), 'src/components/streaming/MatrixCameraCell.tsx')
+        : path.resolve(process.cwd(), 'src/components/MatrixCameraCell.tsx');
       const content = fs.readFileSync(componentPath, 'utf8');
 
       const hasFakeOperator = content.includes('OPERATOR / SENTRY #01') && content.includes('Math.sin(t * 1.3)');

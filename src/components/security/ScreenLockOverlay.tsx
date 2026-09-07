@@ -12,7 +12,7 @@ import {
 } from 'lucide-react';
 import { useSecurity } from '../../context/SecurityContext';
 import { useAuth } from '../../context/AuthContext';
-import { SeemadrishtiLogo } from '../SeemadrishtiLogo';
+import { SeemadrishtiLogo } from '../layout/SeemadrishtiLogo';
 
 export const ScreenLockOverlay: React.FC = () => {
   const { isScreenLocked, unlockScreen, unlockWithBiometric, biometricEnabled } = useSecurity();

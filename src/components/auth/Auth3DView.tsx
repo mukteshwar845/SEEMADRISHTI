@@ -17,7 +17,7 @@ import {
 } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import { Auth3DCanvas } from './Auth3DCanvas';
-import { SeemadrishtiLogo } from '../SeemadrishtiLogo';
+import { SeemadrishtiLogo } from '../layout/SeemadrishtiLogo';
 
 interface Auth3DViewProps {
   initialMode?: 'login' | 'signup';

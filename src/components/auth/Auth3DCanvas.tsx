@@ -17,6 +17,9 @@ export const Auth3DCanvas: React.FC<Auth3DCanvasProps> = ({
     const container = containerRef.current;
     if (!container) return;
 
+    const width = container.clientWidth || container.offsetWidth || 800;
+    const height = container.clientHeight || container.offsetHeight || 600;
+
     // 1. Scene setup with volumetric atmospheric fog
     const scene = new THREE.Scene();
     scene.fog = new THREE.FogExp2(0x020512, 0.022);
@@ -24,22 +27,27 @@ export const Auth3DCanvas: React.FC<Auth3DCanvasProps> = ({
     // 2. Camera setup
     const camera = new THREE.PerspectiveCamera(
       52,
-      container.clientWidth / container.clientHeight,
+      width / height,
       0.1,
       1000
     );
     camera.position.set(0, 1.8, 9.5);
 
     // 3. WebGL Renderer with High Performance & Alpha
-    const renderer = new THREE.WebGLRenderer({
-      antialias: true,
-      alpha: true,
-      powerPreference: 'high-performance',
-    });
-    renderer.setSize(container.clientWidth, container.clientHeight);
-    renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
-    renderer.setClearColor(0x020510, 1);
-    container.appendChild(renderer.domElement);
+    let renderer: THREE.WebGLRenderer;
+    try {
+      renderer = new THREE.WebGLRenderer({
+        antialias: true,
+        alpha: true,
+        powerPreference: 'high-performance',
+      });
+      renderer.setSize(width, height);
+      renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+      renderer.setClearColor(0x020510, 1);
+      container.appendChild(renderer.domElement);
+    } catch {
+      return;
+    }
 
     // 4. Cinematic Lighting
     const ambientLight = new THREE.AmbientLight(0x051829, 1.8);
@@ -238,15 +246,18 @@ export const Auth3DCanvas: React.FC<Auth3DCanvasProps> = ({
 
     window.addEventListener('mousemove', handleMouseMove);
 
-    // 11. Responsive resize
-    const handleResize = () => {
-      if (!container) return;
-      camera.aspect = container.clientWidth / container.clientHeight;
-      camera.updateProjectionMatrix();
-      renderer.setSize(container.clientWidth, container.clientHeight);
-    };
-
-    window.addEventListener('resize', handleResize);
+    // 11. Responsive Resize Observer
+    const resizeObserver = new ResizeObserver((entries) => {
+      for (const entry of entries) {
+        const cr = entry.contentRect;
+        if (cr.width > 0 && cr.height > 0) {
+          camera.aspect = cr.width / cr.height;
+          camera.updateProjectionMatrix();
+          renderer.setSize(cr.width, cr.height);
+        }
+      }
+    });
+    resizeObserver.observe(container);
 
     // 12. Animation loop
     let animationFrameId: number;
@@ -279,8 +290,8 @@ export const Auth3DCanvas: React.FC<Auth3DCanvasProps> = ({
     // 13. Cleanup
     return () => {
       cancelAnimationFrame(animationFrameId);
+      resizeObserver.disconnect();
       window.removeEventListener('mousemove', handleMouseMove);
-      window.removeEventListener('resize', handleResize);
       renderer.dispose();
       if (container.contains(renderer.domElement)) {
         container.removeChild(renderer.domElement);

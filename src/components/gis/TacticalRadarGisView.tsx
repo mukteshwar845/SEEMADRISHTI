@@ -18,9 +18,14 @@ import {
   VolumeX,
   Target,
   RefreshCw,
+  Globe,
+  Layers,
+  Sparkles,
+  Box,
 } from 'lucide-react';
 import { useTheme } from '../../context/ThemeContext';
 import { ViewMode } from '../../types';
+import { TacticalRadar3DCanvas } from './TacticalRadar3DCanvas';
 
 interface TacticalRadarGisViewProps {
   onSelectCamera?: (cameraId: string) => void;
@@ -63,6 +68,7 @@ export const TacticalRadarGisView: React.FC<TacticalRadarGisViewProps> = ({
   const [selectedContact, setSelectedContact] = useState<RadarContact | null>(null);
   const [soundEnabled, setSoundEnabled] = useState(false);
   const [radarRange, setRadarRange] = useState<number>(500); // 500 meters
+  const [viewDimension, setViewDimension] = useState<'3D' | '2D'>('3D');
   const [measureToolActive, setMeasureToolActive] = useState(false);
   const [measurePoints, setMeasurePoints] = useState<{ x: number; y: number }[]>([]);
   const [measuredDistance, setMeasuredDistance] = useState<number | null>(null);
@@ -466,7 +472,33 @@ export const TacticalRadarGisView: React.FC<TacticalRadarGisViewProps> = ({
         </div>
 
         {/* Tactical Controls */}
-        <div className="flex items-center gap-2 text-xs">
+        <div className="flex items-center gap-2 text-xs flex-wrap">
+          {/* 3D vs 2D Toggle Switch */}
+          <div className="flex items-center gap-1 p-1 bg-black/60 rounded-xl border border-white/10">
+            <button
+              onClick={() => setViewDimension('3D')}
+              className={`px-3 py-1 rounded-lg text-xs font-mono font-bold flex items-center gap-1.5 transition-all cursor-pointer ${
+                viewDimension === '3D'
+                  ? 'bg-cyan-500/25 text-cyan-300 border border-cyan-400/50 shadow-[0_0_12px_rgba(0,240,255,0.3)]'
+                  : 'text-slate-400 hover:text-white'
+              }`}
+            >
+              <Box size={13} className={viewDimension === '3D' ? 'text-cyan-400 animate-pulse' : ''} />
+              <span>3D TERRAIN</span>
+            </button>
+            <button
+              onClick={() => setViewDimension('2D')}
+              className={`px-3 py-1 rounded-lg text-xs font-mono font-bold flex items-center gap-1.5 transition-all cursor-pointer ${
+                viewDimension === '2D'
+                  ? 'bg-cyan-500/25 text-cyan-300 border border-cyan-400/50 shadow-[0_0_12px_rgba(0,240,255,0.3)]'
+                  : 'text-slate-400 hover:text-white'
+              }`}
+            >
+              <Layers size={13} />
+              <span>2D RADAR</span>
+            </button>
+          </div>
+
           <button
             onClick={() => setMeasureToolActive(!measureToolActive)}
             className={`px-3 py-1.5 rounded-lg border font-bold flex items-center gap-1.5 transition-all cursor-pointer ${
@@ -493,24 +525,36 @@ export const TacticalRadarGisView: React.FC<TacticalRadarGisViewProps> = ({
 
       {/* Main Radar Screen Layout */}
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-4">
-        {/* Center Radar Canvas (8 cols on lg) */}
-        <div className="lg:col-span-8 p-4 bg-slate-950 border border-cyan-500/30 rounded-2xl flex flex-col items-center justify-center relative overflow-hidden shadow-[0_0_30px_rgba(6,182,212,0.1)]">
-          <canvas
-            ref={canvasRef}
-            width={620}
-            height={620}
-            onClick={handleCanvasClick}
-            className="cursor-crosshair max-w-full max-h-[620px] rounded-full border border-cyan-500/20"
-          />
+        {/* Center Radar Display (8 cols on lg) */}
+        <div className="lg:col-span-8 flex flex-col items-center justify-center relative overflow-hidden">
+          {viewDimension === '3D' ? (
+            <TacticalRadar3DCanvas
+              contacts={contacts}
+              cameraNodes={cameraNodes}
+              radarRange={radarRange}
+              onSelectContact={(c) => setSelectedContact(c as any)}
+              onSelectCamera={onSelectCamera}
+            />
+          ) : (
+            <div className="w-full p-4 bg-slate-950 border border-cyan-500/30 rounded-2xl flex flex-col items-center justify-center relative overflow-hidden shadow-[0_0_30px_rgba(6,182,212,0.1)]">
+              <canvas
+                ref={canvasRef}
+                width={620}
+                height={620}
+                onClick={handleCanvasClick}
+                className="cursor-crosshair max-w-full max-h-[620px] rounded-full border border-cyan-500/20"
+              />
 
-          <div className="absolute bottom-3 left-4 text-[10px] text-slate-500 space-y-0.5">
-            <div>Click any node (CAM-01..09) or contact to inspect.</div>
-            {measureToolActive && (
-              <div className="text-amber-400 font-bold">
-                Rangefinder active: Click two points to measure real-world distance in meters.
+              <div className="absolute bottom-3 left-4 text-[10px] text-slate-500 space-y-0.5">
+                <div>Click any node (CAM-01..09) or contact to inspect.</div>
+                {measureToolActive && (
+                  <div className="text-amber-400 font-bold">
+                    Rangefinder active: Click two points to measure real-world distance in meters.
+                  </div>
+                )}
               </div>
-            )}
-          </div>
+            </div>
+          )}
         </div>
 
         {/* Right Info Panel: Target Feed & Camera Sectors (4 cols on lg) */}

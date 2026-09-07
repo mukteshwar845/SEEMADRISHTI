@@ -1,8 +1,8 @@
 import React, { useEffect, useRef, useState } from 'react';
 import * as THREE from 'three';
-import { Eye, Shield, Cpu, Activity, Radio, Sparkles } from 'lucide-react';
+import { Eye, Shield, Cpu, Activity, Radio, Sparkles, ZoomIn, ZoomOut, RotateCcw } from 'lucide-react';
 
-interface SwarmNodeData {
+export interface SwarmNodeData {
   id: string;
   name: string;
   role: string;
@@ -22,42 +22,53 @@ const AGENT_NODES: SwarmNodeData[] = [
   { id: 'awareness', name: 'AWARENESS-05', role: 'Multi-Sensor Fusion', color: 0xf59e0b, hex: '#f59e0b', x: -2.5, y: -2.0, z: 1.2, status: 'ACTIVE' },
 ];
 
-export const Swarm3DTopology: React.FC<{ className?: string }> = ({ className = '' }) => {
+export const Swarm3DTopology: React.FC<{
+  className?: string;
+  onSelectAgent?: (agentId: string) => void;
+}> = ({ className = '', onSelectAgent }) => {
   const containerRef = useRef<HTMLDivElement>(null);
   const [hoveredNode, setHoveredNode] = useState<SwarmNodeData | null>(null);
+  const [activeNodeId, setActiveNodeId] = useState<string | null>(null);
 
   useEffect(() => {
     const container = containerRef.current;
     if (!container) return;
 
+    while (container.firstChild) {
+      container.removeChild(container.firstChild);
+    }
+
+    const width = container.clientWidth || container.offsetWidth || 700;
+    const height = container.clientHeight || container.offsetHeight || 320;
+
     // 1. Scene setup
     const scene = new THREE.Scene();
 
     // 2. Camera setup
-    const camera = new THREE.PerspectiveCamera(
-      45,
-      container.clientWidth / container.clientHeight,
-      0.1,
-      100
-    );
+    const camera = new THREE.PerspectiveCamera(45, width / height, 0.1, 100);
     camera.position.set(0, 0, 11);
 
     // 3. WebGL Renderer
-    const renderer = new THREE.WebGLRenderer({
-      antialias: true,
-      alpha: true,
-      powerPreference: 'high-performance',
-    });
-    renderer.setSize(container.clientWidth, container.clientHeight);
-    renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
-    renderer.setClearColor(0x000000, 0);
-    container.appendChild(renderer.domElement);
+    let renderer: THREE.WebGLRenderer;
+    try {
+      renderer = new THREE.WebGLRenderer({
+        antialias: true,
+        alpha: true,
+        powerPreference: 'high-performance',
+      });
+      renderer.setSize(width, height);
+      renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+      renderer.setClearColor(0x000000, 0);
+      container.appendChild(renderer.domElement);
+    } catch {
+      return;
+    }
 
     // 4. Lighting
-    const ambientLight = new THREE.AmbientLight(0xffffff, 1.2);
+    const ambientLight = new THREE.AmbientLight(0xffffff, 1.4);
     scene.add(ambientLight);
 
-    const pointLight = new THREE.PointLight(0x00f0ff, 4, 30);
+    const pointLight = new THREE.PointLight(0x00f0ff, 5, 35);
     pointLight.position.set(0, 5, 8);
     scene.add(pointLight);
 
@@ -66,44 +77,44 @@ export const Swarm3DTopology: React.FC<{ className?: string }> = ({ className = 
     scene.add(swarmGroup);
 
     // Central Neural Core (Pulsing Icosahedron)
-    const coreGeo = new THREE.IcosahedronGeometry(1.1, 1);
+    const coreGeo = new THREE.IcosahedronGeometry(1.15, 1);
     const coreMat = new THREE.MeshBasicMaterial({
       color: 0x00f0ff,
       wireframe: true,
       transparent: true,
-      opacity: 0.4,
+      opacity: 0.45,
     });
     const coreMesh = new THREE.Mesh(coreGeo, coreMat);
     swarmGroup.add(coreMesh);
 
     // Inner glowing core
-    const innerCoreGeo = new THREE.SphereGeometry(0.6, 16, 16);
+    const innerCoreGeo = new THREE.SphereGeometry(0.65, 16, 16);
     const innerCoreMat = new THREE.MeshBasicMaterial({
       color: 0x00f0ff,
       transparent: true,
-      opacity: 0.7,
+      opacity: 0.75,
     });
     const innerCoreMesh = new THREE.Mesh(innerCoreGeo, innerCoreMat);
     swarmGroup.add(innerCoreMesh);
 
     // Orbital Rings
-    const ringGeo1 = new THREE.RingGeometry(4.2, 4.25, 64);
+    const ringGeo1 = new THREE.RingGeometry(4.2, 4.28, 64);
     const ringMat1 = new THREE.MeshBasicMaterial({
       color: 0x00f0ff,
       side: THREE.DoubleSide,
       transparent: true,
-      opacity: 0.25,
+      opacity: 0.3,
     });
     const ring1 = new THREE.Mesh(ringGeo1, ringMat1);
     ring1.rotation.x = Math.PI / 3;
     swarmGroup.add(ring1);
 
-    const ringGeo2 = new THREE.RingGeometry(4.8, 4.85, 64);
+    const ringGeo2 = new THREE.RingGeometry(4.8, 4.86, 64);
     const ringMat2 = new THREE.MeshBasicMaterial({
       color: 0xa855f7,
       side: THREE.DoubleSide,
       transparent: true,
-      opacity: 0.2,
+      opacity: 0.22,
     });
     const ring2 = new THREE.Mesh(ringGeo2, ringMat2);
     ring2.rotation.y = Math.PI / 4;
@@ -112,34 +123,40 @@ export const Swarm3DTopology: React.FC<{ className?: string }> = ({ className = 
 
     // 5. Agent Nodes & Meshes
     const nodeMeshes: THREE.Mesh[] = [];
+    const interactiveMeshes: THREE.Object3D[] = [];
+
     AGENT_NODES.forEach((node) => {
+      const nodeGroup = new THREE.Group();
+      nodeGroup.position.set(node.x, node.y, node.z);
+
       // Outer wireframe halo
-      const nodeGeo = new THREE.OctahedronGeometry(0.5, 0);
+      const nodeGeo = new THREE.OctahedronGeometry(0.55, 0);
       const nodeMat = new THREE.MeshBasicMaterial({
         color: node.color,
         wireframe: true,
       });
       const nodeMesh = new THREE.Mesh(nodeGeo, nodeMat);
-      nodeMesh.position.set(node.x, node.y, node.z);
-      nodeMesh.userData = node;
-      swarmGroup.add(nodeMesh);
+      nodeGroup.add(nodeMesh);
       nodeMeshes.push(nodeMesh);
 
       // Inner glowing core
-      const nodeCoreGeo = new THREE.SphereGeometry(0.22, 12, 12);
+      const nodeCoreGeo = new THREE.SphereGeometry(0.24, 14, 14);
       const nodeCoreMat = new THREE.MeshBasicMaterial({
         color: node.color,
       });
       const nodeCoreMesh = new THREE.Mesh(nodeCoreGeo, nodeCoreMat);
-      nodeCoreMesh.position.set(node.x, node.y, node.z);
-      swarmGroup.add(nodeCoreMesh);
+      nodeGroup.add(nodeCoreMesh);
+
+      nodeGroup.userData = { isAgent: true, agent: node };
+      swarmGroup.add(nodeGroup);
+      interactiveMeshes.push(nodeGroup);
     });
 
     // 6. Neural Link Lines between all 5 Agents
     const lineMat = new THREE.LineBasicMaterial({
       color: 0x00f0ff,
       transparent: true,
-      opacity: 0.35,
+      opacity: 0.4,
     });
 
     const linePoints: THREE.Vector3[] = [];
@@ -154,16 +171,16 @@ export const Swarm3DTopology: React.FC<{ className?: string }> = ({ className = 
     swarmGroup.add(neuralLines);
 
     // 7. Dynamic Data Pulse Particles traversing neural lines
-    const particleCount = 40;
+    const particleCount = 45;
     const particleGeo = new THREE.BufferGeometry();
     const particlePositions = new Float32Array(particleCount * 3);
     const particleColors = new Float32Array(particleCount * 3);
 
     for (let i = 0; i < particleCount; i++) {
       const idx = i * 3;
-      particlePositions[idx] = (Math.random() - 0.5) * 6;
-      particlePositions[idx + 1] = (Math.random() - 0.5) * 6;
-      particlePositions[idx + 2] = (Math.random() - 0.5) * 3;
+      particlePositions[idx] = (Math.random() - 0.5) * 6.5;
+      particlePositions[idx + 1] = (Math.random() - 0.5) * 6.5;
+      particlePositions[idx + 2] = (Math.random() - 0.5) * 3.5;
 
       particleColors[idx] = 0.0;
       particleColors[idx + 1] = 0.94;
@@ -174,52 +191,120 @@ export const Swarm3DTopology: React.FC<{ className?: string }> = ({ className = 
     particleGeo.setAttribute('color', new THREE.BufferAttribute(particleColors, 3));
 
     const particleMat = new THREE.PointsMaterial({
-      size: 0.12,
+      size: 0.14,
       vertexColors: true,
       transparent: true,
-      opacity: 0.8,
+      opacity: 0.85,
     });
     const particles = new THREE.Points(particleGeo, particleMat);
     swarmGroup.add(particles);
 
-    // Mouse Interaction for Parallax Tilt
-    let mouseX = 0;
-    let mouseY = 0;
-    let targetRotationX = 0;
-    let targetRotationY = 0;
+    // Mouse Drag & Raycast Interaction
+    let isDragging = false;
+    let prevMouseX = 0;
+    let prevMouseY = 0;
+    let rotationY = 0;
+    let rotationX = 0;
+    let autoRotate = true;
 
-    const handlePointerMove = (e: MouseEvent) => {
-      const rect = container.getBoundingClientRect();
-      mouseX = ((e.clientX - rect.left) / rect.width) * 2 - 1;
-      mouseY = -(((e.clientY - rect.top) / rect.height) * 2 - 1);
-      targetRotationY = mouseX * 0.4;
-      targetRotationX = -mouseY * 0.3;
+    const raycaster = new THREE.Raycaster();
+    const mouseCoord = new THREE.Vector2();
+
+    const onMouseDown = (e: MouseEvent) => {
+      isDragging = true;
+      prevMouseX = e.clientX;
+      prevMouseY = e.clientY;
+      autoRotate = false;
     };
 
-    container.addEventListener('mousemove', handlePointerMove);
+    const onMouseMove = (e: MouseEvent) => {
+      const rect = container.getBoundingClientRect();
+      const clientX = e.clientX - rect.left;
+      const clientY = e.clientY - rect.top;
+
+      mouseCoord.x = (clientX / rect.width) * 2 - 1;
+      mouseCoord.y = -(clientY / rect.height) * 2 + 1;
+
+      if (isDragging) {
+        const dx = e.clientX - prevMouseX;
+        const dy = e.clientY - prevMouseY;
+        rotationY += dx * 0.008;
+        rotationX = Math.max(-0.6, Math.min(0.6, rotationX + dy * 0.006));
+        prevMouseX = e.clientX;
+        prevMouseY = e.clientY;
+      } else {
+        raycaster.setFromCamera(mouseCoord, camera);
+        const intersects = raycaster.intersectObjects(interactiveMeshes, true);
+
+        if (intersects.length > 0) {
+          let root: THREE.Object3D | null = intersects[0].object;
+          while (root && !root.userData?.isAgent && root.parent !== swarmGroup) {
+            root = root.parent;
+          }
+          if (root?.userData?.isAgent) {
+            setHoveredNode(root.userData.agent);
+          }
+        } else {
+          setHoveredNode(null);
+        }
+      }
+    };
+
+    const onMouseUp = () => {
+      isDragging = false;
+    };
+
+    const onClick = (e: MouseEvent) => {
+      const rect = container.getBoundingClientRect();
+      mouseCoord.x = ((e.clientX - rect.left) / rect.width) * 2 - 1;
+      mouseCoord.y = -((e.clientY - rect.top) / rect.height) * 2 + 1;
+
+      raycaster.setFromCamera(mouseCoord, camera);
+      const intersects = raycaster.intersectObjects(interactiveMeshes, true);
+
+      if (intersects.length > 0) {
+        let root: THREE.Object3D | null = intersects[0].object;
+        while (root && !root.userData?.isAgent && root.parent !== swarmGroup) {
+          root = root.parent;
+        }
+        if (root?.userData?.isAgent) {
+          setActiveNodeId(root.userData.agent.id);
+          if (onSelectAgent) {
+            onSelectAgent(root.userData.agent.id);
+          }
+        }
+      }
+    };
+
+    container.addEventListener('mousedown', onMouseDown);
+    window.addEventListener('mousemove', onMouseMove);
+    window.addEventListener('mouseup', onMouseUp);
+    container.addEventListener('click', onClick);
 
     // Animation Loop
     let animationFrameId: number;
-    let clock = new THREE.Clock();
+    const clock = new THREE.Clock();
 
     const animate = () => {
       animationFrameId = requestAnimationFrame(animate);
       const elapsedTime = clock.getElapsedTime();
 
-      // Smooth group rotation + mouse parallax
-      swarmGroup.rotation.y += (targetRotationY + elapsedTime * 0.15 - swarmGroup.rotation.y) * 0.05;
-      swarmGroup.rotation.x += (targetRotationX - swarmGroup.rotation.x) * 0.05;
+      if (autoRotate) {
+        rotationY += 0.004;
+      }
+      swarmGroup.rotation.y = rotationY;
+      swarmGroup.rotation.x = rotationX;
 
       // Pulse central core
-      const coreScale = 1.0 + Math.sin(elapsedTime * 2.5) * 0.08;
+      const coreScale = 1.0 + Math.sin(elapsedTime * 2.5) * 0.09;
       coreMesh.scale.set(coreScale, coreScale, coreScale);
-      coreMesh.rotation.y += 0.01;
-      coreMesh.rotation.x += 0.005;
+      coreMesh.rotation.y += 0.012;
+      coreMesh.rotation.x += 0.006;
 
       // Rotate individual agent nodes
       nodeMeshes.forEach((mesh, index) => {
         mesh.rotation.x += 0.02 * (index % 2 === 0 ? 1 : -1);
-        mesh.rotation.y += 0.02;
+        mesh.rotation.y += 0.022;
       });
 
       // Animate particles
@@ -227,8 +312,8 @@ export const Swarm3DTopology: React.FC<{ className?: string }> = ({ className = 
       const posArray = posAttr.array as Float32Array;
       for (let i = 0; i < particleCount; i++) {
         const idx = i * 3;
-        posArray[idx + 1] += Math.sin(elapsedTime + i) * 0.01;
-        posArray[idx] += Math.cos(elapsedTime + i) * 0.008;
+        posArray[idx + 1] += Math.sin(elapsedTime + i) * 0.012;
+        posArray[idx] += Math.cos(elapsedTime + i) * 0.009;
       }
       posAttr.needsUpdate = true;
 
@@ -237,29 +322,36 @@ export const Swarm3DTopology: React.FC<{ className?: string }> = ({ className = 
 
     animate();
 
-    // Resize Handler
-    const handleResize = () => {
-      if (!container) return;
-      camera.aspect = container.clientWidth / container.clientHeight;
-      camera.updateProjectionMatrix();
-      renderer.setSize(container.clientWidth, container.clientHeight);
-    };
-
-    window.addEventListener('resize', handleResize);
+    const resizeObserver = new ResizeObserver((entries) => {
+      for (const entry of entries) {
+        const cr = entry.contentRect;
+        if (cr.width > 0 && cr.height > 0) {
+          camera.aspect = cr.width / cr.height;
+          camera.updateProjectionMatrix();
+          renderer.setSize(cr.width, cr.height);
+        }
+      }
+    });
+    resizeObserver.observe(container);
 
     return () => {
       cancelAnimationFrame(animationFrameId);
-      container.removeEventListener('mousemove', handlePointerMove);
-      window.removeEventListener('resize', handleResize);
+      resizeObserver.disconnect();
+      container.removeEventListener('mousedown', onMouseDown);
+      window.removeEventListener('mousemove', onMouseMove);
+      window.removeEventListener('mouseup', onMouseUp);
+      container.removeEventListener('click', onClick);
       if (renderer.domElement.parentNode === container) {
         container.removeChild(renderer.domElement);
       }
       renderer.dispose();
     };
-  }, []);
+  }, [onSelectAgent]);
 
   return (
-    <div className={`relative overflow-hidden rounded-2xl bg-slate-950/70 border border-cyan-500/25 backdrop-blur-xl shadow-[0_0_30px_rgba(6,182,212,0.15)] ${className}`}>
+    <div
+      className={`relative overflow-hidden rounded-2xl bg-slate-950/80 border border-cyan-500/35 backdrop-blur-xl shadow-[0_0_35px_rgba(0,240,255,0.18)] ${className}`}
+    >
       {/* HUD Header */}
       <div className="absolute top-3 left-3 right-3 z-10 flex items-center justify-between pointer-events-none">
         <div className="flex items-center gap-2">
@@ -269,8 +361,8 @@ export const Swarm3DTopology: React.FC<{ className?: string }> = ({ className = 
           </span>
         </div>
         <div className="flex items-center gap-2">
-          <span className="px-2 py-0.5 rounded-full bg-emerald-500/15 border border-emerald-400/30 text-[10px] font-mono font-bold text-emerald-300">
-            5/5 NODES INTERLINKED
+          <span className="px-2 py-0.5 rounded-full bg-emerald-500/15 border border-emerald-400/40 text-[10px] font-mono font-bold text-emerald-300">
+            5/5 AGENTS SYNAPSED
           </span>
         </div>
       </div>
@@ -279,21 +371,32 @@ export const Swarm3DTopology: React.FC<{ className?: string }> = ({ className = 
       <div ref={containerRef} className="w-full h-72 cursor-grab active:cursor-grabbing" />
 
       {/* Interactive Bottom Roster Grid */}
-      <div className="grid grid-cols-5 gap-1.5 p-2.5 bg-black/40 border-t border-white/[0.08] text-[10px] font-mono">
-        {AGENT_NODES.map((node) => (
-          <div
-            key={node.id}
-            onMouseEnter={() => setHoveredNode(node)}
-            onMouseLeave={() => setHoveredNode(null)}
-            className="flex flex-col items-center justify-center p-1.5 rounded-xl bg-white/[0.03] hover:bg-white/[0.08] border border-white/[0.06] hover:border-cyan-400/40 transition-all cursor-pointer"
-          >
-            <div className="flex items-center gap-1">
-              <span className="w-1.5 h-1.5 rounded-full" style={{ backgroundColor: node.hex }} />
-              <span className="font-bold text-slate-200 truncate">{node.name.split('-')[0]}</span>
-            </div>
-            <span className="text-[8px] text-slate-400 truncate max-w-full">{node.role.split('&')[0]}</span>
-          </div>
-        ))}
+      <div className="grid grid-cols-5 gap-1.5 p-2.5 bg-black/60 border-t border-white/[0.08] text-[10px] font-mono">
+        {AGENT_NODES.map((node) => {
+          const isHovered = hoveredNode?.id === node.id || activeNodeId === node.id;
+          return (
+            <button
+              key={node.id}
+              onClick={() => {
+                setActiveNodeId(node.id);
+                if (onSelectAgent) onSelectAgent(node.id);
+              }}
+              onMouseEnter={() => setHoveredNode(node)}
+              onMouseLeave={() => setHoveredNode(null)}
+              className={`flex flex-col items-center justify-center p-1.5 rounded-xl transition-all cursor-pointer border ${
+                isHovered
+                  ? 'bg-cyan-500/25 border-cyan-400 shadow-[0_0_12px_rgba(0,240,255,0.3)]'
+                  : 'bg-white/[0.03] hover:bg-white/[0.08] border-white/[0.06] hover:border-cyan-400/40'
+              }`}
+            >
+              <div className="flex items-center gap-1">
+                <span className="w-1.5 h-1.5 rounded-full" style={{ backgroundColor: node.hex }} />
+                <span className="font-bold text-slate-200 truncate">{node.name.split('-')[0]}</span>
+              </div>
+              <span className="text-[8px] text-slate-400 truncate max-w-full">{node.role.split('&')[0]}</span>
+            </button>
+          );
+        })}
       </div>
     </div>
   );

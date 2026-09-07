@@ -16,6 +16,9 @@ export const Border3DCanvas: React.FC<Border3DCanvasProps> = ({
     const container = containerRef.current;
     if (!container) return;
 
+    const width = container.clientWidth || container.offsetWidth || 800;
+    const height = container.clientHeight || container.offsetHeight || 600;
+
     // 1. Scene & Atmosphere Setup
     const scene = new THREE.Scene();
     scene.fog = new THREE.FogExp2(0x020611, 0.02);
@@ -23,7 +26,7 @@ export const Border3DCanvas: React.FC<Border3DCanvasProps> = ({
     // 2. Camera Setup
     const camera = new THREE.PerspectiveCamera(
       52,
-      container.clientWidth / container.clientHeight,
+      width / height,
       0.1,
       1000
     );
@@ -31,15 +34,20 @@ export const Border3DCanvas: React.FC<Border3DCanvasProps> = ({
     camera.lookAt(0, 0, 0);
 
     // 3. WebGL Renderer
-    const renderer = new THREE.WebGLRenderer({
-      antialias: true,
-      alpha: true,
-      powerPreference: 'high-performance',
-    });
-    renderer.setSize(container.clientWidth, container.clientHeight);
-    renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
-    renderer.setClearColor(0x02040a, 0);
-    container.appendChild(renderer.domElement);
+    let renderer: THREE.WebGLRenderer;
+    try {
+      renderer = new THREE.WebGLRenderer({
+        antialias: true,
+        alpha: true,
+        powerPreference: 'high-performance',
+      });
+      renderer.setSize(width, height);
+      renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+      renderer.setClearColor(0x02040a, 0);
+      container.appendChild(renderer.domElement);
+    } catch {
+      return;
+    }
 
     // 4. Lights
     const ambientLight = new THREE.AmbientLight(0x0a192f, 1.8);
@@ -308,20 +316,23 @@ export const Border3DCanvas: React.FC<Border3DCanvasProps> = ({
 
     animate();
 
-    // 13. Window Resize Handler
-    const handleResize = () => {
-      if (!container) return;
-      camera.aspect = container.clientWidth / container.clientHeight;
-      camera.updateProjectionMatrix();
-      renderer.setSize(container.clientWidth, container.clientHeight);
-    };
-
-    window.addEventListener('resize', handleResize);
+    // 13. Responsive Resize Observer
+    const resizeObserver = new ResizeObserver((entries) => {
+      for (const entry of entries) {
+        const cr = entry.contentRect;
+        if (cr.width > 0 && cr.height > 0) {
+          camera.aspect = cr.width / cr.height;
+          camera.updateProjectionMatrix();
+          renderer.setSize(cr.width, cr.height);
+        }
+      }
+    });
+    resizeObserver.observe(container);
 
     // Cleanup
     return () => {
       window.removeEventListener('mousemove', handleMouseMove);
-      window.removeEventListener('resize', handleResize);
+      resizeObserver.disconnect();
       cancelAnimationFrame(animationFrameId);
       if (container.contains(renderer.domElement)) {
         container.removeChild(renderer.domElement);

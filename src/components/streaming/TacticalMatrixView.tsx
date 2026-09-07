@@ -2,6 +2,7 @@ import React, { useState, useEffect, useMemo } from 'react';
 import { MatrixCameraFeed, AlertItem } from '../../types';
 import { MatrixCameraCell } from './MatrixCameraCell';
 import { CinematicCameraFullscreenModal } from '../matrix/CinematicCameraFullscreenModal';
+import { Tactical3DCard } from '../common/Tactical3DCard';
 import {
   Grid,
   Layers,
@@ -551,9 +552,11 @@ export const TacticalMatrixView: React.FC<TacticalMatrixViewProps> = ({
             );
 
             return (
-              <div
+              <Tactical3DCard
                 key={cam.id}
-                className={`tactical-3d-card relative group rounded-2xl transition-all duration-200 ${
+                maxTilt={12}
+                scale={1.025}
+                className={`rounded-2xl group ${
                   isHighlighted ? 'ring-2 ring-rose-500 shadow-[0_0_25px_rgba(244,63,94,0.6)] animate-pulse' : ''
                 }`}
                 onDoubleClick={() => setFullscreenCamera(cam)}
@@ -585,7 +588,7 @@ export const TacticalMatrixView: React.FC<TacticalMatrixViewProps> = ({
                 >
                   <Pin size={11} className={isPinned ? 'fill-black' : ''} />
                 </button>
-              </div>
+              </Tactical3DCard>
             );
           })}
         </div>
@@ -598,9 +601,11 @@ export const TacticalMatrixView: React.FC<TacticalMatrixViewProps> = ({
           className="grid grid-cols-1 md:grid-cols-2 gap-3.5 perspective-1500"
         >
           {currentQuadFeeds.map((cam) => (
-            <div
+            <Tactical3DCard
               key={cam.id}
-              className="tactical-3d-card relative group rounded-2xl"
+              maxTilt={10}
+              scale={1.02}
+              className="rounded-2xl group"
               onDoubleClick={() => setFullscreenCamera(cam)}
             >
               <MatrixCameraCell
@@ -614,7 +619,7 @@ export const TacticalMatrixView: React.FC<TacticalMatrixViewProps> = ({
                 onTriggerAlert={onTriggerAlert}
                 heatmapIntensity={isHeatmapActive ? heatmapData[cam.tag] || 0 : undefined}
               />
-            </div>
+            </Tactical3DCard>
           ))}
         </div>
       )}

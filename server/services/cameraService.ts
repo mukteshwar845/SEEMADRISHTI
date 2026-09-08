@@ -5,12 +5,12 @@ import { AppError } from '../middleware/errorHandler';
 export class CameraService {
   public static getAll(): CameraEntity[] {
     const db = getDatabase();
-    return db.prepare('SELECT * FROM cameras ORDER BY id ASC').all() as CameraEntity[];
+    return db.prepare('SELECT * FROM cameras ORDER BY id ASC').all() as unknown as CameraEntity[];
   }
 
   public static getById(id: string): CameraEntity {
     const db = getDatabase();
-    const camera = db.prepare('SELECT * FROM cameras WHERE id = ?').get(id) as CameraEntity | undefined;
+    const camera = db.prepare('SELECT * FROM cameras WHERE id = ?').get(id) as unknown as CameraEntity | undefined;
     if (!camera) {
       throw new AppError(`Camera not found: ${id}`, 404);
     }

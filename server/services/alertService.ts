@@ -40,7 +40,7 @@ export class AlertService {
     params.push(limit, offset);
 
     const totalRow = db.prepare(countQuery).get(...countParams) as { total: number };
-    const rows = db.prepare(query).all(...params) as AlertEntity[];
+    const rows = db.prepare(query).all(...params) as unknown as AlertEntity[];
 
     return {
       alerts: rows.map((a) => ({ ...a, acknowledged: Boolean(a.acknowledged) })),
@@ -52,7 +52,7 @@ export class AlertService {
 
   public static getById(id: string) {
     const db = getDatabase();
-    const alert = db.prepare('SELECT * FROM alerts WHERE id = ?').get(id) as AlertEntity | undefined;
+    const alert = db.prepare('SELECT * FROM alerts WHERE id = ?').get(id) as unknown as AlertEntity | undefined;
     if (!alert) {
       throw new AppError(`Alert not found: ${id}`, 404);
     }
@@ -70,11 +70,7 @@ export class AlertService {
     `).run(id, dto.event_id || null, dto.camera_id, dto.severity, dto.title, dto.reason, timestamp);
 
     const created = this.getById(id);
-    broadcastWebSocketMessage({
-      type: 'alert_created',
-      data: created,
-      timestamp: Date.now(),
-    });
+    broadcastWebSocketMessage('alert_created', created);
 
     return created;
   }
@@ -85,11 +81,7 @@ export class AlertService {
     db.prepare('UPDATE alerts SET acknowledged = 1 WHERE id = ?').run(id);
 
     const updated = this.getById(id);
-    broadcastWebSocketMessage({
-      type: 'alert_updated',
-      data: updated,
-      timestamp: Date.now(),
-    });
+    broadcastWebSocketMessage('alert_updated', updated);
 
     return updated;
   }

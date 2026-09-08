@@ -7,9 +7,9 @@ export class ZoneService {
     const db = getDatabase();
     let rows: ZoneEntity[];
     if (cameraId) {
-      rows = db.prepare('SELECT * FROM zones WHERE camera_id = ? ORDER BY created_at ASC').all(cameraId) as ZoneEntity[];
+      rows = db.prepare('SELECT * FROM zones WHERE camera_id = ? ORDER BY created_at ASC').all(cameraId) as unknown as ZoneEntity[];
     } else {
-      rows = db.prepare('SELECT * FROM zones ORDER BY created_at ASC').all() as ZoneEntity[];
+      rows = db.prepare('SELECT * FROM zones ORDER BY created_at ASC').all() as unknown as ZoneEntity[];
     }
 
     return rows.map((z) => ({
@@ -21,7 +21,7 @@ export class ZoneService {
 
   public static getById(id: string) {
     const db = getDatabase();
-    const zone = db.prepare('SELECT * FROM zones WHERE id = ?').get(id) as ZoneEntity | undefined;
+    const zone = db.prepare('SELECT * FROM zones WHERE id = ?').get(id) as unknown as ZoneEntity | undefined;
     if (!zone) {
       throw new AppError(`Zone not found: ${id}`, 404);
     }
